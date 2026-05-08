@@ -79,8 +79,9 @@ export async function navigate(route) {
   const container = document.getElementById('page-content');
   container.innerHTML = '<div class="loading-center"><div class="spinner"></div></div>';
 
-  // Cleanup previous page
+  // Cleanup previous page and FAB
   if (currentPage?.destroy) currentPage.destroy();
+  document.querySelector('.fab')?.remove();
   currentPage = null;
 
   try {
