@@ -4,7 +4,7 @@ import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: "AIzaSyD2a3pxKZAsJwr8dadPz0xbGe9m4KWrfHQ",
-  authDomain: "yonke-uhambo.firebaseapp.com",
+  authDomain: "yonke-uhambo.web.app",
   projectId: "yonke-uhambo",
   storageBucket: "yonke-uhambo.firebasestorage.app",
   messagingSenderId: "1093456667640",

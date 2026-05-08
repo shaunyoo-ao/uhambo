@@ -357,28 +357,30 @@ document.getElementById('google-login-btn').addEventListener('click', async () =
   }
 });
 
-// Clear any stale redirect state on every page load (errors swallowed inside)
-handleRedirectResult();
+// handleRedirectResult() MUST be awaited before onAuthStateChanged is
+// registered. Without the await, Firebase fires an initial null auth state
+// before the redirect result is processed, which triggers showLogin() even
+// after a successful redirect sign-in. The async IIFE makes this sequential.
+(async () => {
+  await handleRedirectResult();
 
-onAuthStateChange((user, err) => {
-  if (err === 'access_denied') {
-    _appInitialized = false;
-    hideLoading();
-    showLogin();
-    showToast('Access denied. This app is private.');
-    return;
-  }
-  if (!user) {
-    // Only show login if app has never been initialized.
-    // Do NOT show login on null fires that happen after the app is running
-    // (e.g. token refresh, brief SDK state reset, stale redirect error).
-    if (!_appInitialized) {
+  onAuthStateChange((user, err) => {
+    if (err === 'access_denied') {
+      _appInitialized = false;
       hideLoading();
       showLogin();
+      showToast('Access denied. This app is private.');
+      return;
     }
-    return;
-  }
-  if (_appInitialized) return;
-  _appInitialized = true;
-  initApp(user);
-});
+    if (!user) {
+      if (!_appInitialized) {
+        hideLoading();
+        showLogin();
+      }
+      return;
+    }
+    if (_appInitialized) return;
+    _appInitialized = true;
+    initApp(user);
+  });
+})();

@@ -13,30 +13,35 @@ const ALLOWED = ['yooyoopd@gmail.com', '2yeonsoo@gmail.com'];
 const provider = new GoogleAuthProvider();
 provider.setCustomParameters({ prompt: 'select_account' });
 
+// iOS PWA (standalone mode) blocks window.open(), so signInWithPopup silently
+// fails — the popup opens in a separate Safari tab that never resolves the
+// Promise. Must use redirect instead.
+function isIOSPWA() {
+  return ('standalone' in navigator) && navigator.standalone === true;
+}
+
 export async function signInWithGoogle() {
+  if (isIOSPWA()) {
+    return signInWithRedirect(auth, provider);
+  }
   try {
-    // Popup works on all modern browsers when triggered by user gesture
     return await signInWithPopup(auth, provider);
   } catch (e) {
-    // Only fall back to redirect if popup is explicitly blocked by the browser
     if (e.code === 'auth/popup-blocked') {
-      sessionStorage.setItem('pendingRedirect', '1');
       return signInWithRedirect(auth, provider);
     }
     throw e;
   }
 }
 
-// Called on every page load — clears any stale redirect state silently
+// Called once on every page load, BEFORE onAuthStateChanged is registered.
+// Processes any pending redirect result and clears stale redirect state.
+// All errors are swallowed — never drive UI from this function's errors.
 export async function handleRedirectResult() {
   try {
-    const result = await getRedirectResult(auth);
-    sessionStorage.removeItem('pendingRedirect');
-    return result;
+    return await getRedirectResult(auth);
   } catch (e) {
-    // Swallow — stale redirect errors must not affect app startup
-    console.warn('[auth] getRedirectResult error (stale or irrelevant):', e.code);
-    sessionStorage.removeItem('pendingRedirect');
+    console.warn('[auth] getRedirectResult (stale/irrelevant):', e.code);
     return null;
   }
 }
