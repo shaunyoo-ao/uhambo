@@ -1,0 +1,42 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    function isAllowedEmail() {
+      return request.auth != null &&
+             request.auth.token.email in [
+               'yooyoopd@gmail.com',
+               '2yeonsoo@gmail.com'
+             ];
+    }
+
+    match /users/{userId} {
+      allow read, write: if isOwner(userId) && isAllowedEmail();
+
+      match /trips/{tripId} {
+        allow read, write: if isOwner(userId) && isAllowedEmail();
+
+        match /itinerary/{itemId} {
+          allow read, write: if isOwner(userId) && isAllowedEmail();
+        }
+        match /accommodation/{itemId} {
+          allow read, write: if isOwner(userId) && isAllowedEmail();
+        }
+        match /activities/{activityId} {
+          allow read, write: if isOwner(userId) && isAllowedEmail();
+        }
+        match /expenses/{expenseId} {
+          allow read, write: if isOwner(userId) && isAllowedEmail();
+        }
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

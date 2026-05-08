@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head><title>Generate Icons</title></head>
+<body>
+<canvas id="c192" width="192" height="192"></canvas>
+<canvas id="c512" width="512" height="512"></canvas>
+<canvas id="cm192" width="192" height="192"></canvas>
+<canvas id="cm512" width="512" width="512"></canvas>
+<script>
+function drawIcon(canvas, size, maskable) {
+  const ctx = canvas.getContext('2d');
+  const pad = maskable ? size * 0.15 : 0;
+  const r = size / 2;
+
+  if (maskable) {
+    ctx.fillStyle = '#0c0d0f';
+    ctx.fillRect(0, 0, size, size);
+  } else {
+    ctx.clearRect(0, 0, size, size);
+    ctx.beginPath();
+    ctx.arc(r, r, r, 0, Math.PI * 2);
+    ctx.fillStyle = '#0c0d0f';
+    ctx.fill();
+  }
+
+  const innerSize = size - pad * 2;
+  const cx = size / 2;
+  const cy = size / 2;
+
+  ctx.font = `italic ${innerSize * 0.55}px "Times New Roman", serif`;
+  ctx.fillStyle = '#ee6c3a';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('u', cx, cy + innerSize * 0.03);
+
+  ctx.font = `${innerSize * 0.14}px ui-monospace, monospace`;
+  ctx.fillStyle = '#f3f0ea';
+  ctx.letterSpacing = '0.15em';
+  ctx.fillText('UHAMBO', cx, cy + innerSize * 0.35);
+}
+
+drawIcon(document.getElementById('c192'), 192, false);
+drawIcon(document.getElementById('c512'), 512, false);
+drawIcon(document.getElementById('cm192'), 192, true);
+drawIcon(document.getElementById('cm512'), 512, true);
+
+document.querySelectorAll('canvas').forEach(c => {
+  const a = document.createElement('a');
+  a.href = c.toDataURL('image/png');
+  a.download = c.id + '.png';
+  a.textContent = 'Download ' + c.id;
+  document.body.appendChild(a);
+  document.body.appendChild(document.createElement('br'));
+});
+</script>
+</body>
+</html>
