@@ -5,9 +5,9 @@
 
 ---
 
-## The 3 Bugs That Cause "Login Loop"
+## The 5 Bugs That Cause "Login Loop"
 
-Every time this goes wrong, one or more of these three bugs is responsible.
+Every time this goes wrong, one or more of these bugs is responsible.
 
 ### Bug 1 — `getRedirectResult` error triggers `showLogin()` after `initApp`
 
@@ -23,10 +23,14 @@ Firebase persists redirect errors in IndexedDB. If a previous redirect failed, *
 
 ```javascript
 // ✅ CORRECT — swallow ALL errors silently, let onAuthStateChanged drive the UI
-handleRedirectResult().catch(e => {
-  console.warn('[auth] getRedirectResult error (stale/irrelevant):', e.code);
-  // Do NOT call showLogin() here
-});
+export async function handleRedirectResult() {
+  try {
+    return await getRedirectResult(auth);
+  } catch (e) {
+    console.warn('[auth] getRedirectResult (stale/irrelevant):', e.code);
+    return null;  // never throw, never call showLogin() from here
+  }
+}
 ```
 
 ---
@@ -96,12 +100,123 @@ export async function signInWithGoogle() {
     return await signInWithPopup(auth, provider);
   } catch (e) {
     if (e.code === 'auth/popup-blocked') {
-      // Only use redirect when the browser explicitly blocks the popup
       return signInWithRedirect(auth, provider);
     }
     throw e;
   }
 }
+```
+
+---
+
+### Bug 4 — Wrong `authDomain` causes cross-origin redirect failure
+
+When Firebase Hosting hosts your app at `your-project.web.app` but `authDomain`
+is set to `your-project.firebaseapp.com`, the redirect goes cross-origin.
+Storage partitioning (Bug 3) then breaks the auth state read.
+
+Firebase Hosting provides a **same-origin auth handler** at `/__/auth/handler`
+when `authDomain` matches your hosting domain.
+
+```javascript
+// ❌ WRONG — cross-origin; broken by storage partitioning on redirect fallback
+const firebaseConfig = {
+  authDomain: "your-project.firebaseapp.com",
+  ...
+};
+```
+
+```javascript
+// ✅ CORRECT — same-origin; redirect handler served from your own domain
+const firebaseConfig = {
+  authDomain: "your-project.web.app",
+  ...
+};
+```
+
+> **Note:** Ensure `your-project.web.app` is listed in Firebase Console →
+> Authentication → Settings → Authorized domains.
+
+---
+
+### Bug 5 — iOS PWA standalone mode blocks `signInWithPopup`
+
+When your app is installed to the iOS home screen (standalone mode),
+`window.open()` opens a **separate Safari tab** that never resolves the Promise
+back to the PWA. `signInWithPopup` hangs — the user sees the Google sign-in
+page, authenticates, but the app never receives the result.
+
+```javascript
+// ❌ WRONG — popup silently fails in iOS standalone mode
+export async function signInWithGoogle() {
+  return signInWithPopup(auth, provider);
+}
+```
+
+```javascript
+// ✅ CORRECT — detect iOS standalone, use redirect instead
+function isIOSPWA() {
+  return ('standalone' in navigator) && navigator.standalone === true;
+}
+
+export async function signInWithGoogle() {
+  if (isIOSPWA()) {
+    // Redirect works in iOS standalone; popup does not.
+    // Requires authDomain fix (Bug 4) to work without storage partitioning.
+    return signInWithRedirect(auth, provider);
+  }
+  try {
+    return await signInWithPopup(auth, provider);
+  } catch (e) {
+    if (e.code === 'auth/popup-blocked') {
+      return signInWithRedirect(auth, provider);
+    }
+    throw e;
+  }
+}
+```
+
+---
+
+### Bug 6 (bonus) — Not awaiting `handleRedirectResult()` before `onAuthStateChanged`
+
+If `handleRedirectResult()` is not awaited, `onAuthStateChanged` can fire
+`null` before Firebase has finished processing the pending redirect result.
+This triggers `showLogin()` even though the user is about to be authenticated.
+
+```javascript
+// ❌ WRONG — race condition; null fires before redirect is processed
+handleRedirectResult();  // not awaited
+onAuthStateChange(callback);
+```
+
+```javascript
+// ✅ CORRECT — sequential; redirect fully processed before listener fires
+(async () => {
+  await handleRedirectResult();
+  onAuthStateChange(callback);
+})();
+```
+
+---
+
+### Bug 7 (bonus) — Service worker intercepts Firebase auth requests
+
+If your service worker intercepts requests to `accounts.google.com` or
+`firebaseapp.com`, it can corrupt the redirect flow or block the Google
+sign-in page from loading.
+
+```javascript
+// ✅ CORRECT — skip ALL auth-related traffic in sw.js
+self.addEventListener('fetch', event => {
+  const url = new URL(event.request.url);
+  if (url.hostname.includes('firestore.googleapis.com')) return;
+  if (url.hostname.includes('identitytoolkit.googleapis.com')) return;
+  if (url.hostname.includes('securetoken.googleapis.com')) return;
+  if (url.hostname.includes('accounts.google.com')) return;
+  if (url.hostname.includes('firebaseapp.com')) return;
+  // ... your caching strategy here
+});
 ```
 
 ---
@@ -115,7 +230,15 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
-const firebaseConfig = { /* your config */ };
+const firebaseConfig = {
+  apiKey: "...",
+  authDomain: "your-project.web.app",   // ← MUST be web.app, not firebaseapp.com
+  projectId: "your-project",
+  storageBucket: "your-project.firebasestorage.app",
+  messagingSenderId: "...",
+  appId: "..."
+};
+
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
@@ -141,8 +264,17 @@ const ALLOWED_EMAILS = ['user1@example.com', 'user2@example.com'];
 const provider = new GoogleAuthProvider();
 provider.setCustomParameters({ prompt: 'select_account' });
 
-// Primary: popup. Redirect only if popup is explicitly blocked.
+// iOS PWA (standalone mode) blocks window.open(), so signInWithPopup silently
+// fails — the popup opens in a separate Safari tab that never resolves back.
+function isIOSPWA() {
+  return ('standalone' in navigator) && navigator.standalone === true;
+}
+
+// Primary: popup. iOS standalone → redirect. Redirect-blocked → redirect.
 export async function signInWithGoogle() {
+  if (isIOSPWA()) {
+    return signInWithRedirect(auth, provider);
+  }
   try {
     return await signInWithPopup(auth, provider);
   } catch (e) {
@@ -153,13 +285,13 @@ export async function signInWithGoogle() {
   }
 }
 
-// Must be called on every page load.
-// Silently clears any stale redirect state — NEVER drives UI from its errors.
+// Must be called (and awaited) on every page load BEFORE onAuthStateChanged.
+// Clears any stale redirect state silently.
 export async function handleRedirectResult() {
   try {
     return await getRedirectResult(auth);
   } catch (e) {
-    console.warn('[auth] getRedirectResult (stale):', e.code);
+    console.warn('[auth] getRedirectResult (stale/irrelevant):', e.code);
     return null;
   }
 }
@@ -190,7 +322,7 @@ import { signInWithGoogle, handleRedirectResult, signOut, onAuthStateChange } fr
 
 let _appInitialized = false;
 
-// ── Login button ─────────────────────────────────────────────────
+// ── Login button ──────────────────────────────────────────────────
 document.getElementById('login-btn').addEventListener('click', async () => {
   const btn = document.getElementById('login-btn');
   const originalHTML = btn.innerHTML;
@@ -198,46 +330,50 @@ document.getElementById('login-btn').addEventListener('click', async () => {
   btn.textContent = 'Opening Google Sign-In…';
   try {
     await signInWithGoogle();
-    // On popup success: onAuthStateChanged fires → initApp.
-    // On redirect: page navigates away, nothing more to do here.
+    // Popup success: onAuthStateChanged fires → initApp().
+    // Redirect: page navigates away — nothing more to do here.
   } catch (e) {
     btn.disabled = false;
     btn.innerHTML = originalHTML;
     if (e.code === 'auth/popup-closed-by-user' ||
         e.code === 'auth/cancelled-popup-request') {
-      return; // user closed popup — silent
+      return;
     }
     showToast('Sign-in failed (' + (e.code || 'unknown') + ')');
     console.error('[auth] signInWithGoogle:', e.code, e.message);
   }
 });
 
-// ── Clear stale redirect state on every page load ─────────────────
-// Do NOT chain .catch(showLogin) — see Bug 1 above.
-handleRedirectResult();
+// ── Auth bootstrap ────────────────────────────────────────────────
+// MUST await handleRedirectResult() before registering onAuthStateChanged.
+// Without the await, Firebase fires an initial null auth state before the
+// redirect result is processed, causing showLogin() to flash even after a
+// successful redirect sign-in.
+(async () => {
+  await handleRedirectResult();
 
-// ── Auth state driver ─────────────────────────────────────────────
-onAuthStateChange((user, err) => {
-  if (err === 'access_denied') {
-    _appInitialized = false;
-    showLogin();
-    showToast('Access denied.');
-    return;
-  }
-  if (!user) {
-    if (!_appInitialized) showLogin(); // only before first login
-    return;
-  }
-  if (_appInitialized) return;
-  _appInitialized = true;
-  initApp(user);
-});
+  onAuthStateChange((user, err) => {
+    if (err === 'access_denied') {
+      _appInitialized = false;
+      showLogin();
+      showToast('Access denied.');
+      return;
+    }
+    if (!user) {
+      if (!_appInitialized) showLogin();  // only before first login
+      return;
+    }
+    if (_appInitialized) return;
+    _appInitialized = true;
+    initApp(user);
+  });
+})();
 
 // ── Sign-out ──────────────────────────────────────────────────────
 async function doSignOut() {
-  _appInitialized = false; // allow login screen on next null fire
+  _appInitialized = false;
   await signOut();
-  location.reload();       // cleanest: full reset
+  location.reload();
 }
 ```
 
@@ -248,13 +384,13 @@ async function doSignOut() {
 Before testing, verify in Firebase Console:
 
 1. **Authentication → Sign-in method → Google**: Enabled
-2. **Authentication → Settings → Authorized domains**: must include  
-   - `localhost` (for local dev)  
-   - `your-project.web.app`  
-   - `your-project.firebaseapp.com`  
+2. **Authentication → Settings → Authorized domains**: must include
+   - `localhost`
+   - `your-project.web.app`
+   - `your-project.firebaseapp.com`
    - Any custom domain
-3. **Firestore → Rules**: deployed and correct (run `firebase deploy --only firestore:rules`)
-4. **OAuth consent screen** (Google Cloud Console): app is not in test mode if adding new users
+3. **Firestore → Rules**: deployed (`firebase deploy --only firestore:rules`)
+4. **OAuth consent screen** (Google Cloud Console): not in test mode if adding new users
 
 ---
 
@@ -273,43 +409,41 @@ Before testing, verify in Firebase Console:
 <script type="module" src="js/app.js"></script>
 ```
 
-- Pin the version number (`10.12.2`) — do not use `latest`
-- The `type="importmap"` script **must appear before** `type="module"` scripts
-- Safari 16.4+ supports importmap; for older iOS, a shim is needed (`es-module-shims`)
+- Pin the version number — do not use `latest`
+- `type="importmap"` must appear **before** `type="module"` scripts
+- Safari 16.4+ supports importmap; for older iOS use `es-module-shims`
 
 ---
 
 ## PWA / Service Worker Notes
 
-If your app registers a service worker, ensure it does **not** intercept Firebase auth requests:
+Skip ALL Firebase and Google auth traffic in your service worker:
 
 ```javascript
-// sw.js — skip all Firebase/Google auth traffic
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   if (url.hostname.includes('firestore.googleapis.com')) return;
   if (url.hostname.includes('identitytoolkit.googleapis.com')) return;
   if (url.hostname.includes('securetoken.googleapis.com')) return;
-  if (url.hostname.includes('accounts.google.com')) return;
-  if (url.hostname.includes('firebaseapp.com')) return;
-  // ... your caching strategy here
+  if (url.hostname.includes('accounts.google.com')) return;    // ← don't forget
+  if (url.hostname.includes('firebaseapp.com')) return;        // ← don't forget
+  // ... caching strategy
 });
 ```
 
-Also ensure `sw.js` itself is served with `Cache-Control: no-cache` so stale service worker code never blocks an auth fix from deploying.
+Serve `sw.js` with `Cache-Control: no-cache` so auth fixes deploy immediately.
 
 ---
 
 ## Quick Diagnosis Checklist
 
-When auth doesn't work, check in order:
-
 | Symptom | Likely cause |
 |---|---|
-| Login screen reappears after successful popup | Bug 1 or Bug 2 above |
-| Login screen reappears after Google redirect | Bug 3 (storage partitioning) or Bug 1 |
-| Toast shows `auth/unauthorized-domain` | Domain not in Firebase Console authorized list |
-| Toast shows `auth/popup-blocked` | Browser blocked popup; redirect fallback should kick in |
-| Popup opens, closes, nothing happens | `onAuthStateChanged` not firing; check Firebase init |
-| Works on desktop, fails on iOS | iOS Safari PWA blocks `signInWithPopup` in some modes; use redirect fallback |
+| Login screen reappears after successful popup | Bug 2 (`_appInitialized` missing) |
+| Login screen flashes then disappears | Bug 6 (not awaiting `handleRedirectResult`) |
+| Login screen reappears after Google redirect | Bug 3 (storage partitioning) + Bug 4 (`authDomain`) |
+| Works on desktop, broken on iOS home screen | Bug 5 (iOS PWA standalone) |
 | Works once, fails after reload | Stale redirect error in IndexedDB (Bug 1) |
+| `auth/unauthorized-domain` toast | Domain not in Firebase Console authorized list |
+| `auth/popup-blocked` toast | Browser blocked popup; redirect fallback should activate |
+| Popup opens, closes, nothing happens | `onAuthStateChanged` not firing; check Firebase init |

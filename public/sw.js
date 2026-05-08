@@ -52,12 +52,14 @@ self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-GET and Firebase SDK/API requests
+  // Skip non-GET and any Firebase/Google auth traffic
   if (request.method !== 'GET') return;
   if (url.hostname.includes('firestore.googleapis.com')) return;
   if (url.hostname.includes('firebase.googleapis.com')) return;
   if (url.hostname.includes('identitytoolkit.googleapis.com')) return;
   if (url.hostname.includes('securetoken.googleapis.com')) return;
+  if (url.hostname.includes('accounts.google.com')) return;
+  if (url.hostname.includes('firebaseapp.com')) return;
 
   // OSM map tiles → Cache First (long-lived)
   if (url.hostname.includes('openstreetmap.org') || url.hostname.includes('tile.')) {
