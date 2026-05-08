@@ -13,6 +13,11 @@ const ALLOWED = ['yooyoopd@gmail.com', '2yeonsoo@gmail.com'];
 const provider = new GoogleAuthProvider();
 provider.setCustomParameters({ prompt: 'select_account' });
 
+function log(msg) {
+  if (window._alog) window._alog(msg);
+  else console.log('[auth]', msg);
+}
+
 // iOS PWA (standalone mode) blocks window.open(), so signInWithPopup silently
 // fails — the popup opens in a separate Safari tab that never resolves the
 // Promise. Must use redirect instead.
@@ -21,13 +26,21 @@ function isIOSPWA() {
 }
 
 export async function signInWithGoogle() {
-  if (isIOSPWA()) {
+  const iosPWA = isIOSPWA();
+  log('signInWithGoogle() — isIOSPWA=' + iosPWA + ' userAgent=' + navigator.userAgent.slice(0, 80));
+  if (iosPWA) {
+    log('iOS PWA detected → signInWithRedirect');
     return signInWithRedirect(auth, provider);
   }
+  log('attempting signInWithPopup...');
   try {
-    return await signInWithPopup(auth, provider);
+    const result = await signInWithPopup(auth, provider);
+    log('signInWithPopup SUCCESS — ' + result.user.email);
+    return result;
   } catch (e) {
+    log('signInWithPopup ERROR: ' + e.code + ' — ' + e.message);
     if (e.code === 'auth/popup-blocked') {
+      log('popup blocked → falling back to signInWithRedirect');
       return signInWithRedirect(auth, provider);
     }
     throw e;
@@ -38,10 +51,13 @@ export async function signInWithGoogle() {
 // Processes any pending redirect result and clears stale redirect state.
 // All errors are swallowed — never drive UI from this function's errors.
 export async function handleRedirectResult() {
+  log('getRedirectResult() called...');
   try {
-    return await getRedirectResult(auth);
+    const result = await getRedirectResult(auth);
+    log('getRedirectResult() → ' + (result ? result.user.email : 'null'));
+    return result;
   } catch (e) {
-    console.warn('[auth] getRedirectResult (stale/irrelevant):', e.code);
+    log('getRedirectResult() ERROR (swallowed): ' + e.code + ' — ' + e.message);
     return null;
   }
 }
@@ -53,6 +69,7 @@ export function signOut() {
 export function onAuthStateChange(callback) {
   return onAuthStateChanged(auth, user => {
     if (user && !ALLOWED.includes(user.email)) {
+      log('onAuthStateChanged → ' + user.email + ' NOT in allowlist → signing out');
       fbSignOut(auth);
       callback(null, 'access_denied');
       return;

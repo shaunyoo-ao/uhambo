@@ -334,24 +334,33 @@ async function initApp(user) {
   navigate(route);
 }
 
+// ── Auth debug logger ────────────────────────────────────────────
+window._alog = (msg) => {
+  console.log('[auth]', msg);
+  const el = document.getElementById('auth-debug');
+  if (!el) return;
+  const ts = new Date().toISOString().slice(11, 23);
+  el.textContent += `[${ts}] ${msg}\n`;
+  el.scrollTop = el.scrollHeight;
+};
+
 // ── Bootstrap ────────────────────────────────────────────────────
 document.getElementById('google-login-btn').addEventListener('click', async () => {
   const btn = document.getElementById('google-login-btn');
   const originalHTML = btn.innerHTML;
   btn.disabled = true;
   btn.textContent = 'Opening Google Sign-In…';
+  _alog('button clicked — calling signInWithGoogle()');
   try {
     await signInWithGoogle();
-    // If signInWithPopup succeeded, onAuthStateChanged will fire — nothing else needed here.
-    // If signInWithRedirect was used, the page has already navigated away.
+    _alog('signInWithGoogle() resolved — waiting for onAuthStateChanged');
   } catch (e) {
     btn.disabled = false;
     btn.innerHTML = originalHTML;
+    _alog('signInWithGoogle() ERROR: ' + e.code + ' — ' + e.message);
     if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
-      // User closed the popup — no message needed
       return;
     }
-    // Show the actual Firebase error code so it's debuggable
     showToast('Sign-in failed (' + (e.code || 'unknown') + ')');
     console.error('[auth] signInWithGoogle error:', e.code, e.message);
   }
@@ -362,10 +371,13 @@ document.getElementById('google-login-btn').addEventListener('click', async () =
 // before the redirect result is processed, which triggers showLogin() even
 // after a successful redirect sign-in. The async IIFE makes this sequential.
 (async () => {
-  await handleRedirectResult();
+  _alog('page load — awaiting handleRedirectResult()');
+  const redirectUser = await handleRedirectResult();
+  _alog('handleRedirectResult() done — user: ' + (redirectUser ? redirectUser.email : 'null'));
 
   onAuthStateChange((user, err) => {
     if (err === 'access_denied') {
+      _alog('onAuthStateChanged → access_denied');
       _appInitialized = false;
       hideLoading();
       showLogin();
@@ -373,12 +385,14 @@ document.getElementById('google-login-btn').addEventListener('click', async () =
       return;
     }
     if (!user) {
+      _alog('onAuthStateChanged → null (appInitialized=' + _appInitialized + ')');
       if (!_appInitialized) {
         hideLoading();
         showLogin();
       }
       return;
     }
+    _alog('onAuthStateChanged → ' + user.email + ' (appInitialized=' + _appInitialized + ')');
     if (_appInitialized) return;
     _appInitialized = true;
     initApp(user);
