@@ -1,4 +1,4 @@
-import { signInWithGoogle, signOut, onAuthStateChange } from './auth.js';
+import { signInWithGoogle, signOut, onAuthStateChange, handleRedirectResult } from './auth.js';
 import { setLang, getLang, t } from './i18n.js';
 import { setCurrency, getCurrency, CURRENCIES } from './currency.js';
 import { getTrips, createTrip } from './db.js';
@@ -7,6 +7,7 @@ import { getTrips, createTrip } from './db.js';
 export let currentUser = null;
 export let currentTripId = null;
 let currentPage = null;
+let _appInitialized = false; // guard against duplicate initApp calls
 
 // ── Page registry ────────────────────────────────────────────────
 const routes = {
@@ -335,26 +336,49 @@ async function initApp(user) {
 
 // ── Bootstrap ────────────────────────────────────────────────────
 document.getElementById('google-login-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('google-login-btn');
+  const originalHTML = btn.innerHTML;
+  btn.disabled = true;
+  btn.textContent = 'Opening Google Sign-In…';
   try {
     await signInWithGoogle();
+    // If signInWithPopup succeeded, onAuthStateChanged will fire — nothing else needed here.
+    // If signInWithRedirect was used, the page has already navigated away.
   } catch (e) {
-    if (e.code !== 'auth/popup-closed-by-user') {
-      showToast('Sign-in failed: ' + e.message);
+    btn.disabled = false;
+    btn.innerHTML = originalHTML;
+    if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') {
+      // User closed the popup — no message needed
+      return;
     }
+    // Show the actual Firebase error code so it's debuggable
+    showToast('Sign-in failed (' + (e.code || 'unknown') + ')');
+    console.error('[auth] signInWithGoogle error:', e.code, e.message);
   }
 });
 
+// Clear any stale redirect state on every page load (errors swallowed inside)
+handleRedirectResult();
+
 onAuthStateChange((user, err) => {
   if (err === 'access_denied') {
+    _appInitialized = false;
     hideLoading();
     showLogin();
     showToast('Access denied. This app is private.');
     return;
   }
   if (!user) {
-    hideLoading();
-    showLogin();
+    // Only show login if app has never been initialized.
+    // Do NOT show login on null fires that happen after the app is running
+    // (e.g. token refresh, brief SDK state reset, stale redirect error).
+    if (!_appInitialized) {
+      hideLoading();
+      showLogin();
+    }
     return;
   }
+  if (_appInitialized) return;
+  _appInitialized = true;
   initApp(user);
 });
