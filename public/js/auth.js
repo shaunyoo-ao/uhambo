@@ -1,7 +1,8 @@
 import { auth } from './firebase-init.js';
 import {
   GoogleAuthProvider,
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut as fbSignOut,
   onAuthStateChanged
 } from 'firebase/auth';
@@ -9,9 +10,22 @@ import {
 const ALLOWED = ['yooyoopd@gmail.com', '2yeonsoo@gmail.com'];
 
 const provider = new GoogleAuthProvider();
+provider.setCustomParameters({ prompt: 'select_account' });
 
+// Redirect-based sign-in — works reliably on mobile/PWA standalone mode
 export function signInWithGoogle() {
-  return signInWithPopup(auth, provider);
+  return signInWithRedirect(auth, provider);
+}
+
+// Must be called on every page load to capture the result after redirect
+export async function handleRedirectResult() {
+  try {
+    const result = await getRedirectResult(auth);
+    return result; // null if no pending redirect
+  } catch (e) {
+    console.error('Redirect result error:', e);
+    throw e;
+  }
 }
 
 export function signOut() {
