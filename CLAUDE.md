@@ -9,6 +9,14 @@ Mobile-first PWA for planning and tracking family trips. Single-page app with va
 
 ---
 
+## Git Workflow
+
+**Push all completed changes directly to `main`.** No PRs or approval needed.
+- Commit to the session's feature branch, then immediately push to `main` as well (or commit directly to `main`).
+- CI/CD deploys automatically on push to `main` via GitHub Actions.
+
+---
+
 ## Tech Stack
 - **Frontend:** Vanilla HTML5, CSS3, ES Modules (no bundler)
 - **Backend:** Firebase Firestore (Spark plan)

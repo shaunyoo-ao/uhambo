@@ -890,3 +890,12 @@ a { color: var(--accent); text-decoration: none; }
   .fab { right: calc(50% - 240px + 16px); }
   #toast { bottom: calc(var(--nav-h) + var(--safe-bottom) + 10px); }
 }
+
+/* ── Link field ─────────────────────────────────────────────────── */
+.link-list { display:flex; flex-direction:column; gap:6px; margin-bottom:6px; }
+.link-item { display:flex; align-items:center; gap:6px; }
+.link-item a { flex:1; font-size:13px; color:var(--sky); text-overflow:ellipsis; overflow:hidden; white-space:nowrap; }
+.link-item-del { flex-shrink:0; background:none; border:none; color:var(--muted); cursor:pointer; font-size:16px; padding:2px 4px; }
+.link-add-row { display:flex; gap:6px; }
+.link-add-row input { flex:1; }
+.link-add-btn { flex-shrink:0; }
