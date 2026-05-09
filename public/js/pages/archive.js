@@ -47,7 +47,6 @@ export async function render(container, ctx) {
     ]);
 
     // ── Compute stats ────────────────────────────────────────────
-    // Total expenses by category
     const byCat = {};
     let grandTotal = 0;
     for (const e of expenses) {
@@ -56,14 +55,6 @@ export async function render(container, ctx) {
       const cat = e.category || 'other';
       byCat[cat] = (byCat[cat] || 0) + amt;
     }
-
-    // Nights stayed
-    let totalNights = 0;
-    accommodation.forEach(a => {
-      if (a.checkIn && a.checkOut) {
-        totalNights += Math.max(0, Math.round((new Date(a.checkOut) - new Date(a.checkIn)) / 86400000));
-      }
-    });
 
     // Mileage
     const mileageKm = await calcMileage(itinerary);
@@ -86,7 +77,6 @@ export async function render(container, ctx) {
       if (a.address) places.add(a.address.split(',')[0].trim());
     });
 
-    // Per-category breakdown
     const catEntries = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
 
     container.innerHTML = `
@@ -153,12 +143,8 @@ export async function render(container, ctx) {
                   </div>
                 </div>`;
             }).join('')}
-            <canvas id="arch-chart" width="200" height="200" class="chart-canvas" style="margin-top:16px"></canvas>
           </div>
         </div>` : ''}
-
-        <!-- Per-day spending -->
-        ${renderDailySpend(expenses, currency)}
 
         <!-- Places visited -->
         ${places.size > 0 ? `
@@ -180,108 +166,22 @@ export async function render(container, ctx) {
           </div>
           <div class="card-body">
             <div class="progress-bar" style="height:8px;margin-bottom:10px">
-              <div class="progress-fill" style="width:${activities.length > 0 ? Math.round(completedActs/activities.length*100) : 0}%"></div>
+              <div class="progress-fill" style="width:${activities.length > 0 ? Math.round(completedActs / activities.length * 100) : 0}%"></div>
             </div>
             ${activities.slice(0, 6).map(a => `
               <div class="row gap-8" style="padding:5px 0;border-bottom:1px solid var(--line-soft)">
                 <div class="check-box ${a.completed ? 'checked' : ''}" style="pointer-events:none"></div>
                 <span class="text-sm ${a.completed ? 'text-muted' : ''}" style="${a.completed ? 'text-decoration:line-through' : ''}">${a.name || '—'}</span>
               </div>`).join('')}
-            ${activities.length > 6 ? `<div class="text-xs text-muted" style="margin-top:6px">+${activities.length-6} more</div>` : ''}
-          </div>
-        </div>` : ''}
-
-        <!-- Itinerary summary -->
-        ${itinerary.length > 0 ? `
-        <div class="card" style="margin-bottom:16px">
-          <div class="card-header">
-            <span class="eyebrow">Trip Timeline</span>
-            <span class="text-xs text-muted">${itinerary.length} events</span>
-          </div>
-          <div class="card-body" style="padding:10px 14px">
-            <div class="row gap-8" style="flex-wrap:wrap">
-              <div class="stat-card" style="flex:1;min-width:80px">
-                <div class="stat-value mono">${itinerary.filter(i=>i.type==='travel').length}</div>
-                <div class="stat-label">Travel</div>
-              </div>
-              <div class="stat-card" style="flex:1;min-width:80px">
-                <div class="stat-value mono">${itinerary.filter(i=>i.type==='meal').length}</div>
-                <div class="stat-label">Meals</div>
-              </div>
-              <div class="stat-card" style="flex:1;min-width:80px">
-                <div class="stat-value mono">${itinerary.filter(i=>i.type==='activity').length}</div>
-                <div class="stat-label">Activities</div>
-              </div>
-            </div>
-          </div>
-        </div>` : ''}
-
-        <!-- Per-night cost -->
-        ${totalNights > 0 && grandTotal > 0 ? `
-        <div class="card">
-          <div class="card-header"><span class="eyebrow">Cost Breakdown</span></div>
-          <div class="card-body">
-            <div class="row-between" style="padding:5px 0;border-bottom:1px solid var(--line-soft)">
-              <span class="text-sm">Per night</span>
-              <span class="mono text-sm text-accent">${formatCurrency(grandTotal / totalNights, currency)}</span>
-            </div>
-            ${tripDays > 0 ? `
-            <div class="row-between" style="padding:5px 0;border-bottom:1px solid var(--line-soft)">
-              <span class="text-sm">Per day</span>
-              <span class="mono text-sm text-accent">${formatCurrency(grandTotal / tripDays, currency)}</span>
-            </div>` : ''}
-            <div class="row-between" style="padding:5px 0">
-              <span class="text-sm">Per activity</span>
-              <span class="mono text-sm text-accent">${activities.length > 0 ? formatCurrency(grandTotal / activities.length, currency) : '—'}</span>
-            </div>
+            ${activities.length > 6 ? `<div class="text-xs text-muted" style="margin-top:6px">+${activities.length - 6} more</div>` : ''}
           </div>
         </div>` : ''}
       </div>`;
-
-    // Draw donut chart
-    if (catEntries.length > 0) {
-      drawDonut(catEntries, grandTotal);
-    }
 
   } catch (e) {
     console.error('Archive render:', e);
     container.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Error loading archive</div><div class="empty-sub">${e.message}</div></div>`;
   }
-}
-
-function renderDailySpend(expenses, currency) {
-  if (expenses.length === 0) return '';
-  const byDate = {};
-  expenses.forEach(e => {
-    const d = e.date || 'Unknown';
-    if (!byDate[d]) byDate[d] = 0;
-    // Use raw amount in same currency for simplicity here (already converted async above)
-  });
-  return '';
-}
-
-function drawDonut(catEntries, total) {
-  const canvas = document.getElementById('arch-chart');
-  if (!canvas || total === 0) return;
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
-  const cx = W / 2, cy = H / 2, r = Math.min(W, H) / 2 - 12;
-  ctx.clearRect(0, 0, W, H);
-  let angle = -Math.PI / 2;
-  catEntries.forEach(([cat, val]) => {
-    const sweep = (val / total) * 2 * Math.PI;
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.arc(cx, cy, r, angle, angle + sweep);
-    ctx.closePath();
-    ctx.fillStyle = CAT_COLORS[cat] || '#7c8089';
-    ctx.fill();
-    angle += sweep;
-  });
-  ctx.beginPath();
-  ctx.arc(cx, cy, r * 0.55, 0, 2 * Math.PI);
-  ctx.fillStyle = '#16181c';
-  ctx.fill();
 }
 
 function noTripHTML() {

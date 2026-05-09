@@ -81,7 +81,7 @@ function renderList(items) {
               <div class="row gap-8" style="margin-bottom:4px">
                 <span>${TYPE_ICONS[item.type] || '📌'}</span>
                 <span class="text-sm font-medium">${item.title || '—'}</span>
-                ${item.sourceType ? `<span class="badge badge-sky" style="margin-left:auto;font-size:10px">↔ synced</span>` : `<span class="badge badge-muted" style="margin-left:auto;font-size:10px">${item.type || 'other'}</span>`}
+                <span class="badge badge-muted" style="margin-left:auto;font-size:10px">${item.type || 'other'}</span>
               </div>
               ${item.location ? `<div class="text-xs text-muted">📍 ${item.location}</div>` : ''}
               ${item.description ? `<div class="text-sm" style="color:var(--cream-dim);margin-top:4px">${item.description}</div>` : ''}
@@ -153,7 +153,7 @@ function openItemModal(item) {
         </div>
       </form>`,
     footer: `
-      ${isEdit ? `<button class="btn btn-danger" onclick="window.__deleteItinItem('${item.id}')">Delete</button>` : ''}
+      ${isEdit ? `<button class="btn btn-danger" onclick="window.__deleteItinItem('${item.id}')">${t('common.delete')}</button>` : ''}
       <button class="btn btn-ghost" style="flex:1" onclick="window.__closeModal()">${t('common.cancel')}</button>
       <button class="btn btn-primary" style="flex:2" onclick="window.__saveItinItem(${isEdit ? `'${item.id}'` : 'null'})">
         ${isEdit ? t('common.save') : t('common.add')}
