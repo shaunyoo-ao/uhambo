@@ -56,6 +56,8 @@ const translations = {
     'itin.types.rest':     'Rest',
     'itin.types.other':    'Other',
     // Accommodation
+    'accom.tap_add':        'Tap + to add a stay',
+    'act.tap_add':          'Tap + to add an activity',
     'accom.title':          'Accommodation',
     'accom.add':            'Add Stay',
     'accom.edit_stay':      'Edit Stay',
@@ -176,6 +178,8 @@ const translations = {
     'itin.types.rest':     '휴식',
     'itin.types.other':    '기타',
     // Accommodation
+    'accom.tap_add':        '+ 를 눌러 숙소를 추가해보세요',
+    'act.tap_add':          '+ 를 눌러 활동을 추가해보세요',
     'accom.title':          '숙소',
     'accom.add':            '숙소 추가',
     'accom.edit_stay':      '숙소 수정',

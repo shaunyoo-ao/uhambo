@@ -19,7 +19,7 @@ const CAT_ICONS = {
   transport: '🚗', food: '🍔', accom: '🏨',
   activity: '⚡', shopping: '🛍️', other: '💳'
 };
-const CATS = ['transport', 'food', 'accom', 'activity', 'shopping', 'other'];
+const CATS = ['food', 'shopping', 'transport', 'activity', 'accom', 'other'];
 
 export async function render(container, ctx) {
   _ctx = ctx;

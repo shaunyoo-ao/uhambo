@@ -52,7 +52,7 @@ async function renderList(items) {
     el.innerHTML = `<div class="empty-state" style="padding-top:40px">
       <div class="empty-icon">🏨</div>
       <div class="empty-title">${t('common.empty')}</div>
-      <div class="empty-sub">Tap + to add a stay</div>
+      <div class="empty-sub">${t('accom.tap_add')}</div>
     </div>`;
     return;
   }

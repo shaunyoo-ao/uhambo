@@ -28,7 +28,7 @@ export async function getWeather(lat, lng) {
   } catch (_) {}
 
   try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=temperature_2m_max,temperature_2m_min,weathercode,precipitation_sum&current_weather=true&timezone=auto&forecast_days=7`;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=temperature_2m_max,temperature_2m_min,weathercode,precipitation_sum,precipitation_probability_max&current_weather=true&timezone=auto&forecast_days=7`;
     const res = await fetch(url);
     const raw = await res.json();
 
@@ -39,6 +39,8 @@ export async function getWeather(lat, lng) {
       code: raw.daily.weathercode[i],
       icon: weatherIcon(raw.daily.weathercode[i]),
       precipitation: raw.daily.precipitation_sum[i],
+      precip: raw.daily.precipitation_probability_max?.[i] ?? null,
+      precipIsProb: true,
     }));
 
     const current = raw.current_weather ? {
@@ -62,12 +64,14 @@ export async function getTripWeather(lat, lng, startDate, endDate) {
   const start = startDate || today;
   const end   = endDate   || new Date(Date.now() + 6 * 86400000).toISOString().slice(0, 10);
 
-  const baseUrl = end < today
+  const isPast = end < today;
+  const baseUrl = isPast
     ? 'https://archive-api.open-meteo.com/v1/archive'
     : 'https://api.open-meteo.com/v1/forecast';
+  const precipParam = isPast ? 'precipitation_sum' : 'precipitation_probability_max';
 
   try {
-    const url = `${baseUrl}?latitude=${lat}&longitude=${lng}&daily=temperature_2m_max,temperature_2m_min,weathercode&start_date=${start}&end_date=${end}&timezone=auto`;
+    const url = `${baseUrl}?latitude=${lat}&longitude=${lng}&daily=temperature_2m_max,temperature_2m_min,weathercode,${precipParam}&start_date=${start}&end_date=${end}&timezone=auto`;
     const res = await fetch(url);
     const raw = await res.json();
     if (!raw.daily) return null;
@@ -76,6 +80,8 @@ export async function getTripWeather(lat, lng, startDate, endDate) {
       maxTemp: Math.round(raw.daily.temperature_2m_max[i]),
       minTemp: Math.round(raw.daily.temperature_2m_min[i]),
       icon: weatherIcon(raw.daily.weathercode[i]),
+      precip: raw.daily[precipParam]?.[i] ?? null,
+      precipIsProb: !isPast,
     }));
   } catch (_) {
     return null;
@@ -91,15 +97,26 @@ export async function geocodeCity(city) {
     if (cached.lat) return cached;
   } catch (_) {}
 
-  try {
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city)}&format=json&limit=1`;
-    const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
-    const data = await res.json();
-    if (data.length > 0) {
-      const result = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), name: data[0].display_name };
-      localStorage.setItem(cacheKey, JSON.stringify(result));
-      return result;
-    }
-  } catch (_) {}
+  const tryGeocode = async (query) => {
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
+      const res = await fetch(url, { headers: { 'Accept-Language': 'ko,en' } });
+      const data = await res.json();
+      if (data.length > 0) {
+        return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), name: data[0].display_name };
+      }
+    } catch (_) {}
+    return null;
+  };
+
+  // Try full string first, then first segment before comma as fallback
+  let result = await tryGeocode(city);
+  if (!result && city.includes(',')) {
+    result = await tryGeocode(city.split(',')[0].trim());
+  }
+  if (result) {
+    localStorage.setItem(cacheKey, JSON.stringify(result));
+    return result;
+  }
   return null;
 }
