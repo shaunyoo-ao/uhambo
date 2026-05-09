@@ -182,6 +182,7 @@ function openNewTrip() {
     openModal({
       title: 'New Trip',
       body: `
+        <div id="trip-save-progress" class="modal-progress"></div>
         <form id="new-trip-form">
           <div class="form-group">
             <label class="form-label">Trip Name</label>
@@ -220,6 +221,16 @@ function openNewTrip() {
 async function submitNewTrip() {
   const form = document.getElementById('new-trip-form');
   if (!form.checkValidity()) { form.reportValidity(); return; }
+
+  const createBtn = document.querySelector('#modal-root .btn-primary');
+  const cancelBtn = document.querySelector('#modal-root .btn-ghost');
+  const progress  = document.getElementById('trip-save-progress');
+
+  createBtn.disabled = true;
+  if (cancelBtn) cancelBtn.disabled = true;
+  createBtn.textContent = 'Saving…';
+  if (progress) progress.classList.add('saving');
+
   const data = Object.fromEntries(new FormData(form));
   try {
     const tripId = await createTrip(currentUser.uid, data);
@@ -232,6 +243,10 @@ async function submitNewTrip() {
     showToast('Trip created');
     navigate(localStorage.getItem('lastRoute') || 'dashboard');
   } catch (e) {
+    if (progress) progress.classList.remove('saving');
+    createBtn.disabled = false;
+    if (cancelBtn) cancelBtn.disabled = false;
+    createBtn.textContent = 'Create';
     showToast('Failed to create trip: ' + e.message);
   }
 }

@@ -1,7 +1,8 @@
 export const CURRENCIES = [
-  { code: 'KRW', symbol: '₩', label: 'Korean Won',    decimals: 0 },
-  { code: 'USD', symbol: '$', label: 'US Dollar',      decimals: 2 },
-  { code: 'EUR', symbol: '€', label: 'Euro',           decimals: 2 },
+  { code: 'KRW', symbol: '₩', label: 'Korean Won',          decimals: 0 },
+  { code: 'USD', symbol: '$', label: 'US Dollar',            decimals: 2 },
+  { code: 'EUR', symbol: '€', label: 'Euro',                 decimals: 2 },
+  { code: 'ZAR', symbol: 'R', label: 'South African Rand',   decimals: 2 },
 ];
 
 let _currency = localStorage.getItem('currency') || 'KRW';
@@ -45,7 +46,7 @@ export async function ensureRates() {
   } catch (_) {}
 
   // Fallback static rates (approximate)
-  _rates = { KRW: 1, USD: 0.00075, EUR: 0.00069 };
+  _rates = { KRW: 1, USD: 0.00075, EUR: 0.00069, ZAR: 0.01372 };
   return _rates;
 }
 
