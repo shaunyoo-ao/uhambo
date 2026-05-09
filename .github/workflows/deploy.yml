@@ -12,16 +12,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Deploy Firestore indexes and rules
-        run: |
-          npm install -g firebase-tools
-          echo "$FIREBASE_SA" > /tmp/sa.json
-          GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json \
-            firebase deploy --only firestore --project yonke-uhambo
-          rm -f /tmp/sa.json
-        env:
-          FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:

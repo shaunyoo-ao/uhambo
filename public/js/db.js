@@ -17,6 +17,13 @@ function snap(snapshot) {
   return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
+function sortByDateTime(items) {
+  return items.sort((a, b) => {
+    const d = (a.date || '').localeCompare(b.date || '');
+    return d !== 0 ? d : (a.time || '').localeCompare(b.time || '');
+  });
+}
+
 // ── Trips ────────────────────────────────────────────────────────
 export async function getTrips(uid) {
   const q = query(tripsRef(uid), orderBy('createdAt', 'desc'));
@@ -48,14 +55,14 @@ export async function deleteTrip(uid, tid) {
 
 // ── Itinerary ────────────────────────────────────────────────────
 export async function getItinerary(uid, tid) {
-  const q = query(subRef(uid, tid, 'itinerary'), orderBy('date'), orderBy('time'));
+  const q = query(subRef(uid, tid, 'itinerary'), orderBy('date'));
   const s = await getDocs(q);
-  return snap(s);
+  return sortByDateTime(snap(s));
 }
 
 export function subscribeItinerary(uid, tid, cb) {
-  const q = query(subRef(uid, tid, 'itinerary'), orderBy('date'), orderBy('time'));
-  return onSnapshot(q, s => cb(snap(s)));
+  const q = query(subRef(uid, tid, 'itinerary'), orderBy('date'));
+  return onSnapshot(q, s => cb(sortByDateTime(snap(s))));
 }
 
 export async function addItineraryItem(uid, tid, data) {
@@ -96,14 +103,14 @@ export async function deleteAccommodation(uid, tid, id) {
 
 // ── Activities ───────────────────────────────────────────────────
 export async function getActivities(uid, tid) {
-  const q = query(subRef(uid, tid, 'activities'), orderBy('date'), orderBy('time'));
+  const q = query(subRef(uid, tid, 'activities'), orderBy('date'));
   const s = await getDocs(q);
-  return snap(s);
+  return sortByDateTime(snap(s));
 }
 
 export function subscribeActivities(uid, tid, cb) {
-  const q = query(subRef(uid, tid, 'activities'), orderBy('date'), orderBy('time'));
-  return onSnapshot(q, s => cb(snap(s)));
+  const q = query(subRef(uid, tid, 'activities'), orderBy('date'));
+  return onSnapshot(q, s => cb(sortByDateTime(snap(s))));
 }
 
 export async function addActivity(uid, tid, data) {
