@@ -91,15 +91,16 @@ export async function getTripWeather(lat, lng, startDate, endDate) {
 // Geocode a city name to lat/lng via Nominatim (OpenStreetMap, free)
 export async function geocodeCity(city) {
   if (!city) return null;
-  const cacheKey = `geo_${city.toLowerCase().replace(/\s+/g, '_')}`;
+  const key = city.toLowerCase().trim();
+  const cacheKey = `geo_${key.replace(/\s+/g, '_')}`;
   try {
     const cached = JSON.parse(localStorage.getItem(cacheKey) || '{}');
     if (cached.lat) return cached;
   } catch (_) {}
 
-  const tryGeocode = async (query) => {
+  const tryGeocode = async (q) => {
     try {
-      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`;
       const res = await fetch(url, { headers: { 'Accept-Language': 'ko,en' } });
       const data = await res.json();
       if (data.length > 0) {
@@ -109,11 +110,12 @@ export async function geocodeCity(city) {
     return null;
   };
 
-  // Try full string first, then first segment before comma as fallback
+  // Try full string first, then first segment before comma
   let result = await tryGeocode(city);
   if (!result && city.includes(',')) {
     result = await tryGeocode(city.split(',')[0].trim());
   }
+
   if (result) {
     localStorage.setItem(cacheKey, JSON.stringify(result));
     return result;
