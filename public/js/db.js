@@ -49,8 +49,21 @@ export async function updateTrip(uid, tid, data) {
   return updateDoc(tripRef(uid, tid), { ...data, updatedAt: serverTimestamp() });
 }
 
+const SUBCOLLECTIONS = ['itinerary', 'accommodation', 'activities', 'expenses'];
+
 export async function deleteTrip(uid, tid) {
+  for (const sub of SUBCOLLECTIONS) {
+    const s = await getDocs(subRef(uid, tid, sub));
+    await Promise.all(s.docs.map(d => deleteDoc(d.ref)));
+  }
   return deleteDoc(tripRef(uid, tid));
+}
+
+export async function deleteAllTrips(uid) {
+  const s = await getDocs(tripsRef(uid));
+  for (const tripDoc of s.docs) {
+    await deleteTrip(uid, tripDoc.id);
+  }
 }
 
 // ── Itinerary ────────────────────────────────────────────────────
