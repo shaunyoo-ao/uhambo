@@ -129,6 +129,28 @@ export function closeModal() {
   if (overlay._onClose) { overlay._onClose(); overlay._onClose = null; }
 }
 
+export function setModalSaving(saving) {
+  const progress = document.getElementById('modal-save-progress');
+  const primary  = document.querySelector('#modal-root .btn-primary');
+  const ghost    = document.querySelector('#modal-root .btn-ghost');
+  if (saving) {
+    progress?.classList.add('saving');
+    if (primary) {
+      primary._origText   = primary.textContent.trim();
+      primary.textContent = primary._origText === 'Add' ? 'Adding…' : 'Saving…';
+      primary.disabled    = true;
+    }
+    if (ghost) ghost.disabled = true;
+  } else {
+    progress?.classList.remove('saving');
+    if (primary) {
+      if (primary._origText) primary.textContent = primary._origText;
+      primary.disabled = false;
+    }
+    if (ghost) ghost.disabled = false;
+  }
+}
+
 // ── Toast ────────────────────────────────────────────────────────
 export function showToast(msg, duration = 2500) {
   const el = document.getElementById('toast');
@@ -204,7 +226,6 @@ function openNewTrip() {
     openModal({
       title: 'New Trip',
       body: `
-        <div id="trip-save-progress" class="modal-progress"></div>
         <form id="new-trip-form">
           <div class="form-group">
             <label class="form-label">Trip Name</label>
@@ -247,14 +268,7 @@ async function submitNewTrip() {
   if (!form.checkValidity()) { form.reportValidity(); return; }
 
   _savingTrip = true;
-  const createBtn = document.querySelector('#modal-root .btn-primary');
-  const cancelBtn = document.querySelector('#modal-root .btn-ghost');
-  const progress  = document.getElementById('trip-save-progress');
-
-  if (createBtn) { createBtn.disabled = true; createBtn.textContent = 'Saving…'; }
-  if (cancelBtn)   cancelBtn.disabled = true;
-  if (progress)    progress.classList.add('saving');
-
+  setModalSaving(true);
   const data = Object.fromEntries(new FormData(form));
   try {
     const tripId = await createTrip(currentUser.uid, data);
@@ -267,9 +281,7 @@ async function submitNewTrip() {
     showToast('Trip created');
     navigate(localStorage.getItem('lastRoute') || 'dashboard');
   } catch (e) {
-    if (progress)    progress.classList.remove('saving');
-    if (createBtn) { createBtn.disabled = false; createBtn.textContent = 'Create'; }
-    if (cancelBtn)   cancelBtn.disabled = false;
+    setModalSaving(false);
     showToast('Failed to create trip: ' + e.message);
   } finally {
     _savingTrip = false;
@@ -398,6 +410,7 @@ window.__saveEditTrip = async () => {
   const form = document.getElementById('edit-trip-form');
   if (!form || !form.checkValidity()) { form?.reportValidity(); return; }
   const data = Object.fromEntries(new FormData(form));
+  setModalSaving(true);
   try {
     await updateTrip(currentUser.uid, currentTripId, data);
     const opt = document.getElementById('trip-selector').querySelector(`option[value="${currentTripId}"]`);
@@ -406,7 +419,10 @@ window.__saveEditTrip = async () => {
     closeModal();
     showToast('Trip updated');
     navigate(localStorage.getItem('lastRoute') || 'dashboard');
-  } catch (e) { showToast('Error: ' + e.message); }
+  } catch (e) {
+    setModalSaving(false);
+    showToast('Error: ' + e.message);
+  }
 };
 
 // ── Init ─────────────────────────────────────────────────────────

@@ -3,7 +3,7 @@ import {
   subscribeActivities, addActivity, updateActivity, deleteActivity, toggleActivity,
   upsertLinkedExpense, deleteLinkedExpense, upsertLinkedItinItem, deleteLinkedItinItems,
 } from '../db.js';
-import { openModal, closeModal, showToast, showConfirm } from '../app.js';
+import { openModal, closeModal, showToast, showConfirm, setModalSaving } from '../app.js';
 import { formatConverted, getCurrency, CURRENCIES } from '../currency.js';
 
 let _unsub = null;
@@ -233,6 +233,7 @@ function openItemModal(item) {
     data.links = _links;
     const { userId, tripId } = _ctx;
     _adding = true;
+    setModalSaving(true);
     try {
       let savedId = id;
       if (id) {
@@ -261,8 +262,10 @@ function openItemModal(item) {
         type: 'activity',
       });
       closeModal();
-    } catch (e) { showToast('Error: ' + e.message); }
-    finally { _adding = false; }
+    } catch (e) {
+      setModalSaving(false);
+      showToast('Error: ' + e.message);
+    } finally { _adding = false; }
   };
 
   window.__deleteActItem = async (id) => {
