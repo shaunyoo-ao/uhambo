@@ -1,0 +1,23 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "activities",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "date",   "order": "ASCENDING" },
+        { "fieldPath": "time",   "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "itinerary",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "date",   "order": "ASCENDING" },
+        { "fieldPath": "time",   "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
