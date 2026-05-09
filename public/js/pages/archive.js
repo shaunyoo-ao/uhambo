@@ -1,6 +1,7 @@
 import { t } from '../i18n.js';
 import { getTrip, getItinerary, getAccommodation, getActivities, getExpenses } from '../db.js';
 import { convert, formatCurrency, getCurrency, ensureRates } from '../currency.js';
+import { calcMileage } from '../mileage.js';
 
 let _ctx = null;
 
@@ -64,6 +65,9 @@ export async function render(container, ctx) {
       }
     });
 
+    // Mileage
+    const mileageKm = await calcMileage(itinerary);
+
     // Activities completed
     const completedActs = activities.filter(a => a.completed).length;
 
@@ -107,14 +111,14 @@ export async function render(container, ctx) {
             ${trip?.startDate ? `<div class="stat-sub">${trip.startDate}</div>` : ''}
           </div>
           <div class="stat-card">
-            <div class="stat-value mono">${totalNights}</div>
-            <div class="stat-label">${t('arch.nights')}</div>
-            <div class="stat-sub">${accommodation.length} stays</div>
+            <div class="stat-value mono">${mileageKm} km</div>
+            <div class="stat-label">${t('arch.mileage')}</div>
+            <div class="stat-sub">${accommodation.length} ${t('arch.stays_label')}</div>
           </div>
           <div class="stat-card">
             <div class="stat-value mono">${completedActs}</div>
             <div class="stat-label">${t('arch.activities')}</div>
-            <div class="stat-sub">${activities.length} total</div>
+            <div class="stat-sub">${activities.length} ${t('arch.total_label')}</div>
           </div>
           <div class="stat-card">
             <div class="stat-value mono">${places.size}</div>
@@ -171,7 +175,7 @@ export async function render(container, ctx) {
         ${activities.length > 0 ? `
         <div class="card" style="margin-bottom:16px">
           <div class="card-header">
-            <span class="eyebrow">Activity Progress</span>
+            <span class="eyebrow">${t('arch.act_prog')}</span>
             <span class="mono text-sm">${completedActs}/${activities.length}</span>
           </div>
           <div class="card-body">

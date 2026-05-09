@@ -1,11 +1,12 @@
 import { t } from '../i18n.js';
-import { getTrip } from '../db.js';
+import { getTrip, getItinerary } from '../db.js';
 import { subscribeItinerary } from '../db.js';
 import { getExpenses } from '../db.js';
 import { getAccommodation } from '../db.js';
 import { getActivities } from '../db.js';
-import { getWeather, geocodeCity } from '../weather.js';
-import { formatConverted, getCurrency, ensureRates } from '../currency.js';
+import { getTripWeather, getWeather, geocodeCity } from '../weather.js';
+import { formatConverted, getCurrency, getCurrencyMeta, ensureRates } from '../currency.js';
+import { calcMileage } from '../mileage.js';
 import { navigate } from '../app.js';
 
 let _unsubItinerary = null;
@@ -29,11 +30,12 @@ export async function render(container, { userId, tripId }) {
   container.innerHTML = `<div class="loading-center"><div class="spinner"></div></div>`;
 
   try {
-    const [trip, expenses, accommodation, activities] = await Promise.all([
+    const [trip, expenses, accommodation, activities, itinerary] = await Promise.all([
       getTrip(userId, tripId),
       getExpenses(userId, tripId),
       getAccommodation(userId, tripId),
       getActivities(userId, tripId),
+      getItinerary(userId, tripId),
     ]);
 
     if (!trip) {
@@ -44,7 +46,6 @@ export async function render(container, { userId, tripId }) {
     await ensureRates();
 
     const today = new Date().toISOString().slice(0, 10);
-    const currency = getCurrency();
 
     // Compute total expenses
     let totalKRW = 0;
@@ -74,6 +75,9 @@ export async function render(container, { userId, tripId }) {
 
     const completedActs = activities.filter(a => a.completed).length;
 
+    // Mileage
+    const mileageKm = await calcMileage(itinerary);
+
     container.innerHTML = `
       <div class="page" style="padding-bottom:24px">
         <!-- Trip header -->
@@ -92,16 +96,16 @@ export async function render(container, { userId, tripId }) {
           </div>
           <div class="stat-card">
             <div class="stat-value mono">${activities.length}</div>
-            <div class="stat-label">${t('nav.activities')}</div>
-            <div class="stat-sub">${completedActs} completed</div>
+            <div class="stat-label">${t('act.title')}</div>
+            <div class="stat-sub">${completedActs} ${t('dash.completed').toLowerCase()}</div>
           </div>
           <div class="stat-card">
             <div class="stat-value mono">${accommodation.length}</div>
-            <div class="stat-label">Stays</div>
+            <div class="stat-label">${t('dash.stays')}</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value mono">${expenses.length}</div>
-            <div class="stat-label">Expenses</div>
+            <div class="stat-value mono">${mileageKm} km</div>
+            <div class="stat-label">${t('dash.mileage')}</div>
           </div>
         </div>
 
@@ -122,7 +126,7 @@ export async function render(container, { userId, tripId }) {
         <div class="card" style="margin-bottom:16px">
           <div class="card-header">
             <span class="eyebrow">${t('dash.upcoming')}</span>
-            <button class="btn btn-ghost btn-sm" onclick="window.__navigate('itinerary')">View all</button>
+            <button class="btn btn-ghost btn-sm" onclick="window.__navigate('itinerary')">${t('dash.view_all')}</button>
           </div>
           <div id="upcoming-body">
             <div class="loading-center" style="padding:16px"><div class="spinner" style="width:20px;height:20px;border-width:2px"></div></div>
@@ -132,8 +136,8 @@ export async function render(container, { userId, tripId }) {
         <!-- Recent expenses -->
         <div class="card">
           <div class="card-header">
-            <span class="eyebrow">Recent Expenses</span>
-            <button class="btn btn-ghost btn-sm" onclick="window.__navigate('expenses')">View all</button>
+            <span class="eyebrow">${t('dash.recent_exp')}</span>
+            <button class="btn btn-ghost btn-sm" onclick="window.__navigate('expenses')">${t('dash.view_all')}</button>
           </div>
           <div id="expenses-body">
             ${renderRecentExpenses(expenses.slice(0, 4))}
@@ -177,31 +181,30 @@ async function loadWeather(trip) {
       return;
     }
 
-    const weather = await getWeather(lat, lng);
-    if (!weather) {
+    // Use trip-date-ranged weather if dates set, otherwise 7-day forecast
+    let days;
+    if (trip.startDate && trip.endDate) {
+      days = await getTripWeather(lat, lng, trip.startDate, trip.endDate);
+    } else {
+      const weather = await getWeather(lat, lng);
+      days = weather?.days || null;
+    }
+
+    if (!days || days.length === 0) {
       weatherEl.innerHTML = `<div class="text-sm text-muted">Weather unavailable</div>`;
       return;
     }
 
-    const today = new Date();
-    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const todayStr = new Date().toISOString().slice(0, 10);
 
     weatherEl.innerHTML = `
-      ${weather.current ? `
-        <div class="row gap-12" style="margin-bottom:12px">
-          <span style="font-size:32px">${weather.current.icon}</span>
-          <div>
-            <div class="mono text-xl">${weather.current.temp}°C</div>
-            <div class="text-xs text-muted">Now</div>
-          </div>
-        </div>
-      ` : ''}
       <div class="weather-widget">
-        ${weather.days.map((day, i) => {
+        ${days.slice(0, 7).map((day) => {
           const d = new Date(day.date);
-          const label = i === 0 ? 'Today' : days[d.getDay()];
+          const label = day.date === todayStr ? 'Today' : dayNames[d.getDay()];
           return `
-            <div class="weather-day ${i === 0 ? 'today' : ''}">
+            <div class="weather-day ${day.date === todayStr ? 'today' : ''}">
               <div class="weather-day-label">${label}</div>
               <div class="weather-icon">${day.icon}</div>
               <div class="weather-temp">${day.maxTemp}°</div>
@@ -218,7 +221,7 @@ async function loadWeather(trip) {
 function renderUpcoming(items) {
   if (items.length === 0) {
     return `<div class="empty-state" style="padding:20px 16px">
-      <div class="empty-sub">No upcoming events</div>
+      <div class="empty-sub">${t('dash.no_events')}</div>
     </div>`;
   }
   const typeIcons = { travel: '✈️', meal: '🍽️', activity: '⚡', rest: '🏨', other: '📌' };
@@ -234,10 +237,13 @@ function renderUpcoming(items) {
 
 function renderRecentExpenses(expenses) {
   if (expenses.length === 0) {
-    return `<div class="empty-state" style="padding:20px 16px"><div class="empty-sub">No expenses yet</div></div>`;
+    return `<div class="empty-state" style="padding:20px 16px"><div class="empty-sub">${t('dash.no_expenses')}</div></div>`;
   }
-  const catIcons = { transport:'🚗', food:'🍔', accom:'🏨', activity:'⚡', shopping:'🛍️', other:'💳' };
-  return expenses.map(e => `
+  const catIcons = { transport: '🚗', food: '🍔', accom: '🏨', activity: '⚡', shopping: '🛍️', other: '💳' };
+  return expenses.map(e => {
+    const meta = getCurrencyMeta(e.currency || 'KRW');
+    const amtStr = e.amount ? `${meta.symbol}${Number(e.amount).toLocaleString()}` : '—';
+    return `
     <div class="list-item">
       <div class="list-icon" style="background:var(--surface-2)">${catIcons[e.category] || '💳'}</div>
       <div class="list-content">
@@ -245,7 +251,8 @@ function renderRecentExpenses(expenses) {
         <div class="list-sub">${e.date || ''}</div>
       </div>
       <div class="list-meta">
-        <div class="mono text-sm text-accent">${e.amount ? (e.currency === 'KRW' ? '₩' : e.currency === 'USD' ? '$' : '€') + Number(e.amount).toLocaleString() : '—'}</div>
+        <div class="mono text-sm text-accent">${amtStr}</div>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }

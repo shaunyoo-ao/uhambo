@@ -56,6 +56,32 @@ export async function getWeather(lat, lng) {
   }
 }
 
+export async function getTripWeather(lat, lng, startDate, endDate) {
+  if (!lat || !lng) return null;
+  const today = new Date().toISOString().slice(0, 10);
+  const start = startDate || today;
+  const end   = endDate   || new Date(Date.now() + 6 * 86400000).toISOString().slice(0, 10);
+
+  const baseUrl = end < today
+    ? 'https://archive-api.open-meteo.com/v1/archive'
+    : 'https://api.open-meteo.com/v1/forecast';
+
+  try {
+    const url = `${baseUrl}?latitude=${lat}&longitude=${lng}&daily=temperature_2m_max,temperature_2m_min,weathercode&start_date=${start}&end_date=${end}&timezone=auto`;
+    const res = await fetch(url);
+    const raw = await res.json();
+    if (!raw.daily) return null;
+    return raw.daily.time.map((date, i) => ({
+      date,
+      maxTemp: Math.round(raw.daily.temperature_2m_max[i]),
+      minTemp: Math.round(raw.daily.temperature_2m_min[i]),
+      icon: weatherIcon(raw.daily.weathercode[i]),
+    }));
+  } catch (_) {
+    return null;
+  }
+}
+
 // Geocode a city name to lat/lng via Nominatim (OpenStreetMap, free)
 export async function geocodeCity(city) {
   if (!city) return null;

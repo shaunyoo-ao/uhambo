@@ -1,12 +1,14 @@
 import { t } from '../i18n.js';
 import { subscribeExpenses, addExpense, updateExpense, deleteExpense } from '../db.js';
 import { openModal, closeModal, showToast, showConfirm } from '../app.js';
-import { formatConverted, convert, getCurrency, formatCurrency, ensureRates, CURRENCIES } from '../currency.js';
+import { formatConverted, convert, getCurrency, getCurrencyMeta, formatCurrency, ensureRates, CURRENCIES } from '../currency.js';
 
 let _unsub = null;
 let _ctx = null;
 let _items = [];
 let _filterCat = 'all';
+let _adding = false;
+let _links = [];
 
 export function destroy() {
   if (_unsub) { _unsub(); _unsub = null; }
@@ -43,7 +45,10 @@ export async function render(container, ctx) {
     <div id="exp-list"><div class="loading-center"><div class="spinner"></div></div></div>
     <div style="height:80px"></div>`;
 
-  addFAB(() => openItemModal(null));
+  addFAB(() => {
+    if (_adding) return;
+    openItemModal(null);
+  });
 
   window.__expFilter = (cat) => {
     _filterCat = cat;
@@ -67,7 +72,6 @@ async function renderSummary(items) {
   await ensureRates();
   const currency = getCurrency();
 
-  // Sum all in display currency
   let total = 0;
   const byCat = {};
   for (const e of items) {
@@ -88,7 +92,7 @@ async function renderSummary(items) {
             <div class="mono text-xl text-accent">${totalStr}</div>
           </div>
           <div style="text-align:right">
-            <div class="eyebrow" style="margin-bottom:2px">${items.length} items</div>
+            <div class="eyebrow" style="margin-bottom:2px">${items.length} ${t('exp.items').toLowerCase()}</div>
             <div class="text-sm text-muted">${currency}</div>
           </div>
         </div>
@@ -134,13 +138,11 @@ function drawPieChart(byCat, total) {
     angle += sweep;
   });
 
-  // Center hole
   ctx2d.beginPath();
   ctx2d.arc(cx, cy, r * 0.52, 0, 2 * Math.PI);
   ctx2d.fillStyle = '#16181c';
   ctx2d.fill();
 
-  // Legend
   if (legend) {
     legend.innerHTML = entries.map(([cat, val]) => {
       const pct = Math.round((val / total) * 100);
@@ -161,7 +163,7 @@ async function renderList(items) {
     el.innerHTML = `<div class="empty-state" style="padding-top:40px">
       <div class="empty-icon">💳</div>
       <div class="empty-title">${_filterCat === 'all' ? t('common.empty') : 'No ' + _filterCat + ' expenses'}</div>
-      ${_filterCat === 'all' ? `<div class="empty-sub">Tap + to add an expense</div>` : ''}
+      ${_filterCat === 'all' ? `<div class="empty-sub">${t('exp.tap_add')}</div>` : ''}
     </div>`;
     return;
   }
@@ -169,8 +171,12 @@ async function renderList(items) {
   const currency = getCurrency();
   const rows = await Promise.all(filtered.map(async e => {
     const displayAmt = await formatConverted(e.amount || 0, e.currency || 'KRW');
+    const meta = getCurrencyMeta(e.currency || 'KRW');
     const origAmt = e.currency !== currency
-      ? `<div class="text-xs text-muted">${e.currency === 'KRW' ? '₩' : e.currency === 'USD' ? '$' : '€'}${Number(e.amount).toLocaleString()}</div>`
+      ? `<div class="text-xs text-muted">${meta.symbol}${Number(e.amount).toLocaleString()}</div>`
+      : '';
+    const syncBadge = e.sourceType
+      ? `<div class="badge badge-sky" style="margin-top:4px;font-size:10px">↔ ${e.sourceType}</div>`
       : '';
     return `
       <div class="list-item" onclick="window.__editExpItem('${e.id}')">
@@ -182,6 +188,7 @@ async function renderList(items) {
         <div class="list-meta">
           <div class="mono text-sm text-accent">${displayAmt}</div>
           ${origAmt}
+          ${syncBadge}
         </div>
       </div>`;
   }));
@@ -194,9 +201,18 @@ async function renderList(items) {
   };
 }
 
+function linkListHTML(links) {
+  return (links || []).map((url, i) => `
+    <div class="link-item">
+      <a href="${url}" target="_blank" rel="noopener">${url}</a>
+      <button type="button" class="link-item-del" onclick="window.__expRmLink(${i})">×</button>
+    </div>`).join('');
+}
+
 function openItemModal(item) {
   const isEdit = !!item;
   const today = new Date().toISOString().slice(0, 10);
+  _links = item?.links ? [...item.links] : [];
 
   openModal({
     title: isEdit ? 'Edit Expense' : t('exp.add'),
@@ -229,22 +245,48 @@ function openItemModal(item) {
           <input class="form-input" name="date" type="date" value="${item?.date || today}">
         </div>
         <div class="form-group">
+          <label class="form-label">${t('common.links')}</label>
+          <div class="link-list" id="exp-link-list">${linkListHTML(_links)}</div>
+          <div class="link-add-row">
+            <input class="form-input" id="exp-link-input" placeholder="https://..." type="url">
+            <button type="button" class="btn btn-secondary btn-sm link-add-btn" onclick="window.__expAddLink()">+</button>
+          </div>
+        </div>
+        <div class="form-group">
           <label class="form-label">${t('exp.notes')}</label>
           <textarea class="form-textarea" name="notes" placeholder="Optional notes…">${item?.notes || ''}</textarea>
         </div>
       </form>`,
     footer: `
       ${isEdit ? `<button class="btn btn-danger btn-sm" onclick="window.__deleteExpItem('${item.id}')">Delete</button>` : ''}
-      <button class="btn btn-ghost" style="flex:1" onclick="window.__closeModal()">Cancel</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="window.__closeModal()">${t('common.cancel')}</button>
       <button class="btn btn-primary" style="flex:2" onclick="window.__saveExpItem(${isEdit ? `'${item.id}'` : 'null'})">
         ${isEdit ? t('common.save') : t('common.add')}</button>`
   });
 
+  window.__expAddLink = () => {
+    const inp = document.getElementById('exp-link-input');
+    const val = inp.value.trim();
+    if (!val) return;
+    _links.push(val);
+    inp.value = '';
+    const el = document.getElementById('exp-link-list');
+    if (el) el.innerHTML = linkListHTML(_links);
+  };
+  window.__expRmLink = (i) => {
+    _links.splice(i, 1);
+    const el = document.getElementById('exp-link-list');
+    if (el) el.innerHTML = linkListHTML(_links);
+  };
+
   window.__saveExpItem = async (id) => {
+    if (_adding) return;
     const form = document.getElementById('exp-form');
     if (!form.checkValidity()) { form.reportValidity(); return; }
     const data = Object.fromEntries(new FormData(form));
     data.amount = Number(data.amount);
+    data.links = _links;
+    _adding = true;
     try {
       if (id) {
         await updateExpense(_ctx.userId, _ctx.tripId, id, data);
@@ -255,6 +297,7 @@ function openItemModal(item) {
       }
       closeModal();
     } catch (e) { showToast('Error: ' + e.message); }
+    finally { _adding = false; }
   };
 
   window.__deleteExpItem = async (id) => {

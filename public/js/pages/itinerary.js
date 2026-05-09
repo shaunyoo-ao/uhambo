@@ -4,6 +4,7 @@ import { openModal, closeModal, showToast, showConfirm } from '../app.js';
 
 let _unsub = null;
 let _ctx = null;
+let _links = [];
 
 export function destroy() {
   if (_unsub) { _unsub(); _unsub = null; }
@@ -45,7 +46,7 @@ function renderList(items) {
     el.innerHTML = `<div class="empty-state" style="padding-top:40px">
       <div class="empty-icon">📅</div>
       <div class="empty-title">${t('common.empty')}</div>
-      <div class="empty-sub">Tap + to add your first event</div>
+      <div class="empty-sub">${t('itin.no_events')}</div>
     </div>`;
     return;
   }
@@ -80,10 +81,11 @@ function renderList(items) {
               <div class="row gap-8" style="margin-bottom:4px">
                 <span>${TYPE_ICONS[item.type] || '📌'}</span>
                 <span class="text-sm font-medium">${item.title || '—'}</span>
-                <span class="badge badge-muted" style="margin-left:auto;font-size:10px">${item.type || 'other'}</span>
+                ${item.sourceType ? `<span class="badge badge-sky" style="margin-left:auto;font-size:10px">↔ synced</span>` : `<span class="badge badge-muted" style="margin-left:auto;font-size:10px">${item.type || 'other'}</span>`}
               </div>
               ${item.location ? `<div class="text-xs text-muted">📍 ${item.location}</div>` : ''}
               ${item.description ? `<div class="text-sm" style="color:var(--cream-dim);margin-top:4px">${item.description}</div>` : ''}
+              ${(item.links || []).length > 0 ? `<div class="row gap-6" style="margin-top:4px;flex-wrap:wrap">${item.links.map(u => `<a href="${u}" target="_blank" rel="noopener" class="text-xs" style="color:var(--sky)" onclick="event.stopPropagation()">🔗 Link</a>`).join('')}</div>` : ''}
             </div>
           </div>
         </div>`).join('')}`;
@@ -95,10 +97,19 @@ function renderList(items) {
   };
 }
 
+function linkListHTML(links) {
+  return (links || []).map((url, i) => `
+    <div class="link-item">
+      <a href="${url}" target="_blank" rel="noopener">${url}</a>
+      <button type="button" class="link-item-del" onclick="window.__itinRmLink(${i})">×</button>
+    </div>`).join('');
+}
+
 function openItemModal(item) {
   const isEdit = !!item;
   const today = new Date().toISOString().slice(0, 10);
   const types = ['travel', 'meal', 'activity', 'rest', 'other'];
+  _links = item?.links ? [...item.links] : [];
 
   openModal({
     title: isEdit ? t('common.edit') + ' Event' : t('itin.add'),
@@ -129,22 +140,46 @@ function openItemModal(item) {
           <input class="form-input" name="location" value="${item?.location || ''}" placeholder="e.g. Narita Airport">
         </div>
         <div class="form-group">
+          <label class="form-label">${t('common.links')}</label>
+          <div class="link-list" id="itin-link-list">${linkListHTML(_links)}</div>
+          <div class="link-add-row">
+            <input class="form-input" id="itin-link-input" placeholder="https://..." type="url">
+            <button type="button" class="btn btn-secondary btn-sm link-add-btn" onclick="window.__itinAddLink()">+</button>
+          </div>
+        </div>
+        <div class="form-group">
           <label class="form-label">${t('itin.notes')}</label>
           <textarea class="form-textarea" name="description" placeholder="Additional notes…">${item?.description || ''}</textarea>
         </div>
       </form>`,
     footer: `
       ${isEdit ? `<button class="btn btn-danger" onclick="window.__deleteItinItem('${item.id}')">Delete</button>` : ''}
-      <button class="btn btn-ghost" style="flex:1" onclick="window.__closeModal()">Cancel</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="window.__closeModal()">${t('common.cancel')}</button>
       <button class="btn btn-primary" style="flex:2" onclick="window.__saveItinItem(${isEdit ? `'${item.id}'` : 'null'})">
         ${isEdit ? t('common.save') : t('common.add')}
       </button>`
   });
 
+  window.__itinAddLink = () => {
+    const inp = document.getElementById('itin-link-input');
+    const val = inp.value.trim();
+    if (!val) return;
+    _links.push(val);
+    inp.value = '';
+    const el = document.getElementById('itin-link-list');
+    if (el) el.innerHTML = linkListHTML(_links);
+  };
+  window.__itinRmLink = (i) => {
+    _links.splice(i, 1);
+    const el = document.getElementById('itin-link-list');
+    if (el) el.innerHTML = linkListHTML(_links);
+  };
+
   window.__saveItinItem = async (id) => {
     const form = document.getElementById('itin-form');
     if (!form.checkValidity()) { form.reportValidity(); return; }
     const data = Object.fromEntries(new FormData(form));
+    data.links = _links;
     try {
       if (id) {
         await updateItineraryItem(_ctx.userId, _ctx.tripId, id, data);
@@ -174,9 +209,6 @@ function addFAB(container, onClick) {
   fab.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
   fab.addEventListener('click', onClick);
   document.getElementById('app').appendChild(fab);
-  // Cleanup on navigate
-  const orig = window.__fabCleanup;
-  window.__fabCleanup = () => { fab.remove(); if (orig) orig(); };
 }
 
 function formatDateLabel(date, today) {

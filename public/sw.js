@@ -1,4 +1,4 @@
-const VERSION = 'v3';
+const VERSION = 'v4';
 const APP_SHELL = 'app-shell-' + VERSION;
 const MAP_CACHE  = 'map-tiles-' + VERSION;
 const API_CACHE  = 'api-' + VERSION;
@@ -22,6 +22,7 @@ const PRECACHE = [
   '/js/pages/activities.js',
   '/js/pages/expenses.js',
   '/js/pages/archive.js',
+  '/js/mileage.js',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
 ];
