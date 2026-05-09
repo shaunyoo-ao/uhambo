@@ -1,7 +1,7 @@
 import { signInWithGoogle, signOut, onAuthStateChange, handleRedirectResult } from './auth.js';
 import { setLang, getLang, t } from './i18n.js';
 import { setCurrency, getCurrency, CURRENCIES } from './currency.js';
-import { getTrips, createTrip } from './db.js';
+import { getTrips, createTrip, deleteTrip, deleteAllTrips } from './db.js';
 
 // ── Global state ────────────────────────────────────────────────
 export let currentUser = null;
@@ -166,9 +166,18 @@ function openSettings() {
       </div>
       <div class="settings-group">
         <div class="eyebrow" style="margin-bottom:10px">Trip</div>
-        <button class="btn btn-secondary btn-sm" onclick="window.__newTrip()">+ New Trip</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-secondary btn-sm" onclick="window.__newTrip()">+ New Trip</button>
+          <button class="btn btn-sm" style="color:var(--rose);border-color:var(--rose);background:transparent"
+            onclick="window.__deleteCurrentTrip()">Delete Trip</button>
+        </div>
       </div>
-      <div class="settings-group" style="margin-top:24px">
+      <div class="settings-group" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">
+        <div class="eyebrow" style="margin-bottom:10px;color:var(--rose)">Danger Zone</div>
+        <button class="btn btn-sm btn-full" style="color:var(--rose);border-color:var(--rose);background:transparent"
+          onclick="window.__deleteAllData()">Delete All Trips &amp; Data</button>
+      </div>
+      <div class="settings-group" style="margin-top:16px">
         <button class="btn btn-ghost btn-full" onclick="window.__signOut()">Sign Out</button>
       </div>
     `,
@@ -310,6 +319,38 @@ window.__setCurrency = (code) => {
 };
 window.__newTrip = openNewTrip;
 window.__submitNewTrip = submitNewTrip;
+window.__deleteCurrentTrip = async () => {
+  if (!currentTripId) return;
+  const trips = await getTrips(currentUser.uid);
+  const trip  = trips.find(t => t.id === currentTripId);
+  closeModal();
+  const ok = await showConfirm(
+    'Delete Trip',
+    `Delete "${trip?.name || 'this trip'}" and all its data? This cannot be undone.`
+  );
+  if (!ok) return;
+  const deletingId = currentTripId;
+  currentTripId = null;
+  localStorage.removeItem('lastTripId');
+  await deleteTrip(currentUser.uid, deletingId);
+  await loadTrips(currentUser.uid);
+  navigate('dashboard');
+  showToast('Trip deleted');
+};
+window.__deleteAllData = async () => {
+  closeModal();
+  const ok = await showConfirm(
+    'Delete All Data',
+    'This will permanently delete ALL trips and all their data. Cannot be undone.'
+  );
+  if (!ok) return;
+  currentTripId = null;
+  localStorage.removeItem('lastTripId');
+  await deleteAllTrips(currentUser.uid);
+  await loadTrips(currentUser.uid);
+  navigate('dashboard');
+  showToast('All data deleted');
+};
 
 // ── Init ─────────────────────────────────────────────────────────
 async function initApp(user) {
