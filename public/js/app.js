@@ -8,6 +8,7 @@ export let currentUser = null;
 export let currentTripId = null;
 let currentPage = null;
 let _appInitialized = false; // guard against duplicate initApp calls
+let _savingTrip = false;     // guard against duplicate trip creation
 
 // ── Page registry ────────────────────────────────────────────────
 const routes = {
@@ -219,17 +220,19 @@ function openNewTrip() {
 }
 
 async function submitNewTrip() {
+  if (_savingTrip) return;          // block queued/double clicks
+
   const form = document.getElementById('new-trip-form');
   if (!form.checkValidity()) { form.reportValidity(); return; }
 
+  _savingTrip = true;
   const createBtn = document.querySelector('#modal-root .btn-primary');
   const cancelBtn = document.querySelector('#modal-root .btn-ghost');
   const progress  = document.getElementById('trip-save-progress');
 
-  createBtn.disabled = true;
-  if (cancelBtn) cancelBtn.disabled = true;
-  createBtn.textContent = 'Saving…';
-  if (progress) progress.classList.add('saving');
+  if (createBtn) { createBtn.disabled = true; createBtn.textContent = 'Saving…'; }
+  if (cancelBtn)   cancelBtn.disabled = true;
+  if (progress)    progress.classList.add('saving');
 
   const data = Object.fromEntries(new FormData(form));
   try {
@@ -243,11 +246,12 @@ async function submitNewTrip() {
     showToast('Trip created');
     navigate(localStorage.getItem('lastRoute') || 'dashboard');
   } catch (e) {
-    if (progress) progress.classList.remove('saving');
-    createBtn.disabled = false;
-    if (cancelBtn) cancelBtn.disabled = false;
-    createBtn.textContent = 'Create';
+    if (progress)    progress.classList.remove('saving');
+    if (createBtn) { createBtn.disabled = false; createBtn.textContent = 'Create'; }
+    if (cancelBtn)   cancelBtn.disabled = false;
     showToast('Failed to create trip: ' + e.message);
+  } finally {
+    _savingTrip = false;
   }
 }
 
