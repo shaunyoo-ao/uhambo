@@ -191,7 +191,7 @@ const translations = {
     'accom.currency':       '통화',
     'accom.notes':          '메모',
     // Activities
-    'act.title':        '활동',
+    'act.title':        'Activity',
     'act.add':          '활동 추가',
     'act.name':         '활동 이름',
     'act.date':         '날짜',

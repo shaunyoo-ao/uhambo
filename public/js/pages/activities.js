@@ -203,7 +203,7 @@ function openItemModal(item) {
         </div>
       </form>`,
     footer: `
-      ${isEdit ? `<button class="btn btn-danger btn-sm" onclick="window.__deleteActItem('${item.id}')">Delete</button>` : ''}
+      ${isEdit ? `<button class="btn btn-danger btn-sm" onclick="window.__deleteActItem('${item.id}')">${t('common.delete')}</button>` : ''}
       <button class="btn btn-ghost" style="flex:1" onclick="window.__closeModal()">${t('common.cancel')}</button>
       <button class="btn btn-primary" style="flex:2" onclick="window.__saveActItem(${isEdit ? `'${item.id}'` : 'null'})">
         ${isEdit ? t('common.save') : t('common.add')}</button>`

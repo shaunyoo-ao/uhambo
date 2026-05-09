@@ -189,7 +189,7 @@ function openSettings() {
         <button class="btn btn-ghost btn-full" onclick="window.__signOut()">Sign Out</button>
       </div>
       <div class="settings-group" style="text-align:center;color:var(--muted);font-size:11px;margin-top:16px">
-        Copyright ⓒ 2026, YONKE All rights reserved.<br>Version 1.0.1
+        Copyright ⓒ 2026, YONKE All rights reserved.<br>Version 1.0.2
       </div>
     `,
     footer: ''
@@ -327,6 +327,9 @@ window.__setLang = (lang) => {
 window.__setCurrency = (code) => {
   setCurrency(code);
   document.dispatchEvent(new CustomEvent('currencychange', { detail: { currency: code } }));
+  pageCache.clear();
+  closeModal();
+  navigate(localStorage.getItem('lastRoute') || 'dashboard');
 };
 window.__newTrip = openNewTrip;
 window.__submitNewTrip = submitNewTrip;
