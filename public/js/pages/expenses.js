@@ -1,6 +1,6 @@
 import { t } from '../i18n.js';
 import { subscribeExpenses, addExpense, updateExpense, deleteExpense } from '../db.js';
-import { openModal, closeModal, showToast, showConfirm } from '../app.js';
+import { openModal, closeModal, showToast, showConfirm, setModalSaving } from '../app.js';
 import { formatConverted, convert, getCurrency, getCurrencyMeta, formatCurrency, ensureRates, CURRENCIES } from '../currency.js';
 
 let _unsub = null;
@@ -287,6 +287,7 @@ function openItemModal(item) {
     data.amount = Number(data.amount);
     data.links = _links;
     _adding = true;
+    setModalSaving(true);
     try {
       if (id) {
         await updateExpense(_ctx.userId, _ctx.tripId, id, data);
@@ -296,8 +297,10 @@ function openItemModal(item) {
         showToast('Expense added');
       }
       closeModal();
-    } catch (e) { showToast('Error: ' + e.message); }
-    finally { _adding = false; }
+    } catch (e) {
+      setModalSaving(false);
+      showToast('Error: ' + e.message);
+    } finally { _adding = false; }
   };
 
   window.__deleteExpItem = async (id) => {

@@ -1,6 +1,6 @@
 import { t } from '../i18n.js';
 import { subscribeItinerary, addItineraryItem, updateItineraryItem, deleteItineraryItem } from '../db.js';
-import { openModal, closeModal, showToast, showConfirm } from '../app.js';
+import { openModal, closeModal, showToast, showConfirm, setModalSaving } from '../app.js';
 
 let _unsub = null;
 let _ctx = null;
@@ -180,6 +180,7 @@ function openItemModal(item) {
     if (!form.checkValidity()) { form.reportValidity(); return; }
     const data = Object.fromEntries(new FormData(form));
     data.links = _links;
+    setModalSaving(true);
     try {
       if (id) {
         await updateItineraryItem(_ctx.userId, _ctx.tripId, id, data);
@@ -189,7 +190,10 @@ function openItemModal(item) {
         showToast('Event added');
       }
       closeModal();
-    } catch (e) { showToast('Error: ' + e.message); }
+    } catch (e) {
+      setModalSaving(false);
+      showToast('Error: ' + e.message);
+    }
   };
 
   window.__deleteItinItem = async (id) => {

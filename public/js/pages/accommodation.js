@@ -3,7 +3,7 @@ import {
   subscribeAccommodation, addAccommodation, updateAccommodation, deleteAccommodation,
   upsertLinkedExpense, deleteLinkedExpense, upsertLinkedItinItem, deleteLinkedItinItems,
 } from '../db.js';
-import { openModal, closeModal, showToast, showConfirm } from '../app.js';
+import { openModal, closeModal, showToast, showConfirm, setModalSaving } from '../app.js';
 import { formatConverted, getCurrency, CURRENCIES } from '../currency.js';
 
 let _unsub = null;
@@ -205,6 +205,7 @@ function openItemModal(item) {
     if (data.cost) data.cost = Number(data.cost);
     data.links = _links;
     const { userId, tripId } = _ctx;
+    setModalSaving(true);
     try {
       let savedId = id;
       if (id) {
@@ -249,7 +250,10 @@ function openItemModal(item) {
         });
       }
       closeModal();
-    } catch (e) { showToast('Error: ' + e.message); }
+    } catch (e) {
+      setModalSaving(false);
+      showToast('Error: ' + e.message);
+    }
   };
 
   window.__deleteAccomItem = async (id) => {
