@@ -156,3 +156,42 @@ export async function updateExpense(uid, tid, id, data) {
 export async function deleteExpense(uid, tid, id) {
   return deleteDoc(subDocRef(uid, tid, 'expenses', id));
 }
+
+// ── Linked expense helpers ────────────────────────────────────────
+export async function upsertLinkedExpense(uid, tid, sourceId, sourceType, data) {
+  const all = await getDocs(subRef(uid, tid, 'expenses'));
+  const existing = all.docs.find(d => d.data().sourceId === sourceId && d.data().sourceType === sourceType);
+  if (existing) {
+    await updateDoc(existing.ref, data);
+    return existing.id;
+  }
+  const ref = await addDoc(subRef(uid, tid, 'expenses'), { ...data, sourceId, sourceType, createdAt: serverTimestamp() });
+  return ref.id;
+}
+
+export async function deleteLinkedExpense(uid, tid, sourceId, sourceType) {
+  const all = await getDocs(subRef(uid, tid, 'expenses'));
+  const match = all.docs.find(d => d.data().sourceId === sourceId && d.data().sourceType === sourceType);
+  if (match) await deleteDoc(match.ref);
+}
+
+// ── Linked itinerary helpers ──────────────────────────────────────
+export async function upsertLinkedItinItem(uid, tid, sourceId, sourceType, sourceSubType, data) {
+  const all = await getDocs(subRef(uid, tid, 'itinerary'));
+  const existing = all.docs.find(d => {
+    const dd = d.data();
+    return dd.sourceId === sourceId && dd.sourceType === sourceType && dd.sourceSubType === sourceSubType;
+  });
+  if (existing) {
+    await updateDoc(existing.ref, data);
+    return existing.id;
+  }
+  const ref = await addDoc(subRef(uid, tid, 'itinerary'), { ...data, sourceId, sourceType, sourceSubType, createdAt: serverTimestamp() });
+  return ref.id;
+}
+
+export async function deleteLinkedItinItems(uid, tid, sourceId, sourceType) {
+  const all = await getDocs(subRef(uid, tid, 'itinerary'));
+  const matches = all.docs.filter(d => d.data().sourceId === sourceId && d.data().sourceType === sourceType);
+  await Promise.all(matches.map(d => deleteDoc(d.ref)));
+}

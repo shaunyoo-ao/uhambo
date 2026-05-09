@@ -1,12 +1,17 @@
 import { t } from '../i18n.js';
-import { subscribeActivities, addActivity, updateActivity, deleteActivity, toggleActivity } from '../db.js';
+import {
+  subscribeActivities, addActivity, updateActivity, deleteActivity, toggleActivity,
+  upsertLinkedExpense, deleteLinkedExpense, upsertLinkedItinItem, deleteLinkedItinItems,
+} from '../db.js';
 import { openModal, closeModal, showToast, showConfirm } from '../app.js';
-import { formatConverted, CURRENCIES } from '../currency.js';
+import { formatConverted, getCurrency, CURRENCIES } from '../currency.js';
 
 let _unsub = null;
 let _ctx = null;
 let _items = [];
 let _filter = 'all';
+let _links = [];
+let _adding = false;
 
 export function destroy() {
   if (_unsub) { _unsub(); _unsub = null; }
@@ -14,10 +19,9 @@ export function destroy() {
 }
 
 const CAT_ICONS = {
-  outdoor: '🏔️', food: '🍜', culture: '🎭',
-  sport: '⚽', shopping: '🛍️', other: '⚡'
+  outdoor: '🏔️', culture: '🎭', sport: '⛳', shopping: '🛍️', other: '⚡'
 };
-const CATS = ['outdoor', 'food', 'culture', 'sport', 'shopping', 'other'];
+const CATS = ['outdoor', 'culture', 'sport', 'shopping', 'other'];
 
 export async function render(container, ctx) {
   _ctx = ctx;
@@ -32,18 +36,21 @@ export async function render(container, ctx) {
     <div style="padding:14px 16px 8px" class="row-between">
       <div>
         <div class="eyebrow" style="margin-bottom:2px">${t('nav.activities')}</div>
-        <div class="page-title">Activities</div>
+        <div class="page-title">${t('act.title')}</div>
       </div>
       <div id="act-stats" class="text-xs text-muted"></div>
     </div>
     <div class="chip-row" id="act-chips">
       <div class="chip active" data-cat="all" onclick="window.__actFilter('all')">All</div>
-      ${CATS.map(c => `<div class="chip" data-cat="${c}" onclick="window.__actFilter('${c}')">${CAT_ICONS[c]} ${c.charAt(0).toUpperCase() + c.slice(1)}</div>`).join('')}
+      ${CATS.map(c => `<div class="chip" data-cat="${c}" onclick="window.__actFilter('${c}')">${CAT_ICONS[c]} ${t('act.cats.' + c)}</div>`).join('')}
     </div>
     <div id="act-list"><div class="loading-center"><div class="spinner"></div></div></div>
     <div style="height:80px"></div>`;
 
-  addFAB(() => openItemModal(null));
+  addFAB(() => {
+    if (_adding) return;
+    openItemModal(null);
+  });
 
   window.__actFilter = (cat) => {
     _filter = cat;
@@ -129,9 +136,18 @@ async function renderItem(item) {
     </div>`;
 }
 
+function linkListHTML(links) {
+  return (links || []).map((url, i) => `
+    <div class="link-item">
+      <a href="${url}" target="_blank" rel="noopener">${url}</a>
+      <button type="button" class="link-item-del" onclick="window.__actRmLink(${i})">×</button>
+    </div>`).join('');
+}
+
 function openItemModal(item) {
   const isEdit = !!item;
   const today = new Date().toISOString().slice(0, 10);
+  _links = item?.links ? [...item.links] : [];
 
   openModal({
     title: isEdit ? 'Edit Activity' : t('act.add'),
@@ -167,10 +183,18 @@ function openItemModal(item) {
             <input class="form-input" name="cost" type="number" min="0" value="${item?.cost || ''}" placeholder="0">
           </div>
           <div class="form-group" style="flex:1">
-            <label class="form-label">Currency</label>
+            <label class="form-label">${t('act.currency')}</label>
             <select class="form-select" name="currency">
-              ${CURRENCIES.map(c => `<option value="${c.code}" ${(item?.currency || 'KRW') === c.code ? 'selected' : ''}>${c.code}</option>`).join('')}
+              ${CURRENCIES.map(c => `<option value="${c.code}" ${(item?.currency || getCurrency()) === c.code ? 'selected' : ''}>${c.code}</option>`).join('')}
             </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">${t('common.links')}</label>
+          <div class="link-list" id="act-link-list">${linkListHTML(_links)}</div>
+          <div class="link-add-row">
+            <input class="form-input" id="act-link-input" placeholder="https://..." type="url">
+            <button type="button" class="btn btn-secondary btn-sm link-add-btn" onclick="window.__actAddLink()">+</button>
           </div>
         </div>
         <div class="form-group">
@@ -180,34 +204,78 @@ function openItemModal(item) {
       </form>`,
     footer: `
       ${isEdit ? `<button class="btn btn-danger btn-sm" onclick="window.__deleteActItem('${item.id}')">Delete</button>` : ''}
-      <button class="btn btn-ghost" style="flex:1" onclick="window.__closeModal()">Cancel</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="window.__closeModal()">${t('common.cancel')}</button>
       <button class="btn btn-primary" style="flex:2" onclick="window.__saveActItem(${isEdit ? `'${item.id}'` : 'null'})">
         ${isEdit ? t('common.save') : t('common.add')}</button>`
   });
 
+  window.__actAddLink = () => {
+    const inp = document.getElementById('act-link-input');
+    const val = inp.value.trim();
+    if (!val) return;
+    _links.push(val);
+    inp.value = '';
+    const el = document.getElementById('act-link-list');
+    if (el) el.innerHTML = linkListHTML(_links);
+  };
+  window.__actRmLink = (i) => {
+    _links.splice(i, 1);
+    const el = document.getElementById('act-link-list');
+    if (el) el.innerHTML = linkListHTML(_links);
+  };
+
   window.__saveActItem = async (id) => {
+    if (_adding) return;
     const form = document.getElementById('act-form');
     if (!form.checkValidity()) { form.reportValidity(); return; }
     const data = Object.fromEntries(new FormData(form));
     if (data.cost) data.cost = Number(data.cost);
+    data.links = _links;
+    const { userId, tripId } = _ctx;
+    _adding = true;
     try {
+      let savedId = id;
       if (id) {
-        await updateActivity(_ctx.userId, _ctx.tripId, id, data);
+        await updateActivity(userId, tripId, id, data);
         showToast('Activity updated');
       } else {
-        await addActivity(_ctx.userId, _ctx.tripId, data);
+        const ref = await addActivity(userId, tripId, data);
+        savedId = ref.id;
         showToast('Activity added');
       }
+      // Expense sync
+      await upsertLinkedExpense(userId, tripId, savedId, 'activity', {
+        title: data.name,
+        amount: parseFloat(data.cost) || 0,
+        currency: data.currency || getCurrency(),
+        date: data.date || '',
+        category: 'activity',
+        notes: '',
+      });
+      // Itinerary sync
+      await upsertLinkedItinItem(userId, tripId, savedId, 'activity', 'event', {
+        title: data.name,
+        date: data.date || '',
+        time: data.time || '',
+        location: data.location || '',
+        type: 'activity',
+      });
       closeModal();
     } catch (e) { showToast('Error: ' + e.message); }
+    finally { _adding = false; }
   };
 
   window.__deleteActItem = async (id) => {
     closeModal();
     const confirmed = await showConfirm('Delete Activity', 'This cannot be undone.');
     if (!confirmed) return;
+    const { userId, tripId } = _ctx;
     try {
-      await deleteActivity(_ctx.userId, _ctx.tripId, id);
+      await Promise.all([
+        deleteActivity(userId, tripId, id),
+        deleteLinkedExpense(userId, tripId, id, 'activity'),
+        deleteLinkedItinItems(userId, tripId, id, 'activity'),
+      ]);
       showToast('Activity deleted');
     } catch (e) { showToast('Error: ' + e.message); }
   };

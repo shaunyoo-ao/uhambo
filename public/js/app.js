@@ -1,7 +1,7 @@
 import { signInWithGoogle, signOut, onAuthStateChange, handleRedirectResult } from './auth.js';
 import { setLang, getLang, t } from './i18n.js';
 import { setCurrency, getCurrency, CURRENCIES } from './currency.js';
-import { getTrips, createTrip } from './db.js';
+import { getTrips, createTrip, deleteTrip } from './db.js';
 
 // ── Global state ────────────────────────────────────────────────
 export let currentUser = null;
@@ -9,6 +9,9 @@ export let currentTripId = null;
 let currentPage = null;
 let _appInitialized = false; // guard against duplicate initApp calls
 let _savingTrip = false;     // guard against duplicate trip creation
+
+// ── Page cache ───────────────────────────────────────────────────
+const pageCache = new Map();
 
 // ── Page registry ────────────────────────────────────────────────
 const routes = {
@@ -67,6 +70,7 @@ async function loadTrips(userId) {
 }
 
 function dispatchTripChange(tripId) {
+  pageCache.clear();
   document.dispatchEvent(new CustomEvent('tripchange', { detail: { tripId } }));
 }
 
@@ -79,7 +83,15 @@ export async function navigate(route) {
     b.classList.toggle('active', b.dataset.route === route));
 
   const container = document.getElementById('page-content');
-  container.innerHTML = '<div class="loading-center"><div class="spinner"></div></div>';
+
+  // Restore from cache for instant display
+  const cacheKey = `${route}:${currentTripId}`;
+  const cached = pageCache.get(cacheKey);
+  if (cached) {
+    container.innerHTML = cached;
+  } else {
+    container.innerHTML = '<div class="loading-center"><div class="spinner"></div></div>';
+  }
 
   // Cleanup previous page and FAB
   if (currentPage?.destroy) currentPage.destroy();
@@ -91,6 +103,10 @@ export async function navigate(route) {
     currentPage = mod;
     await mod.render(container, { userId: currentUser.uid, tripId: currentTripId });
     localStorage.setItem('lastRoute', route);
+    // Save rendered content to cache (after onSnapshot may have updated it)
+    setTimeout(() => {
+      if (container.children.length) pageCache.set(cacheKey, container.innerHTML);
+    }, 500);
   } catch (e) {
     console.error('navigate:', e);
     container.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Failed to load</div><div class="empty-sub">${e.message}</div></div>`;
@@ -156,7 +172,7 @@ function openSettings() {
         </div>
       </div>
       <div class="settings-group">
-        <div class="eyebrow" style="margin-bottom:10px">Currency</div>
+        <div class="eyebrow" style="margin-bottom:10px">Display Currency</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           ${CURRENCIES.map(c => `
             <button class="btn btn-sm ${currency === c.code ? 'btn-primary' : 'btn-secondary'}"
@@ -167,9 +183,13 @@ function openSettings() {
       <div class="settings-group">
         <div class="eyebrow" style="margin-bottom:10px">Trip</div>
         <button class="btn btn-secondary btn-sm" onclick="window.__newTrip()">+ New Trip</button>
+        <button class="btn btn-danger btn-sm" style="margin-top:8px" onclick="window.__deleteCurrentTrip()">Delete Current Trip</button>
       </div>
       <div class="settings-group" style="margin-top:24px">
         <button class="btn btn-ghost btn-full" onclick="window.__signOut()">Sign Out</button>
+      </div>
+      <div class="settings-group" style="text-align:center;color:var(--muted);font-size:11px;margin-top:16px">
+        Copyright ⓒ 2026, YONKE All rights reserved.<br>Version 1.0.1
       </div>
     `,
     footer: ''
@@ -310,6 +330,21 @@ window.__setCurrency = (code) => {
 };
 window.__newTrip = openNewTrip;
 window.__submitNewTrip = submitNewTrip;
+window.__deleteCurrentTrip = async () => {
+  if (!currentTripId) { showToast('No trip selected'); return; }
+  closeModal();
+  const ok = await showConfirm('Delete Current Trip', 'This will delete all trip data and cannot be undone.');
+  if (!ok) return;
+  try {
+    await deleteTrip(currentUser.uid, currentTripId);
+    currentTripId = null;
+    localStorage.removeItem('lastTripId');
+    pageCache.clear();
+    await loadTrips(currentUser.uid);
+    navigate('dashboard');
+    showToast('Trip deleted');
+  } catch (e) { showToast('Error: ' + e.message); }
+};
 
 // ── Init ─────────────────────────────────────────────────────────
 async function initApp(user) {
@@ -334,8 +369,10 @@ async function initApp(user) {
 
   // Bind header buttons
   document.getElementById('settings-btn').addEventListener('click', openSettings);
-  document.getElementById('lang-btn').addEventListener('click', openLangPicker);
-  document.getElementById('currency-btn').addEventListener('click', openCurrencyPicker);
+  document.getElementById('refresh-btn').addEventListener('click', () => {
+    pageCache.clear();
+    navigate(localStorage.getItem('lastRoute') || 'dashboard');
+  });
 
   // Bind modal close
   document.getElementById('modal-close').addEventListener('click', closeModal);
