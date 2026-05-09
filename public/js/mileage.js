@@ -1,26 +1,37 @@
+import { geocodeCity } from './weather.js';
+
 export async function calcMileage(itineraryItems) {
-  const points = itineraryItems
-    .filter(i => i.lat && i.lng)
+  // Sort by date+time, keep items that have a location string
+  const sorted = [...itineraryItems]
+    .filter(i => i.location && i.location.trim())
     .sort((a, b) => `${a.date}T${a.time || ''}`.localeCompare(`${b.date}T${b.time || ''}`));
 
-  if (points.length < 2) return 0;
+  // Deduplicate consecutive identical locations
+  const unique = sorted.filter((p, i) => i === 0 || p.location !== sorted[i - 1].location);
 
-  try {
-    const coords = points.map(p => `${p.lng},${p.lat}`).join(';');
-    const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=false`;
-    const res = await fetch(url);
-    const data = await res.json();
-    if (data.code === 'Ok' && data.routes?.[0]) {
-      return Math.round(data.routes[0].distance / 1000);
-    }
-  } catch (_) {}
+  if (unique.length < 2) return 0;
 
-  // Fallback: haversine straight-line sum
+  // Geocode all locations
+  const coords = await Promise.all(unique.map(p => geocodeCity(p.location)));
+
   let total = 0;
-  for (let i = 1; i < points.length; i++) {
-    total += haversine(points[i - 1].lat, points[i - 1].lng, points[i].lat, points[i].lng);
+  for (let i = 1; i < coords.length; i++) {
+    const a = coords[i - 1], b = coords[i];
+    if (!a || !b) continue;
+    try {
+      const url = `https://router.project-osrm.org/route/v1/driving/${a.lng},${a.lat};${b.lng},${b.lat}?overview=false`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.code === 'Ok' && data.routes?.[0]) {
+        total += data.routes[0].distance;
+      } else {
+        total += haversine(a.lat, a.lng, b.lat, b.lng) * 1000;
+      }
+    } catch (_) {
+      total += haversine(a.lat, a.lng, b.lat, b.lng) * 1000;
+    }
   }
-  return Math.round(total);
+  return Math.round(total / 1000);
 }
 
 function haversine(lat1, lon1, lat2, lon2) {

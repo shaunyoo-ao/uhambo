@@ -173,6 +173,10 @@ async function loadWeather(trip) {
   try {
     let lat = trip.destLat, lng = trip.destLng;
     if ((!lat || !lng) && trip.destination) {
+      // Clear stale cache entry so geocoding retries with updated logic
+      const cacheKey = `geo_${trip.destination.toLowerCase().replace(/\s+/g, '_')}`;
+      const cached = JSON.parse(localStorage.getItem(cacheKey) || '{}');
+      if (!cached.lat) localStorage.removeItem(cacheKey);
       const geo = await geocodeCity(trip.destination);
       if (geo) { lat = geo.lat; lng = geo.lng; }
     }
@@ -203,12 +207,16 @@ async function loadWeather(trip) {
         ${days.slice(0, 7).map((day) => {
           const d = new Date(day.date);
           const label = day.date === todayStr ? 'Today' : dayNames[d.getDay()];
+          const precipStr = day.precip !== null && day.precip !== undefined
+            ? (day.precipIsProb ? Math.round(day.precip) + '%' : Math.round(day.precip) + 'mm')
+            : '';
           return `
             <div class="weather-day ${day.date === todayStr ? 'today' : ''}">
               <div class="weather-day-label">${label}</div>
               <div class="weather-icon">${day.icon}</div>
               <div class="weather-temp">${day.maxTemp}°</div>
               <div class="text-xs" style="color:var(--muted-2)">${day.minTemp}°</div>
+              ${precipStr ? `<div class="text-xs" style="color:var(--sky)">💧${precipStr}</div>` : ''}
             </div>`;
         }).join('')}
       </div>`;

@@ -1,7 +1,7 @@
 import { signInWithGoogle, signOut, onAuthStateChange, handleRedirectResult } from './auth.js';
 import { setLang, getLang, t } from './i18n.js';
 import { setCurrency, getCurrency, CURRENCIES } from './currency.js';
-import { getTrips, createTrip, deleteTrip } from './db.js';
+import { getTrips, createTrip, getTrip, updateTrip, deleteTrip } from './db.js';
 
 // ── Global state ────────────────────────────────────────────────
 export let currentUser = null;
@@ -183,13 +183,14 @@ function openSettings() {
       <div class="settings-group">
         <div class="eyebrow" style="margin-bottom:10px">Trip</div>
         <button class="btn btn-secondary btn-sm" onclick="window.__newTrip()">+ New Trip</button>
+        <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="window.__editCurrentTrip()">Edit Current Trip</button>
         <button class="btn btn-danger btn-sm" style="margin-top:8px" onclick="window.__deleteCurrentTrip()">Delete Current Trip</button>
       </div>
       <div class="settings-group" style="margin-top:16px">
         <button class="btn btn-ghost btn-full" onclick="window.__signOut()">Sign Out</button>
       </div>
       <div class="settings-group" style="text-align:center;color:var(--muted);font-size:11px;margin-top:16px">
-        Copyright ⓒ 2026, YONKE All rights reserved.<br>Version 1.0.2
+        Copyright ⓒ 2026, YONKE All rights reserved.<br>Version 1.0.6
       </div>
     `,
     footer: ''
@@ -346,6 +347,65 @@ window.__deleteCurrentTrip = async () => {
     await loadTrips(currentUser.uid);
     navigate('dashboard');
     showToast('Trip deleted');
+  } catch (e) { showToast('Error: ' + e.message); }
+};
+
+window.__editCurrentTrip = async () => {
+  if (!currentTripId) { showToast('No trip selected'); return; }
+  closeModal();
+  try {
+    const trip = await getTrip(currentUser.uid, currentTripId);
+    if (!trip) { showToast('Trip not found'); return; }
+    setTimeout(() => {
+      openModal({
+        title: 'Edit Trip',
+        body: `
+          <form id="edit-trip-form">
+            <div class="form-group">
+              <label class="form-label">Trip Name</label>
+              <input class="form-input" name="name" value="${trip.name || ''}" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Destination</label>
+              <input class="form-input" name="destination" value="${trip.destination || ''}" placeholder="e.g. Tokyo, Japan">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Start Date</label>
+                <input class="form-input" name="startDate" type="date" value="${trip.startDate || ''}">
+              </div>
+              <div class="form-group">
+                <label class="form-label">End Date</label>
+                <input class="form-input" name="endDate" type="date" value="${trip.endDate || ''}">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Base Currency</label>
+              <select class="form-select" name="baseCurrency">
+                ${CURRENCIES.map(c => `<option value="${c.code}" ${(trip.baseCurrency || 'KRW') === c.code ? 'selected' : ''}>${c.symbol} ${c.code} — ${c.label}</option>`).join('')}
+              </select>
+            </div>
+          </form>`,
+        footer: `
+          <button class="btn btn-ghost" style="flex:1" onclick="window.__closeModal()">Cancel</button>
+          <button class="btn btn-primary" style="flex:2" onclick="window.__saveEditTrip()">Save</button>`
+      });
+    }, 100);
+  } catch (e) { showToast('Error: ' + e.message); }
+};
+
+window.__saveEditTrip = async () => {
+  const form = document.getElementById('edit-trip-form');
+  if (!form || !form.checkValidity()) { form?.reportValidity(); return; }
+  const data = Object.fromEntries(new FormData(form));
+  try {
+    await updateTrip(currentUser.uid, currentTripId, data);
+    const opt = document.getElementById('trip-selector').querySelector(`option[value="${currentTripId}"]`);
+    if (opt) opt.textContent = data.name;
+    pageCache.clear();
+    closeModal();
+    showToast('Trip updated');
+    navigate(localStorage.getItem('lastRoute') || 'dashboard');
   } catch (e) { showToast('Error: ' + e.message); }
 };
 
