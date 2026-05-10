@@ -137,7 +137,8 @@ export function setModalSaving(saving) {
     progress?.classList.add('saving');
     if (primary) {
       primary._origText   = primary.textContent.trim();
-      primary.textContent = primary._origText === 'Add' ? 'Adding…' : 'Saving…';
+      const isAdd = primary._origText === t('common.add');
+      primary.textContent = isAdd ? 'Adding…' : 'Saving…';
       primary.disabled    = true;
     }
     if (ghost) ghost.disabled = true;
