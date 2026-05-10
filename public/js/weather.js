@@ -110,10 +110,15 @@ export async function geocodeCity(city) {
     return null;
   };
 
-  // Try full string first, then first segment before comma
+  // Try full string, then progressively drop leading segments (specific→broad)
+  // e.g. "Golf Estate, Free State, South Africa" → "Free State, South Africa" → "South Africa"
   let result = await tryGeocode(city);
   if (!result && city.includes(',')) {
-    result = await tryGeocode(city.split(',')[0].trim());
+    const parts = city.split(',').map(s => s.trim());
+    for (let i = 1; i < parts.length; i++) {
+      result = await tryGeocode(parts.slice(i).join(', '));
+      if (result) break;
+    }
   }
 
   if (result) {
