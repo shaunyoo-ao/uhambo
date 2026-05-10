@@ -295,6 +295,7 @@ a { color: var(--accent); text-decoration: none; }
   white-space: nowrap;
 }
 .btn:active { opacity: 0.8; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .btn-primary  { background: var(--accent); color: #fff; }
 .btn-secondary { background: var(--surface-2); color: var(--cream); border: 1px solid var(--line); }
 .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
@@ -806,9 +807,8 @@ a { color: var(--accent); text-decoration: none; }
 .modal-progress {
   height: 3px;
   background: transparent;
-  border-radius: 2px;
   overflow: hidden;
-  margin-bottom: 12px;
+  flex-shrink: 0;
   transition: background 0.2s;
 }
 .modal-progress.saving { background: var(--line); }
