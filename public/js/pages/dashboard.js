@@ -187,8 +187,21 @@ async function loadWeather(trip) {
 
     // Use trip-date-ranged weather if dates set, otherwise 7-day forecast
     let days;
+    let isFallback = false;
+    const today = new Date().toISOString().slice(0, 10);
+    const forecastLimit = new Date(Date.now() + 16 * 86400000).toISOString().slice(0, 10);
+
     if (trip.startDate && trip.endDate) {
-      days = await getTripWeather(lat, lng, trip.startDate, trip.endDate);
+      // Trip is within forecast/archive range — use date-ranged weather
+      if (trip.startDate <= forecastLimit || trip.endDate < today) {
+        days = await getTripWeather(lat, lng, trip.startDate, trip.endDate);
+      }
+      // Trip is too far in future (>16 days out) — fall back to current 7-day as reference
+      if (!days || days.length === 0) {
+        const weather = await getWeather(lat, lng);
+        days = weather?.days || null;
+        isFallback = true;
+      }
     } else {
       const weather = await getWeather(lat, lng);
       days = weather?.days || null;
@@ -219,7 +232,8 @@ async function loadWeather(trip) {
               ${precipStr ? `<div class="text-xs" style="color:var(--sky)">💧${precipStr}</div>` : ''}
             </div>`;
         }).join('')}
-      </div>`;
+      </div>
+      ${isFallback ? `<div class="text-xs text-muted" style="margin-top:8px;text-align:center">현재 날씨 기준 참고용 — 예보는 출발 16일 전부터 제공됩니다</div>` : ''}`;
   } catch (e) {
     const el = document.getElementById('weather-body');
     if (el) el.innerHTML = `<div class="text-sm text-muted">Weather unavailable</div>`;
