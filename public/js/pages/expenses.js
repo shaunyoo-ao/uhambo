@@ -1,6 +1,7 @@
 import { t } from '../i18n.js';
 import { subscribeExpenses, addExpense, updateExpense, deleteExpense } from '../db.js';
 import { openModal, closeModal, showToast, showConfirm, setModalSaving } from '../app.js';
+import { openCalc } from '../calculator.js';
 import { formatConverted, convert, getCurrency, getCurrencyMeta, formatCurrency, ensureRates, CURRENCIES } from '../currency.js';
 
 let _unsub = null;
@@ -225,7 +226,10 @@ function openItemModal(item) {
         <div class="form-row">
           <div class="form-group" style="flex:2">
             <label class="form-label">${t('exp.amount')} *</label>
-            <input class="form-input" name="amount" type="number" min="0" step="any" value="${item?.amount || ''}" placeholder="0" required>
+            <div style="display:flex;gap:6px">
+              <input id="exp-amount-input" class="form-input" name="amount" type="number" min="0" step="any" value="${item?.amount || ''}" placeholder="0" required style="flex:1">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="window.__openCalc('exp-amount-input')" style="flex-shrink:0;font-size:16px">🖩</button>
+            </div>
           </div>
           <div class="form-group" style="flex:1">
             <label class="form-label">${t('exp.currency')}</label>
@@ -263,6 +267,8 @@ function openItemModal(item) {
       <button class="btn btn-primary" style="flex:2" onclick="window.__saveExpItem(${isEdit ? `'${item.id}'` : 'null'})">
         ${isEdit ? t('common.save') : t('common.add')}</button>`
   });
+
+  window.__openCalc = openCalc;
 
   window.__expAddLink = () => {
     const inp = document.getElementById('exp-link-input');

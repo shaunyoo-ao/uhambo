@@ -6,10 +6,11 @@ import { getAccommodation } from '../db.js';
 import { getActivities } from '../db.js';
 import { getTripWeather, getWeather, geocodeCity } from '../weather.js';
 import { formatConverted, getCurrency, getCurrencyMeta, ensureRates } from '../currency.js';
-import { calcMileage } from '../mileage.js';
-import { navigate } from '../app.js';
+import { calcMileageDetail } from '../mileage.js';
+import { navigate, openModal, closeModal } from '../app.js';
 
 let _unsubItinerary = null;
+let _mileageDetail = { total: 0, segments: [] };
 
 export function destroy() {
   if (_unsubItinerary) { _unsubItinerary(); _unsubItinerary = null; }
@@ -76,7 +77,8 @@ export async function render(container, { userId, tripId }) {
     const completedActs = activities.filter(a => a.completed).length;
 
     // Mileage
-    const mileageKm = await calcMileage(itinerary);
+    _mileageDetail = await calcMileageDetail(itinerary);
+    const mileageKm = _mileageDetail.total;
 
     container.innerHTML = `
       <div class="page" style="padding-bottom:24px">
@@ -90,20 +92,20 @@ export async function render(container, { userId, tripId }) {
 
         <!-- Quick stats -->
         <div class="stat-grid" style="margin-bottom:16px">
-          <div class="stat-card">
+          <div class="stat-card" style="cursor:pointer" onclick="window.__navigate('expenses')">
             <div class="stat-value mono">${totalFormatted}</div>
             <div class="stat-label">${t('exp.total')}</div>
           </div>
-          <div class="stat-card">
+          <div class="stat-card" style="cursor:pointer" onclick="window.__navigate('activities')">
             <div class="stat-value mono">${activities.length}</div>
             <div class="stat-label">${t('act.title')}</div>
             <div class="stat-sub">${completedActs} ${t('dash.completed').toLowerCase()}</div>
           </div>
-          <div class="stat-card">
+          <div class="stat-card" style="cursor:pointer" onclick="window.__navigate('accommodation')">
             <div class="stat-value mono">${accommodation.length}</div>
             <div class="stat-label">${t('dash.stays')}</div>
           </div>
-          <div class="stat-card">
+          <div class="stat-card" style="cursor:pointer" onclick="window.__showMileageDetail()">
             <div class="stat-value mono">${mileageKm} km</div>
             <div class="stat-label">${t('dash.mileage')}</div>
           </div>
@@ -123,7 +125,7 @@ export async function render(container, { userId, tripId }) {
         </div>
 
         <!-- Upcoming itinerary -->
-        <div class="card" style="margin-bottom:16px">
+        <div class="card">
           <div class="card-header">
             <span class="eyebrow">${t('dash.upcoming')}</span>
             <button class="btn btn-ghost btn-sm" onclick="window.__navigate('itinerary')">${t('dash.view_all')}</button>
@@ -132,20 +134,39 @@ export async function render(container, { userId, tripId }) {
             <div class="loading-center" style="padding:16px"><div class="spinner" style="width:20px;height:20px;border-width:2px"></div></div>
           </div>
         </div>
-
-        <!-- Recent expenses -->
-        <div class="card">
-          <div class="card-header">
-            <span class="eyebrow">${t('dash.recent_exp')}</span>
-            <button class="btn btn-ghost btn-sm" onclick="window.__navigate('expenses')">${t('dash.view_all')}</button>
-          </div>
-          <div id="expenses-body">
-            ${renderRecentExpenses(expenses.slice(0, 4))}
-          </div>
-        </div>
       </div>`;
 
     window.__navigate = navigate;
+
+    window.__showMileageDetail = () => {
+      const { total, segments } = _mileageDetail;
+      if (segments.length === 0) {
+        openModal({
+          title: t('dash.mileage_detail'),
+          body: `<div class="text-sm text-muted" style="padding:8px 0">Add locations to itinerary events to calculate route distance.</div>`,
+          footer: `<button class="btn btn-ghost btn-full" onclick="window.__closeModal()">${t('common.done')}</button>`
+        });
+        return;
+      }
+      const rows = segments.map(s => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)">
+          <div style="flex:1;min-width:0">
+            <div class="text-sm" style="color:var(--muted)">${s.from}</div>
+            <div style="font-size:11px;color:var(--muted-2);margin:2px 0">↓</div>
+            <div class="text-sm">${s.to}</div>
+          </div>
+          <div class="mono text-sm" style="color:var(--accent);margin-left:12px;flex-shrink:0">${s.km} km</div>
+        </div>`).join('');
+      openModal({
+        title: t('dash.mileage_detail'),
+        body: `${rows}
+          <div style="display:flex;justify-content:space-between;padding:12px 0 0">
+            <div class="text-sm" style="font-weight:600">Total</div>
+            <div class="mono text-sm" style="color:var(--accent);font-weight:600">${total} km</div>
+          </div>`,
+        footer: `<button class="btn btn-ghost btn-full" onclick="window.__closeModal()">${t('common.done')}</button>`
+      });
+    };
 
     // Load weather async
     loadWeather(trip);
@@ -233,7 +254,7 @@ async function loadWeather(trip) {
             </div>`;
         }).join('')}
       </div>
-      ${isFallback ? `<div class="text-xs text-muted" style="margin-top:8px;text-align:center">현재 날씨 기준 참고용 — 예보는 출발 16일 전부터 제공됩니다</div>` : ''}`;
+      ${isFallback ? `<div class="text-xs text-muted" style="margin-top:8px;text-align:center">${t('dash.weather_ref')}</div>` : ''}`;
   } catch (e) {
     const el = document.getElementById('weather-body');
     if (el) el.innerHTML = `<div class="text-sm text-muted">Weather unavailable</div>`;
@@ -246,7 +267,7 @@ function renderUpcoming(items) {
       <div class="empty-sub">${t('dash.no_events')}</div>
     </div>`;
   }
-  const typeIcons = { travel: '✈️', meal: '🍽️', activity: '⚡', rest: '🏨', other: '📌' };
+  const typeIcons = { travel: '✈️', meal: '🍽️', activity: '⚡', rest: '🏨', shopping: '🛍️', other: '📌' };
   return items.map(item => `
     <div class="list-item">
       <div class="list-icon" style="background:var(--surface-2)">${typeIcons[item.type] || '📌'}</div>
@@ -257,24 +278,3 @@ function renderUpcoming(items) {
     </div>`).join('');
 }
 
-function renderRecentExpenses(expenses) {
-  if (expenses.length === 0) {
-    return `<div class="empty-state" style="padding:20px 16px"><div class="empty-sub">${t('dash.no_expenses')}</div></div>`;
-  }
-  const catIcons = { transport: '🚗', food: '🍔', accom: '🏨', activity: '⚡', shopping: '🛍️', other: '💳' };
-  return expenses.map(e => {
-    const meta = getCurrencyMeta(e.currency || 'KRW');
-    const amtStr = e.amount ? `${meta.symbol}${Number(e.amount).toLocaleString()}` : '—';
-    return `
-    <div class="list-item">
-      <div class="list-icon" style="background:var(--surface-2)">${catIcons[e.category] || '💳'}</div>
-      <div class="list-content">
-        <div class="list-title">${e.title || e.name || '—'}</div>
-        <div class="list-sub">${e.date || ''}</div>
-      </div>
-      <div class="list-meta">
-        <div class="mono text-sm text-accent">${amtStr}</div>
-      </div>
-    </div>`;
-  }).join('');
-}

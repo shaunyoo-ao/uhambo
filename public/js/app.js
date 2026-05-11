@@ -115,6 +115,7 @@ export async function navigate(route) {
 
 // ── Modal ────────────────────────────────────────────────────────
 export function openModal({ title, body, footer, onClose }) {
+  setModalSaving(false);
   const overlay = document.getElementById('modal-root');
   document.getElementById('modal-title').textContent = title || '';
   document.getElementById('modal-body').innerHTML = body || '';
