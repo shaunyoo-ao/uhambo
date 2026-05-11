@@ -1,11 +1,12 @@
 import { t } from '../i18n.js';
-import { subscribeItinerary, addItineraryItem, updateItineraryItem, deleteItineraryItem } from '../db.js';
+import { subscribeItinerary, addItineraryItem, updateItineraryItem, deleteItineraryItem, getTrip } from '../db.js';
 import { openModal, closeModal, showToast, showConfirm, setModalSaving } from '../app.js';
 import { geocodeCity } from '../weather.js';
 
 let _unsub = null;
 let _ctx = null;
 let _links = [];
+let _tripCountry = '';
 
 export function destroy() {
   if (_unsub) { _unsub(); _unsub = null; }
@@ -17,6 +18,7 @@ const TYPE_COLORS = { home: 'var(--muted)', travel: 'var(--sky)', rest: 'var(--m
 export async function render(container, ctx) {
   _ctx = ctx;
   const { userId, tripId } = ctx;
+  getTrip(userId, tripId).then(tr => { _tripCountry = tr?.country || ''; }).catch(() => {});
 
   if (!tripId) {
     container.innerHTML = noTripHTML();
@@ -52,7 +54,6 @@ function renderList(items) {
     return;
   }
 
-  // Group by date
   const byDate = {};
   items.forEach(item => {
     const d = item.date || 'No Date';
@@ -183,11 +184,9 @@ function openItemModal(item) {
     data.links = _links;
     setModalSaving(true);
     try {
-      // Geocode location at save time so mileage calc uses stored coords.
-      // Clear cache first so re-saves always fetch fresh coordinates (fixes stale wrong geocodes).
       if (data.location) {
         try { localStorage.removeItem(`geo_${data.location.toLowerCase().trim().replace(/\s+/g, '_')}`); } catch(_) {}
-        const geo = await geocodeCity(data.location);
+        const geo = await geocodeCity(data.location, _tripCountry);
         if (geo) { data.lat = geo.lat; data.lng = geo.lng; }
       }
       if (id) {
