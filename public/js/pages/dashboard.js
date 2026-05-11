@@ -148,22 +148,28 @@ export async function render(container, { userId, tripId }) {
         });
         return;
       }
+      const failedCount = segments.filter(s => s.geocodeFailed).length;
       const rows = segments.map(s => `
         <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)">
-          <div style="flex:1;min-width:0">
-            <div class="text-sm" style="color:var(--muted)">${s.from}</div>
+          <div style="flex:1;min-width:0;overflow:hidden">
+            <div class="text-xs text-muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.from}</div>
             <div style="font-size:11px;color:var(--muted-2);margin:2px 0">↓</div>
-            <div class="text-sm">${s.to}</div>
+            <div class="text-xs" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.to}</div>
           </div>
-          <div class="mono text-sm" style="color:var(--accent);margin-left:12px;flex-shrink:0">${s.km} km</div>
+          <div style="margin-left:12px;flex-shrink:0;text-align:right">
+            ${s.geocodeFailed
+              ? `<div class="text-xs" style="color:var(--rose)">⚠️ 주소 미인식</div>`
+              : `<div class="mono text-sm" style="color:var(--accent)">${s.km} km</div>`}
+          </div>
         </div>`).join('');
       openModal({
         title: t('dash.mileage_detail'),
         body: `${rows}
-          <div style="display:flex;justify-content:space-between;padding:12px 0 0">
+          <div style="display:flex;justify-content:space-between;padding:12px 0 4px">
             <div class="text-sm" style="font-weight:600">Total</div>
             <div class="mono text-sm" style="color:var(--accent);font-weight:600">${total} km</div>
-          </div>`,
+          </div>
+          ${failedCount > 0 ? `<div class="text-xs text-muted" style="padding-top:8px">⚠️ ${failedCount}개 구간 주소 미인식 — 이티너리 항목을 열어 다시 저장하면 해결됩니다.</div>` : ''}`,
         footer: `<button class="btn btn-ghost btn-full" onclick="window.__closeModal()">${t('common.done')}</button>`
       });
     };

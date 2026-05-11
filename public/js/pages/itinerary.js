@@ -1,6 +1,7 @@
 import { t } from '../i18n.js';
 import { subscribeItinerary, addItineraryItem, updateItineraryItem, deleteItineraryItem } from '../db.js';
 import { openModal, closeModal, showToast, showConfirm, setModalSaving } from '../app.js';
+import { geocodeCity } from '../weather.js';
 
 let _unsub = null;
 let _ctx = null;
@@ -182,6 +183,11 @@ function openItemModal(item) {
     data.links = _links;
     setModalSaving(true);
     try {
+      // Geocode location at save time so mileage calc uses stored coords
+      if (data.location) {
+        const geo = await geocodeCity(data.location);
+        if (geo) { data.lat = geo.lat; data.lng = geo.lng; }
+      }
       if (id) {
         await updateItineraryItem(_ctx.userId, _ctx.tripId, id, data);
         showToast('Event updated');
