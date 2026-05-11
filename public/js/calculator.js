@@ -157,6 +157,22 @@ window.__calcEval = () => {
   updateDisplay();
 };
 
+window.__calcClose = () => closeCalc();
+
+window.__calcParen = () => {
+  const opens = (_expr.match(/\(/g) || []).length;
+  const closes = (_expr.match(/\)/g) || []).length;
+  if (opens > closes) {
+    _expr += ')';
+  } else {
+    const lastCh = _expr.slice(-1);
+    if (/[\d)]/.test(lastCh)) _expr += '×';
+    _expr += '(';
+  }
+  _lastWasResult = false;
+  updateDisplay();
+};
+
 window.__calcConfirm = () => {
   window.__calcEval();
   if (_targetId) {

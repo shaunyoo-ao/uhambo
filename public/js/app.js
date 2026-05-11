@@ -3,12 +3,15 @@ import { setLang, getLang, t } from './i18n.js';
 import { setCurrency, getCurrency, CURRENCIES } from './currency.js';
 import { getTrips, createTrip, getTrip, updateTrip, deleteTrip } from './db.js';
 
+const APP_VERSION = '1.1.1';
+
 // ── Global state ────────────────────────────────────────────────
 export let currentUser = null;
 export let currentTripId = null;
 let currentPage = null;
-let _appInitialized = false; // guard against duplicate initApp calls
-let _savingTrip = false;     // guard against duplicate trip creation
+let _appInitialized = false;
+let _savingTrip = false;
+let _trips = [];
 
 // ── Page cache ───────────────────────────────────────────────────
 const pageCache = new Map();
@@ -41,32 +44,50 @@ function hideLoading() {
 
 // ── Trip selector ────────────────────────────────────────────────
 async function loadTrips(userId) {
-  const sel = document.getElementById('trip-selector');
+  const btn = document.getElementById('trip-selector-btn');
   try {
-    const trips = await getTrips(userId);
-    sel.innerHTML = '';
-    if (trips.length === 0) {
-      sel.innerHTML = '<option value="">— No trips —</option>';
+    _trips = await getTrips(userId);
+    if (_trips.length === 0) {
+      if (btn) btn.textContent = '— No trips —';
+      currentTripId = null;
     } else {
-      trips.forEach(trip => {
-        const opt = document.createElement('option');
-        opt.value = trip.id;
-        opt.textContent = trip.name;
-        sel.appendChild(opt);
-      });
-    }
-    // Restore last trip or use first
-    const saved = localStorage.getItem('lastTripId');
-    if (saved && trips.find(t => t.id === saved)) {
-      sel.value = saved;
-      currentTripId = saved;
-    } else if (trips.length > 0) {
-      sel.value = trips[0].id;
-      currentTripId = trips[0].id;
+      const saved = localStorage.getItem('lastTripId');
+      const match = saved && _trips.find(tr => tr.id === saved);
+      const active = match || _trips[0];
+      currentTripId = active.id;
+      if (btn) btn.textContent = active.name;
     }
   } catch (e) {
     console.error('loadTrips:', e);
   }
+}
+
+function openTripPicker() {
+  if (_trips.length === 0) { openNewTrip(); return; }
+  openModal({
+    title: t('common.select_trip'),
+    body: _trips.map(trip => `
+      <div class="trip-radio-item" onclick="window.__selectTrip('${trip.id}')">
+        <div class="trip-radio-dot">${trip.id === currentTripId ? '●' : '○'}</div>
+        <div style="flex:1;min-width:0">
+          <div class="font-medium">${trip.name}</div>
+          ${trip.destination ? `<div class="text-xs text-muted">📍 ${trip.destination}</div>` : ''}
+        </div>
+      </div>`).join(''),
+    footer: `<button class="btn btn-ghost btn-full" onclick="window.__closeModal()">${t('common.cancel')}</button>`
+  });
+}
+
+function selectTrip(tripId) {
+  const trip = _trips.find(tr => tr.id === tripId);
+  if (!trip) return;
+  currentTripId = tripId;
+  localStorage.setItem('lastTripId', tripId);
+  const btn = document.getElementById('trip-selector-btn');
+  if (btn) btn.textContent = trip.name;
+  closeModal();
+  dispatchTripChange(tripId);
+  navigate(localStorage.getItem('lastRoute') || 'dashboard');
 }
 
 function dispatchTripChange(tripId) {
@@ -214,7 +235,7 @@ function openSettings() {
         <button class="btn btn-ghost btn-full" onclick="window.__signOut()">Sign Out</button>
       </div>
       <div class="settings-group" style="text-align:center;color:var(--muted);font-size:11px;margin-top:16px">
-        Copyright ⓒ 2026, YONKE All rights reserved.<br>Version 1.0.6
+        Copyright ⓒ 2026, YONKE All rights reserved.<br>Version ${APP_VERSION}
       </div>
     `,
     footer: ''
@@ -274,10 +295,9 @@ async function submitNewTrip() {
   const data = Object.fromEntries(new FormData(form));
   try {
     const tripId = await createTrip(currentUser.uid, data);
-    await loadTrips(currentUser.uid);
-    document.getElementById('trip-selector').value = tripId;
-    currentTripId = tripId;
     localStorage.setItem('lastTripId', tripId);
+    currentTripId = tripId;
+    await loadTrips(currentUser.uid);
     dispatchTripChange(tripId);
     closeModal();
     showToast('Trip created');
@@ -415,8 +435,10 @@ window.__saveEditTrip = async () => {
   setModalSaving(true);
   try {
     await updateTrip(currentUser.uid, currentTripId, data);
-    const opt = document.getElementById('trip-selector').querySelector(`option[value="${currentTripId}"]`);
-    if (opt) opt.textContent = data.name;
+    const tr = _trips.find(t => t.id === currentTripId);
+    if (tr) tr.name = data.name;
+    const btn = document.getElementById('trip-selector-btn');
+    if (btn && currentTripId) btn.textContent = data.name;
     pageCache.clear();
     closeModal();
     showToast('Trip updated');
@@ -435,13 +457,8 @@ async function initApp(user) {
 
   await loadTrips(user.uid);
 
-  // Bind trip selector
-  document.getElementById('trip-selector').addEventListener('change', e => {
-    currentTripId = e.target.value;
-    localStorage.setItem('lastTripId', currentTripId);
-    dispatchTripChange(currentTripId);
-    navigate(localStorage.getItem('lastRoute') || 'dashboard');
-  });
+  window.__openTripPicker = openTripPicker;
+  window.__selectTrip = selectTrip;
 
   // Bind nav tabs
   document.querySelectorAll('.tab-btn').forEach(btn => {
