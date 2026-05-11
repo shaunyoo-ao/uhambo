@@ -6,6 +6,7 @@ import {
 import { openModal, closeModal, showToast, showConfirm, setModalSaving } from '../app.js';
 import { formatConverted, getCurrency, CURRENCIES } from '../currency.js';
 import { openCalc } from '../calculator.js';
+import { geocodeCity } from '../weather.js';
 
 let _unsub = null;
 let _ctx = null;
@@ -259,6 +260,11 @@ function openItemModal(item) {
         category: 'activity',
         notes: '',
       });
+      // Geocode location for itinerary sync lat/lng
+      let geoCoords = null;
+      if (data.location) geoCoords = await geocodeCity(data.location);
+      const geoFields = geoCoords ? { lat: geoCoords.lat, lng: geoCoords.lng } : {};
+
       // Itinerary sync
       await upsertLinkedItinItem(userId, tripId, savedId, 'activity', 'event', {
         title: data.name,
@@ -266,6 +272,8 @@ function openItemModal(item) {
         time: data.time || '',
         location: data.location || '',
         type: 'activity',
+        links: data.links || [],
+        ...geoFields,
       });
       closeModal();
     } catch (e) {

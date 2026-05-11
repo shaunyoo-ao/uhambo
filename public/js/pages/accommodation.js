@@ -6,6 +6,7 @@ import {
 import { openModal, closeModal, showToast, showConfirm, setModalSaving } from '../app.js';
 import { formatConverted, getCurrency, CURRENCIES } from '../currency.js';
 import { openCalc } from '../calculator.js';
+import { geocodeCity } from '../weather.js';
 
 let _unsub = null;
 let _ctx = null;
@@ -235,6 +236,11 @@ function openItemModal(item) {
       } else {
         await deleteLinkedExpense(userId, tripId, savedId, 'accommodation');
       }
+      // Geocode address once for itinerary sync lat/lng
+      let geoCoords = null;
+      if (data.address) geoCoords = await geocodeCity(data.address);
+      const geoFields = geoCoords ? { lat: geoCoords.lat, lng: geoCoords.lng } : {};
+
       // Itinerary sync – check-in
       if (data.checkInTime) {
         await upsertLinkedItinItem(userId, tripId, savedId, 'accommodation', 'checkin', {
@@ -243,6 +249,8 @@ function openItemModal(item) {
           time: data.checkInTime,
           location: data.address || '',
           type: 'rest',
+          links: data.links || [],
+          ...geoFields,
         });
       }
       // Itinerary sync – check-out
@@ -253,6 +261,8 @@ function openItemModal(item) {
           time: data.checkOutTime,
           location: data.address || '',
           type: 'rest',
+          links: data.links || [],
+          ...geoFields,
         });
       }
       closeModal();

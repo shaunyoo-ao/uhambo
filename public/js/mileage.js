@@ -1,5 +1,10 @@
 import { geocodeCity } from './weather.js';
 
+function geoCache(location) {
+  const key = `geo_${location.toLowerCase().trim().replace(/\s+/g, '_')}`;
+  try { const c = JSON.parse(localStorage.getItem(key) || '{}'); return c.lat ? c : null; } catch(_) { return null; }
+}
+
 export async function calcMileageDetail(itineraryItems) {
   const sorted = [...itineraryItems]
     .filter(i => i.location && i.location.trim())
@@ -9,13 +14,31 @@ export async function calcMileageDetail(itineraryItems) {
 
   if (unique.length < 2) return { total: 0, segments: [] };
 
-  const coords = await Promise.all(unique.map(p => geocodeCity(p.location)));
+  // Geocode sequentially to respect Nominatim 1-req/s rate limit.
+  // Stored lat/lng (set at save time) skips network entirely.
+  const coords = [];
+  for (const p of unique) {
+    if (p.lat && p.lng) {
+      coords.push({ lat: p.lat, lng: p.lng });
+    } else {
+      const cached = geoCache(p.location);
+      if (cached) {
+        coords.push(cached);
+      } else {
+        coords.push(await geocodeCity(p.location));
+        await new Promise(r => setTimeout(r, 1100)); // rate-limit gap
+      }
+    }
+  }
 
   let total = 0;
   const segments = [];
-  for (let i = 1; i < coords.length; i++) {
+  for (let i = 1; i < unique.length; i++) {
     const a = coords[i - 1], b = coords[i];
-    if (!a || !b) continue;
+    if (!a || !b) {
+      segments.push({ from: unique[i - 1].location, to: unique[i].location, km: null, geocodeFailed: true });
+      continue;
+    }
     let km = 0;
     try {
       const url = `https://router.project-osrm.org/route/v1/driving/${a.lng},${a.lat};${b.lng},${b.lat}?overview=false`;
