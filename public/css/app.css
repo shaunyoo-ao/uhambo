@@ -617,6 +617,7 @@ a { color: var(--accent); text-decoration: none; }
 .weather-icon { font-size: 20px; line-height: 1; }
 .weather-temp { font-family: var(--font-mono); font-size: 13px; color: var(--cream); }
 .weather-day-label { font-family: var(--font-mono); font-size: 10px; color: var(--muted); letter-spacing: 0.06em; }
+.weather-day-date { font-size: 9px; color: var(--muted); margin-top: -1px; }
 
 /* ── Map container ─────────────────────────────────────────────── */
 .map-container {

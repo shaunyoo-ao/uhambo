@@ -88,8 +88,9 @@ export async function getTripWeather(lat, lng, startDate, endDate) {
   }
 }
 
-// Geocode a city name to lat/lng via Nominatim (OpenStreetMap, free)
-export async function geocodeCity(city) {
+// Geocode a city name to lat/lng via Nominatim (OpenStreetMap, free).
+// Optional countryHint (e.g. "South Africa") improves accuracy for ambiguous names.
+export async function geocodeCity(city, countryHint) {
   if (!city) return null;
   const key = city.toLowerCase().trim();
   const cacheKey = `geo_${key.replace(/\s+/g, '_')}`;
@@ -110,15 +111,19 @@ export async function geocodeCity(city) {
     return null;
   };
 
-  // Try full string, then progressively drop leading segments (specific→broad).
+  const alreadyHasCountry = countryHint && city.toLowerCase().includes(countryHint.toLowerCase());
+  const withCountry = (q) => (countryHint && !alreadyHasCountry) ? `${q}, ${countryHint}` : q;
+
+  // Try full string with country hint (most specific), then without.
   // Stop before single-segment fallback — bare postal codes like "9585" can match
   // the wrong country (e.g. German 09585 instead of South African 9585).
   // Minimum fallback: always keep the last 2 parts, e.g. "Parys, 9585".
-  let result = await tryGeocode(city);
+  let result = await tryGeocode(withCountry(city));
+  if (!result && countryHint && !alreadyHasCountry) result = await tryGeocode(city);
   if (!result && city.includes(',')) {
     const parts = city.split(',').map(s => s.trim());
     for (let i = 1; i < parts.length - 1; i++) {
-      result = await tryGeocode(parts.slice(i).join(', '));
+      result = await tryGeocode(withCountry(parts.slice(i).join(', ')));
       if (result) break;
     }
   }

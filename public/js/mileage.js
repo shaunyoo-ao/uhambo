@@ -12,7 +12,7 @@ export async function calcMileageDetail(itineraryItems) {
 
   const unique = sorted.filter((p, i) => i === 0 || p.location !== sorted[i - 1].location);
 
-  if (unique.length < 2) return { total: 0, segments: [] };
+  if (unique.length < 2) return { total: 0, travelTotal: 0, driveTotal: 0, segments: [] };
 
   // Geocode sequentially to respect Nominatim 1-req/s rate limit.
   // Stored lat/lng (set at save time) skips network entirely.
@@ -50,8 +50,9 @@ export async function calcMileageDetail(itineraryItems) {
   const segments = [];
   for (let i = 1; i < unique.length; i++) {
     const a = coords[i - 1], b = coords[i];
+    const segmentType = (unique[i - 1].type === 'travel' || unique[i].type === 'travel') ? 'travel' : 'drive';
     if (!a || !b) {
-      segments.push({ from: unique[i - 1].location, to: unique[i].location, km: null, geocodeFailed: true });
+      segments.push({ from: unique[i - 1].location, to: unique[i].location, km: null, geocodeFailed: true, segmentType });
       continue;
     }
     let km = 0;
@@ -68,9 +69,16 @@ export async function calcMileageDetail(itineraryItems) {
       km = Math.round(haversine(a.lat, a.lng, b.lat, b.lng));
     }
     total += km;
-    segments.push({ from: unique[i - 1].location, to: unique[i].location, km });
+    segments.push({ from: unique[i - 1].location, to: unique[i].location, km, segmentType });
   }
-  return { total, segments };
+  let travelTotal = 0, driveTotal = 0;
+  for (const s of segments) {
+    if (!s.geocodeFailed && s.km) {
+      if (s.segmentType === 'travel') travelTotal += s.km;
+      else driveTotal += s.km;
+    }
+  }
+  return { total, travelTotal, driveTotal, segments };
 }
 
 export async function calcMileage(itineraryItems) {

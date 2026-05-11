@@ -203,6 +203,17 @@ export async function upsertLinkedItinItem(uid, tid, sourceId, sourceType, sourc
   return ref.id;
 }
 
+export async function getAllTripsData(uid) {
+  const trips = await getTrips(uid);
+  return Promise.all(trips.map(async trip => ({
+    trip,
+    expenses:      await getExpenses(uid, trip.id),
+    activities:    await getActivities(uid, trip.id),
+    accommodation: await getAccommodation(uid, trip.id),
+    itinerary:     await getItinerary(uid, trip.id),
+  })));
+}
+
 export async function deleteLinkedItinItems(uid, tid, sourceId, sourceType) {
   const all = await getDocs(subRef(uid, tid, 'itinerary'));
   const matches = all.docs.filter(d => d.data().sourceId === sourceId && d.data().sourceType === sourceType);
