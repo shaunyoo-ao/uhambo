@@ -183,8 +183,10 @@ function openItemModal(item) {
     data.links = _links;
     setModalSaving(true);
     try {
-      // Geocode location at save time so mileage calc uses stored coords
+      // Geocode location at save time so mileage calc uses stored coords.
+      // Clear cache first so re-saves always fetch fresh coordinates (fixes stale wrong geocodes).
       if (data.location) {
+        try { localStorage.removeItem(`geo_${data.location.toLowerCase().trim().replace(/\s+/g, '_')}`); } catch(_) {}
         const geo = await geocodeCity(data.location);
         if (geo) { data.lat = geo.lat; data.lng = geo.lng; }
       }

@@ -59,7 +59,7 @@
     </svg>
     Continue with Google
   </button>
-  <p class="login-footer" style="text-align:center">Copyright ⓒ 2026, YONKE All rights reserved.<br><span id="app-version">Version 1.1.1</span></p>
+  <p class="login-footer" style="text-align:center">Copyright ⓒ 2026, YONKE All rights reserved.<br>Version 1.1.2</p>
 </div>
 
 <!-- Main App -->
@@ -68,7 +68,9 @@
   <header class="app-header">
     <div class="logo">u <span>Uhambo</span></div>
     <div class="header-controls">
-      <button class="trip-btn" id="trip-selector-btn" onclick="window.__openTripPicker()">— Select trip —</button>
+      <select class="trip-selector" id="trip-selector" title="Select trip">
+        <option value="">— Select trip —</option>
+      </select>
       <button class="icon-btn" id="refresh-btn" title="Refresh">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="23 4 23 10 17 10"/>
@@ -174,14 +176,11 @@
 <!-- Calculator overlay -->
 <div id="calc-root" class="calc-overlay">
   <div class="calc-sheet">
-    <div class="calc-header">
-      <button class="calc-close" onclick="window.__calcClose()">✕</button>
-    </div>
     <div class="calc-expr" id="calc-expr"></div>
     <div class="calc-display" id="calc-display">0</div>
     <div class="calc-grid">
       <button class="calc-btn calc-btn-clear" onclick="window.__calcClear()">C</button>
-      <button class="calc-btn calc-btn-op" onclick="window.__calcParen()">(  )</button>
+      <button class="calc-btn calc-btn-op" onclick="window.__calcInput('(')">(&nbsp;)</button>
       <button class="calc-btn calc-btn-op" onclick="window.__calcInput('%')">%</button>
       <button class="calc-btn calc-btn-op" onclick="window.__calcInput('÷')">÷</button>
       <button class="calc-btn" onclick="window.__calcInput('7')">7</button>

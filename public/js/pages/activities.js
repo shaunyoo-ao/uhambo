@@ -260,9 +260,12 @@ function openItemModal(item) {
         category: 'activity',
         notes: '',
       });
-      // Geocode location for itinerary sync lat/lng
+      // Geocode location for itinerary sync lat/lng; clear cache to force fresh geocode.
       let geoCoords = null;
-      if (data.location) geoCoords = await geocodeCity(data.location);
+      if (data.location) {
+        try { localStorage.removeItem(`geo_${data.location.toLowerCase().trim().replace(/\s+/g, '_')}`); } catch(_) {}
+        geoCoords = await geocodeCity(data.location);
+      }
       const geoFields = geoCoords ? { lat: geoCoords.lat, lng: geoCoords.lng } : {};
 
       // Itinerary sync

@@ -31,6 +31,21 @@ export async function calcMileageDetail(itineraryItems) {
     }
   }
 
+  // Outlier detection: if a coordinate is geocoded to the wrong country it will be
+  // thousands of km from the rest of the trip cluster. Flag it as geocodeFailed and
+  // clear its stale localStorage cache so the next re-save triggers fresh geocoding.
+  const validCoords = coords.filter(c => c !== null);
+  if (validCoords.length >= 3) {
+    const medLat = _median(validCoords.map(c => c.lat));
+    const medLng = _median(validCoords.map(c => c.lng));
+    for (let i = 0; i < coords.length; i++) {
+      if (coords[i] && haversine(coords[i].lat, coords[i].lng, medLat, medLng) > 2000) {
+        try { localStorage.removeItem(`geo_${unique[i].location.toLowerCase().trim().replace(/\s+/g, '_')}`); } catch(_) {}
+        coords[i] = null;
+      }
+    }
+  }
+
   let total = 0;
   const segments = [];
   for (let i = 1; i < unique.length; i++) {
@@ -61,6 +76,12 @@ export async function calcMileageDetail(itineraryItems) {
 export async function calcMileage(itineraryItems) {
   const { total } = await calcMileageDetail(itineraryItems);
   return total;
+}
+
+function _median(arr) {
+  const s = [...arr].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 === 0 ? (s[m - 1] + s[m]) / 2 : s[m];
 }
 
 function haversine(lat1, lon1, lat2, lon2) {

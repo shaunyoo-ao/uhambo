@@ -236,9 +236,12 @@ function openItemModal(item) {
       } else {
         await deleteLinkedExpense(userId, tripId, savedId, 'accommodation');
       }
-      // Geocode address once for itinerary sync lat/lng
+      // Geocode address once for itinerary sync lat/lng; clear cache to force fresh geocode.
       let geoCoords = null;
-      if (data.address) geoCoords = await geocodeCity(data.address);
+      if (data.address) {
+        try { localStorage.removeItem(`geo_${data.address.toLowerCase().trim().replace(/\s+/g, '_')}`); } catch(_) {}
+        geoCoords = await geocodeCity(data.address);
+      }
       const geoFields = geoCoords ? { lat: geoCoords.lat, lng: geoCoords.lng } : {};
 
       // Itinerary sync – check-in

@@ -110,12 +110,14 @@ export async function geocodeCity(city) {
     return null;
   };
 
-  // Try full string, then progressively drop leading segments (specific→broad)
-  // e.g. "Golf Estate, Free State, South Africa" → "Free State, South Africa" → "South Africa"
+  // Try full string, then progressively drop leading segments (specific→broad).
+  // Stop before single-segment fallback — bare postal codes like "9585" can match
+  // the wrong country (e.g. German 09585 instead of South African 9585).
+  // Minimum fallback: always keep the last 2 parts, e.g. "Parys, 9585".
   let result = await tryGeocode(city);
   if (!result && city.includes(',')) {
     const parts = city.split(',').map(s => s.trim());
-    for (let i = 1; i < parts.length; i++) {
+    for (let i = 1; i < parts.length - 1; i++) {
       result = await tryGeocode(parts.slice(i).join(', '));
       if (result) break;
     }
