@@ -54,6 +54,7 @@ function renderList(items) {
     return;
   }
 
+  // Group by date
   const byDate = {};
   items.forEach(item => {
     const d = item.date || 'No Date';
@@ -184,6 +185,8 @@ function openItemModal(item) {
     data.links = _links;
     setModalSaving(true);
     try {
+      // Geocode location at save time so mileage calc uses stored coords.
+      // Clear cache first so re-saves always fetch fresh coordinates (fixes stale wrong geocodes).
       if (data.location) {
         try { localStorage.removeItem(`geo_${data.location.toLowerCase().trim().replace(/\s+/g, '_')}`); } catch(_) {}
         const geo = await geocodeCity(data.location, _tripCountry);

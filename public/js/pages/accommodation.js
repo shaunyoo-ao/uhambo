@@ -2,6 +2,7 @@ import { t } from '../i18n.js';
 import {
   subscribeAccommodation, addAccommodation, updateAccommodation, deleteAccommodation,
   upsertLinkedExpense, deleteLinkedExpense, upsertLinkedItinItem, deleteLinkedItinItems,
+  getTrip,
 } from '../db.js';
 import { openModal, closeModal, showToast, showConfirm, setModalSaving } from '../app.js';
 import { formatConverted, getCurrency, CURRENCIES } from '../currency.js';
@@ -12,6 +13,7 @@ let _unsub = null;
 let _ctx = null;
 let _items = [];
 let _links = [];
+let _tripCountry = '';
 
 export function destroy() {
   if (_unsub) { _unsub(); _unsub = null; }
@@ -21,6 +23,7 @@ export function destroy() {
 export async function render(container, ctx) {
   _ctx = ctx;
   const { userId, tripId } = ctx;
+  getTrip(userId, tripId).then(tr => { _tripCountry = tr?.country || ''; }).catch(() => {});
 
   if (!tripId) {
     container.innerHTML = noTripHTML();
@@ -76,7 +79,10 @@ async function renderList(items) {
                 ${item.address ? `<div class="text-xs text-muted">📍 ${item.address}</div>` : ''}
               </div>
             </div>
-            ${priceStr ? `<div class="mono text-sm text-accent">${priceStr}</div>` : ''}
+            <div class="row gap-8">
+              ${priceStr ? `<div class="mono text-sm text-accent">${priceStr}</div>` : ''}
+              ${item.status === 'candidate' ? `<div class="badge" style="background:rgba(232,200,124,0.15);color:var(--sun)">🔖 ${t('common.candidate')}</div>` : ''}
+            </div>
           </div>
           <div class="dotrow"></div>
           <div class="row gap-16">
@@ -177,6 +183,13 @@ function openItemModal(item) {
           </div>
         </div>
         <div class="form-group">
+          <label class="form-label">${t('common.status')}</label>
+          <select class="form-select" name="status">
+            <option value="booked" ${(item?.status || 'booked') === 'booked' ? 'selected' : ''}>✅ ${t('common.booked')}</option>
+            <option value="candidate" ${item?.status === 'candidate' ? 'selected' : ''}>🔖 ${t('common.candidate')}</option>
+          </select>
+        </div>
+        <div class="form-group">
           <label class="form-label">${t('accom.notes')}</label>
           <textarea class="form-textarea" name="notes" placeholder="Booking ref, check-in instructions…">${item?.notes || ''}</textarea>
         </div>
@@ -240,7 +253,7 @@ function openItemModal(item) {
       let geoCoords = null;
       if (data.address) {
         try { localStorage.removeItem(`geo_${data.address.toLowerCase().trim().replace(/\s+/g, '_')}`); } catch(_) {}
-        geoCoords = await geocodeCity(data.address);
+        geoCoords = await geocodeCity(data.address, _tripCountry);
       }
       const geoFields = geoCoords ? { lat: geoCoords.lat, lng: geoCoords.lng } : {};
 

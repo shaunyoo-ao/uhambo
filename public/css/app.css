@@ -1,4 +1,4 @@
-/* ── Reset & Base ────────────────────────────────────────────── */
+/* ── Reset & Base ──────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { height: 100%; -webkit-tap-highlight-color: transparent; }
 body {
@@ -14,7 +14,7 @@ body {
 button, input, select, textarea { font-family: inherit; font-size: inherit; }
 a { color: var(--accent); text-decoration: none; }
 
-/* ── Design Tokens ───────────────────────────────────────────── */
+/* ── Design Tokens ─────────────────────────────────────────────── */
 :root {
   --ink:          #0c0d0f;
   --surface:      #16181c;
@@ -47,7 +47,7 @@ a { color: var(--accent); text-decoration: none; }
   --safe-bottom:  env(safe-area-inset-bottom, 0px);
 }
 
-/* ── Layout ──────────────────────────────────────────────────────── */
+/* ── Layout ────────────────────────────────────────────────────── */
 #app {
   display: flex;
   flex-direction: column;
@@ -141,7 +141,7 @@ a { color: var(--accent); text-decoration: none; }
 .icon-btn:active { background: var(--surface-2); }
 .icon-btn svg { width: 16px; height: 16px; }
 
-/* ── Page Content ────────────────────────────────────────────── */
+/* ── Page Content ──────────────────────────────────────────────── */
 #page-content {
   flex: 1;
   overflow-y: auto;
@@ -152,7 +152,7 @@ a { color: var(--accent); text-decoration: none; }
 }
 #page-content::-webkit-scrollbar { display: none; }
 
-/* ── Bottom Nav ────────────────────────────────────────────────────── */
+/* ── Bottom Nav ────────────────────────────────────────────────── */
 .app-nav {
   height: calc(var(--nav-h) + var(--safe-bottom));
   padding-bottom: var(--safe-bottom);
@@ -193,7 +193,7 @@ a { color: var(--accent); text-decoration: none; }
 .tab-btn.active { color: var(--accent); }
 .tab-btn:active { opacity: 0.7; }
 
-/* ── Cards ───────────────────────────────────────────────────────── */
+/* ── Cards ─────────────────────────────────────────────────────── */
 .card {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -211,7 +211,7 @@ a { color: var(--accent); text-decoration: none; }
 .card-body { padding: 14px 16px; }
 .card + .card { margin-top: 10px; }
 
-/* ── Typography ────────────────────────────────────────────────────── */
+/* ── Typography ────────────────────────────────────────────────── */
 .eyebrow {
   font-family: var(--font-mono);
   font-size: 10.5px;
@@ -239,7 +239,7 @@ a { color: var(--accent); text-decoration: none; }
 .font-medium { font-weight: 500; }
 .font-bold   { font-weight: 600; }
 
-/* ── Page layout helpers ───────────────────────────────────────────── */
+/* ── Page layout helpers ───────────────────────────────────────── */
 .page { padding: 14px 16px; }
 .page-title {
   font-family: var(--font-display);
@@ -269,7 +269,7 @@ a { color: var(--accent); text-decoration: none; }
 .mt-12 { margin-top: 12px; }
 .mt-16 { margin-top: 16px; }
 
-/* ── Divider ───────────────────────────────────────────────────────── */
+/* ── Divider ───────────────────────────────────────────────────── */
 .divider {
   height: 1px;
   background: var(--line);
@@ -284,7 +284,7 @@ a { color: var(--accent); text-decoration: none; }
   margin: 12px 0;
 }
 
-/* ── Badges & Pills ──────────────────────────────────────────────────── */
+/* ── Badges & Pills ────────────────────────────────────────────── */
 .badge {
   display: inline-flex; align-items: center;
   padding: 2px 8px;
@@ -301,7 +301,7 @@ a { color: var(--accent); text-decoration: none; }
 .badge-rose    { background: var(--rose-soft);   color: var(--rose); }
 .badge-muted   { background: var(--surface-2);   color: var(--muted); }
 
-/* ── Buttons ───────────────────────────────────────────────────────── */
+/* ── Buttons ───────────────────────────────────────────────────── */
 .btn {
   display: inline-flex; align-items: center; justify-content: center;
   gap: 6px;
@@ -325,7 +325,7 @@ a { color: var(--accent); text-decoration: none; }
 .btn-full { width: 100%; }
 .btn svg { width: 16px; height: 16px; }
 
-/* ── FAB ──────────────────────────────────────────────────────────────── */
+/* ── FAB ───────────────────────────────────────────────────────── */
 .fab {
   position: fixed;
   bottom: calc(var(--nav-h) + var(--safe-bottom) + 16px);
@@ -344,7 +344,7 @@ a { color: var(--accent); text-decoration: none; }
 .fab:active { transform: scale(0.94); }
 .fab svg { width: 24px; height: 24px; }
 
-/* ── Modal / Bottom Sheet ──────────────────────────────────────────── */
+/* ── Modal / Bottom Sheet ──────────────────────────────────────── */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -424,7 +424,7 @@ a { color: var(--accent); text-decoration: none; }
   flex-shrink: 0;
 }
 
-/* ── Forms ───────────────────────────────────────────────────────────────── */
+/* ── Forms ─────────────────────────────────────────────────────── */
 .form-group { margin-bottom: 14px; }
 .form-group:last-child { margin-bottom: 0; }
 .form-label {
@@ -465,7 +465,7 @@ a { color: var(--accent); text-decoration: none; }
 .form-row .form-group { flex: 1; }
 .form-hint { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
 
-/* ── List Items ────────────────────────────────────────────────────── */
+/* ── List Items ────────────────────────────────────────────────── */
 .list-item {
   display: flex;
   align-items: flex-start;
@@ -490,7 +490,7 @@ a { color: var(--accent); text-decoration: none; }
 .list-sub { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
 .list-meta { text-align: right; flex-shrink: 0; }
 
-/* ── Chip filter ─────────────────────────────────────────────────────── */
+/* ── Chip filter ───────────────────────────────────────────────── */
 .chip-row {
   display: flex;
   gap: 8px;
@@ -516,7 +516,7 @@ a { color: var(--accent); text-decoration: none; }
 }
 .chip.active { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
 
-/* ── Timeline (Itinerary) ──────────────────────────────────────────── */
+/* ── Timeline (Itinerary) ──────────────────────────────────────── */
 .timeline-date {
   padding: 10px 16px 6px;
   position: sticky;
@@ -569,7 +569,7 @@ a { color: var(--accent); text-decoration: none; }
 }
 .timeline-card:active { border-color: var(--accent); }
 
-/* ── Stat Cards (Archive) ──────────────────────────────────────────── */
+/* ── Stat Cards (Archive) ──────────────────────────────────────── */
 .stat-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -598,7 +598,7 @@ a { color: var(--accent); text-decoration: none; }
 }
 .stat-sub { font-size: 12px; color: var(--cream-dim); margin-top: 3px; }
 
-/* ── Weather Widget ────────────────────────────────────────────────────── */
+/* ── Weather Widget ────────────────────────────────────────────── */
 .weather-widget {
   display: flex;
   gap: 8px;
@@ -619,7 +619,7 @@ a { color: var(--accent); text-decoration: none; }
 .weather-day-label { font-family: var(--font-mono); font-size: 10px; color: var(--muted); letter-spacing: 0.06em; }
 .weather-day-date { font-size: 9px; color: var(--muted); margin-top: -1px; }
 
-/* ── Map container ─────────────────────────────────────────────────────── */
+/* ── Map container ─────────────────────────────────────────────── */
 .map-container {
   width: 100%;
   height: 220px;
@@ -631,7 +631,7 @@ a { color: var(--accent); text-decoration: none; }
 }
 .map-container.fullscreen { height: 100%; border-radius: 0; border: none; }
 
-/* ── Expense chart ──────────────────────────────────────────────────────── */
+/* ── Expense chart ─────────────────────────────────────────────── */
 .chart-canvas {
   width: 100%;
   max-width: 200px;
@@ -640,7 +640,7 @@ a { color: var(--accent); text-decoration: none; }
   margin: 0 auto;
 }
 
-/* ── Empty state ───────────────────────────────────────────────────────── */
+/* ── Empty state ───────────────────────────────────────────────── */
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -654,7 +654,7 @@ a { color: var(--accent); text-decoration: none; }
 .empty-title { font-size: 15px; font-weight: 500; color: var(--cream-dim); }
 .empty-sub { font-size: 13px; color: var(--muted); }
 
-/* ── Loading spinner ─────────────────────────────────────────────────────── */
+/* ── Loading spinner ───────────────────────────────────────────── */
 .spinner {
   width: 28px; height: 28px;
   border: 2.5px solid var(--line);
@@ -668,7 +668,7 @@ a { color: var(--accent); text-decoration: none; }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── Toast ───────────────────────────────────────────────────────────────── */
+/* ── Toast ─────────────────────────────────────────────────────── */
 #toast {
   position: fixed;
   bottom: calc(var(--nav-h) + var(--safe-bottom) + 10px);
@@ -691,7 +691,7 @@ a { color: var(--accent); text-decoration: none; }
   transform: translateX(-50%) translateY(0);
 }
 
-/* ── Login Screen ────────────────────────────────────────────────────── */
+/* ── Login Screen ──────────────────────────────────────────────── */
 #login-screen {
   position: fixed;
   inset: 0;
@@ -755,7 +755,7 @@ a { color: var(--accent); text-decoration: none; }
   text-align: center;
 }
 
-/* ── Loading overlay (app init) ──────────────────────────────────────────── */
+/* ── Loading overlay (app init) ────────────────────────────────── */
 #loading-overlay {
   position: fixed; inset: 0;
   background: var(--ink);
@@ -772,7 +772,7 @@ a { color: var(--accent); text-decoration: none; }
   color: var(--accent);
 }
 
-/* ── Settings panel ────────────────────────────────────────────────────── */
+/* ── Settings panel ────────────────────────────────────────────── */
 .settings-group { margin-bottom: 20px; }
 .settings-row {
   display: flex;
@@ -784,7 +784,7 @@ a { color: var(--accent); text-decoration: none; }
 .settings-row:last-child { border-bottom: none; }
 .settings-row label { font-size: 14px; color: var(--cream-dim); }
 
-/* ── Toggle ──────────────────────────────────────────────────────────────── */
+/* ── Toggle ────────────────────────────────────────────────────── */
 .toggle {
   position: relative; width: 40px; height: 22px;
   display: inline-block;
@@ -810,7 +810,7 @@ a { color: var(--accent); text-decoration: none; }
 .toggle input:checked + .toggle-slider { background: var(--accent-soft); border-color: var(--accent); }
 .toggle input:checked + .toggle-slider::after { left: 21px; background: var(--accent); }
 
-/* ── Progress bar ──────────────────────────────────────────────────────── */
+/* ── Progress bar ──────────────────────────────────────────────── */
 .progress-bar {
   height: 4px;
   background: var(--line);
@@ -825,7 +825,7 @@ a { color: var(--accent); text-decoration: none; }
   transition: width 0.4s;
 }
 
-/* ── Modal save progress (indeterminate) ───────────────────────────────────── */
+/* ── Modal save progress (indeterminate) ───────────────────────── */
 .modal-progress {
   height: 3px;
   background: transparent;
@@ -848,7 +848,7 @@ a { color: var(--accent); text-decoration: none; }
   100% { transform: translateX(400%); }
 }
 
-/* ── Completion checkbox ───────────────────────────────────────────────────── */
+/* ── Completion checkbox ───────────────────────────────────────── */
 .check-box {
   width: 20px; height: 20px;
   border-radius: 6px;
@@ -868,7 +868,7 @@ a { color: var(--accent); text-decoration: none; }
   transform: rotate(-45deg) translateY(-1px);
 }
 
-/* ── Confirm dialog ──────────────────────────────────────────────────────── */
+/* ── Confirm dialog ────────────────────────────────────────────── */
 .confirm-overlay {
   position: fixed; inset: 0;
   background: rgba(12,13,15,0.8);
@@ -891,7 +891,7 @@ a { color: var(--accent); text-decoration: none; }
 .confirm-msg { font-size: 14px; color: var(--cream-dim); margin-bottom: 20px; }
 .confirm-actions { display: flex; gap: 10px; }
 
-/* ── Swipe delete hint ─────────────────────────────────────────────────────── */
+/* ── Swipe delete hint ─────────────────────────────────────────── */
 .swipe-wrap { position: relative; overflow: hidden; }
 .swipe-delete-bg {
   position: absolute; right: 0; top: 0; bottom: 0;
@@ -903,7 +903,7 @@ a { color: var(--accent); text-decoration: none; }
   border-radius: 0 var(--radius) var(--radius) 0;
 }
 
-/* ── Calculator overlay ───────────────────────────────────────────────────────── */
+/* ── Calculator overlay ─────────────────────────────────────────── */
 .calc-overlay {
   position: fixed; inset: 0; z-index: 300;
   background: rgba(0,0,0,0.6);
@@ -957,7 +957,7 @@ a { color: var(--accent); text-decoration: none; }
   background: var(--accent); color: #fff; font-size: 16px;
 }
 
-/* ── Responsive: wider screens ───────────────────────────────────────────── */
+/* ── Responsive: wider screens ─────────────────────────────────── */
 @media (min-width: 480px) {
   #app {
     border-left: 1px solid var(--line);
@@ -967,7 +967,7 @@ a { color: var(--accent); text-decoration: none; }
   #toast { bottom: calc(var(--nav-h) + var(--safe-bottom) + 10px); }
 }
 
-/* ── Link field ─────────────────────────────────────────────────────────────────── */
+/* ── Link field ─────────────────────────────────────────────────── */
 .link-list { display:flex; flex-direction:column; gap:6px; margin-bottom:6px; }
 .link-item { display:flex; align-items:center; gap:6px; }
 .link-item a { flex:1; font-size:13px; color:var(--sky); text-overflow:ellipsis; overflow:hidden; white-space:nowrap; }

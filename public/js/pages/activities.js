@@ -2,6 +2,7 @@ import { t } from '../i18n.js';
 import {
   subscribeActivities, addActivity, updateActivity, deleteActivity, toggleActivity,
   upsertLinkedExpense, deleteLinkedExpense, upsertLinkedItinItem, deleteLinkedItinItems,
+  getTrip,
 } from '../db.js';
 import { openModal, closeModal, showToast, showConfirm, setModalSaving } from '../app.js';
 import { formatConverted, getCurrency, CURRENCIES } from '../currency.js';
@@ -14,6 +15,7 @@ let _items = [];
 let _filter = 'all';
 let _links = [];
 let _adding = false;
+let _tripCountry = '';
 
 export function destroy() {
   if (_unsub) { _unsub(); _unsub = null; }
@@ -21,13 +23,14 @@ export function destroy() {
 }
 
 const CAT_ICONS = {
-  outdoor: '🏔️', culture: '🎭', sport: '⛳', other: '⚡'
+  outdoor: '🏔️', sport: '⛳', culture: '🎭', museum: '🏛️', site: '🗿', other: '⚡'
 };
-const CATS = ['outdoor', 'culture', 'sport', 'other'];
+const CATS = ['outdoor', 'sport', 'culture', 'museum', 'site', 'other'];
 
 export async function render(container, ctx) {
   _ctx = ctx;
   const { userId, tripId } = ctx;
+  getTrip(userId, tripId).then(tr => { _tripCountry = tr?.country || ''; }).catch(() => {});
 
   if (!tripId) {
     container.innerHTML = noTripHTML();
@@ -134,6 +137,7 @@ async function renderItem(item) {
       <div class="list-meta" onclick="window.__editActItem('${item.id}')">
         ${priceStr ? `<div class="mono text-sm text-accent">${priceStr}</div>` : ''}
         <div class="badge badge-muted" style="margin-top:4px">${item.category || 'other'}</div>
+        ${item.status === 'candidate' ? `<div class="badge" style="margin-top:4px;background:var(--sun-dim,rgba(232,200,124,0.15));color:var(--sun)">🔖</div>` : ''}
       </div>
     </div>`;
 }
@@ -203,6 +207,13 @@ function openItemModal(item) {
           </div>
         </div>
         <div class="form-group">
+          <label class="form-label">${t('common.status')}</label>
+          <select class="form-select" name="status">
+            <option value="booked" ${(item?.status || 'booked') === 'booked' ? 'selected' : ''}>✅ ${t('common.booked')}</option>
+            <option value="candidate" ${item?.status === 'candidate' ? 'selected' : ''}>🔖 ${t('common.candidate')}</option>
+          </select>
+        </div>
+        <div class="form-group">
           <label class="form-label">${t('act.notes')}</label>
           <textarea class="form-textarea" name="notes" placeholder="Details, booking info…">${item?.notes || ''}</textarea>
         </div>
@@ -264,7 +275,7 @@ function openItemModal(item) {
       let geoCoords = null;
       if (data.location) {
         try { localStorage.removeItem(`geo_${data.location.toLowerCase().trim().replace(/\s+/g, '_')}`); } catch(_) {}
-        geoCoords = await geocodeCity(data.location);
+        geoCoords = await geocodeCity(data.location, _tripCountry);
       }
       const geoFields = geoCoords ? { lat: geoCoords.lat, lng: geoCoords.lng } : {};
 

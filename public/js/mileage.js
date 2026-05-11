@@ -14,6 +14,8 @@ export async function calcMileageDetail(itineraryItems) {
 
   if (unique.length < 2) return { total: 0, travelTotal: 0, driveTotal: 0, segments: [] };
 
+  // Geocode sequentially to respect Nominatim 1-req/s rate limit.
+  // Stored lat/lng (set at save time) skips network entirely.
   const coords = [];
   for (const p of unique) {
     if (p.lat && p.lng) {
@@ -24,11 +26,14 @@ export async function calcMileageDetail(itineraryItems) {
         coords.push(cached);
       } else {
         coords.push(await geocodeCity(p.location));
-        await new Promise(r => setTimeout(r, 1100));
+        await new Promise(r => setTimeout(r, 1100)); // rate-limit gap
       }
     }
   }
 
+  // Outlier detection: if a coordinate is geocoded to the wrong country it will be
+  // thousands of km from the rest of the trip cluster. Flag it as geocodeFailed and
+  // clear its stale localStorage cache so the next re-save triggers fresh geocoding.
   const validCoords = coords.filter(c => c !== null);
   if (validCoords.length >= 3) {
     const medLat = _median(validCoords.map(c => c.lat));

@@ -54,7 +54,7 @@ export async function render(container, { userId, tripId }) {
       const { convert } = await import('../currency.js');
       totalKRW += await convert(e.amount || 0, e.currency || 'KRW', 'KRW');
     }
-    const totalFormatted = await formatConverted(totalKRW, 'KRW');
+    const totalFormatted = await formatConverted(Math.round(totalKRW), 'KRW');
 
     // Trip duration
     let daysLeft = '';
@@ -79,6 +79,8 @@ export async function render(container, { userId, tripId }) {
     // Mileage
     _mileageDetail = await calcMileageDetail(itinerary);
     const mileageKm = _mileageDetail.total;
+    const mileageTravelKm = _mileageDetail.travelTotal || 0;
+    const mileageDriveKm = _mileageDetail.driveTotal || 0;
 
     container.innerHTML = `
       <div class="page" style="padding-bottom:24px">
@@ -108,6 +110,7 @@ export async function render(container, { userId, tripId }) {
           <div class="stat-card" style="cursor:pointer" onclick="window.__showMileageDetail()">
             <div class="stat-value mono" id="mileage-stat-value">${mileageKm} km</div>
             <div class="stat-label">${t('dash.mileage')}</div>
+            <div class="stat-sub" id="mileage-stat-sub">${mileageTravelKm > 0 ? `✈️ ${mileageTravelKm} · ` : ''}${mileageDriveKm > 0 ? `🚗 ${mileageDriveKm}` : ''}</div>
           </div>
         </div>
 
@@ -153,7 +156,7 @@ export async function render(container, { userId, tripId }) {
         <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)">
           <div style="flex:1;min-width:0;overflow:hidden">
             <div class="text-xs text-muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.from}</div>
-            <div style="font-size:11px;color:var(--muted-2);margin:2px 0">↓</div>
+            <div style="font-size:11px;color:var(--muted-2);margin:2px 0">${s.segmentType === 'travel' ? '✈️' : '🚗'} ↓</div>
             <div class="text-xs" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.to}</div>
           </div>
           <div style="margin-left:12px;flex-shrink:0;text-align:right">
@@ -188,6 +191,11 @@ export async function render(container, { userId, tripId }) {
       _mileageDetail = await calcMileageDetail(items);
       const mileageEl = document.getElementById('mileage-stat-value');
       if (mileageEl) mileageEl.textContent = `${_mileageDetail.total} km`;
+      const mileageSubEl = document.getElementById('mileage-stat-sub');
+      if (mileageSubEl) {
+        const tv = _mileageDetail.travelTotal || 0, dv = _mileageDetail.driveTotal || 0;
+        mileageSubEl.textContent = `${tv > 0 ? `✈️ ${tv} · ` : ''}${dv > 0 ? `🚗 ${dv}` : ''}`;
+      }
     });
 
   } catch (e) {
@@ -207,7 +215,7 @@ async function loadWeather(trip) {
       const cacheKey = `geo_${trip.destination.toLowerCase().replace(/\s+/g, '_')}`;
       const cached = JSON.parse(localStorage.getItem(cacheKey) || '{}');
       if (!cached.lat) localStorage.removeItem(cacheKey);
-      const geo = await geocodeCity(trip.destination);
+      const geo = await geocodeCity(trip.destination, trip.country || '');
       if (geo) { lat = geo.lat; lng = geo.lng; }
     }
     if (!lat || !lng) {
@@ -250,12 +258,15 @@ async function loadWeather(trip) {
         ${days.slice(0, 7).map((day) => {
           const d = new Date(day.date);
           const label = day.date === todayStr ? 'Today' : dayNames[d.getDay()];
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          const dd = String(d.getDate()).padStart(2, '0');
           const precipStr = day.precip !== null && day.precip !== undefined
             ? (day.precipIsProb ? Math.round(day.precip) + '%' : Math.round(day.precip) + 'mm')
             : '';
           return `
             <div class="weather-day ${day.date === todayStr ? 'today' : ''}">
               <div class="weather-day-label">${label}</div>
+              <div class="weather-day-date">${mm}/${dd}</div>
               <div class="weather-icon">${day.icon}</div>
               <div class="weather-temp">${day.maxTemp}°</div>
               <div class="text-xs" style="color:var(--muted-2)">${day.minTemp}°</div>

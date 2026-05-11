@@ -21,8 +21,12 @@ const translations = {
     'common.add_link':    '+ Add link',
     'common.refresh':     'Refresh',
     'common.select_trip': 'Select Trip',
+    'common.status':    'Status',
+    'common.candidate': 'Candidate',
+    'common.booked':    'Booked',
     // Trip
     'trip.name':        'Trip Name',
+    'trip.country':     'Country',
     'trip.destination': 'Destination',
     'trip.start_date':  'Start Date',
     'trip.end_date':    'End Date',
@@ -90,8 +94,10 @@ const translations = {
     'act.notes':        'Notes',
     'act.completed':    'Completed',
     'act.cats.outdoor': 'Outdoor',
-    'act.cats.culture': 'Culture',
     'act.cats.sport':   'Sport',
+    'act.cats.culture': 'Culture',
+    'act.cats.museum':  'Museum',
+    'act.cats.site':    'Site',
     'act.cats.other':   'Other',
     // Expenses
     'exp.title':        'Expenses',
@@ -124,6 +130,8 @@ const translations = {
     'arch.act_prog':     'Activity Progress',
     'arch.total_label':  'total',
     'arch.stays_label':  'stays',
+    'arch.trips':        'Trips',
+    'arch.countries':    'countries',
   },
   ko: {
     // Nav
@@ -147,8 +155,12 @@ const translations = {
     'common.add_link':    '+ 링크 추가',
     'common.refresh':     '새로고침',
     'common.select_trip': '여행 선택',
+    'common.status':    '상태',
+    'common.candidate': '후보',
+    'common.booked':    '예약됨',
     // Trip
     'trip.name':        '여행 이름',
+    'trip.country':     '국가',
     'trip.destination': '목적지',
     'trip.start_date':  '시작일',
     'trip.end_date':    '종료일',
@@ -216,8 +228,10 @@ const translations = {
     'act.notes':        '메모',
     'act.completed':    '완료됨',
     'act.cats.outdoor': '야외',
-    'act.cats.culture': '문화',
     'act.cats.sport':   '스포츠',
+    'act.cats.culture': '문화',
+    'act.cats.museum':  '박물관',
+    'act.cats.site':    '유명장소',
     'act.cats.other':   '기타',
     // Expenses
     'exp.title':        '지출',
@@ -250,6 +264,8 @@ const translations = {
     'arch.act_prog':     '활동 진행률',
     'arch.total_label':  '합계',
     'arch.stays_label':  '숙박',
+    'arch.trips':        '여행',
+    'arch.countries':    '국가',
   }
 };
 
