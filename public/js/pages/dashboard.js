@@ -169,7 +169,7 @@ export async function render(container, { userId, tripId }) {
             <div class="text-sm" style="font-weight:600">Total</div>
             <div class="mono text-sm" style="color:var(--accent);font-weight:600">${total} km</div>
           </div>
-          ${failedCount > 0 ? `<div class="text-xs text-muted" style="padding-top:8px">⚠️ ${failedCount}개 구간 주소 미인식 — 이티너리 항목에서 주소를 다시 저장하면 자동 해결됩니다.</div>` : ''}`,
+          ${failedCount > 0 ? `<div class="text-xs text-muted" style="padding-top:8px">⚠️ ${failedCount}개 구간 주소 미인식 — 이티너리 항목을 열어 다시 저장하면 해결됩니다.</div>` : ''}`,
         footer: `<button class="btn btn-ghost btn-full" onclick="window.__closeModal()">${t('common.done')}</button>`
       });
     };
@@ -177,7 +177,7 @@ export async function render(container, { userId, tripId }) {
     // Load weather async
     loadWeather(trip);
 
-    // Subscribe to itinerary for upcoming section + live mileage recalculation
+    // Subscribe to itinerary for upcoming section + live mileage
     if (_unsubItinerary) _unsubItinerary();
     _unsubItinerary = subscribeItinerary(userId, tripId, async (items) => {
       const upcomingEl = document.getElementById('upcoming-body');
@@ -185,7 +185,6 @@ export async function render(container, { userId, tripId }) {
         const upcoming = items.filter(i => i.date >= today).slice(0, 5);
         upcomingEl.innerHTML = renderUpcoming(upcoming);
       }
-      // Recalculate mileage in itinerary time order
       _mileageDetail = await calcMileageDetail(items);
       const mileageEl = document.getElementById('mileage-stat-value');
       if (mileageEl) mileageEl.textContent = `${_mileageDetail.total} km`;
@@ -277,7 +276,7 @@ function renderUpcoming(items) {
       <div class="empty-sub">${t('dash.no_events')}</div>
     </div>`;
   }
-  const typeIcons = { travel: '✈️', meal: '🍽️', activity: '⚡', rest: '🏨', shopping: '🛍️', other: '📌' };
+  const typeIcons = { travel: '✈️', meal: '🍽️', activity: '⚡', rest: '🏨', shopping: '🛍️', home: '🏠', other: '📌' };
   return items.map(item => `
     <div class="list-item">
       <div class="list-icon" style="background:var(--surface-2)">${typeIcons[item.type] || '📌'}</div>
