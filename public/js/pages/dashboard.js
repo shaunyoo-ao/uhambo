@@ -106,7 +106,7 @@ export async function render(container, { userId, tripId }) {
             <div class="stat-label">${t('dash.stays')}</div>
           </div>
           <div class="stat-card" style="cursor:pointer" onclick="window.__showMileageDetail()">
-            <div class="stat-value mono">${mileageKm} km</div>
+            <div class="stat-value mono" id="mileage-stat-value">${mileageKm} km</div>
             <div class="stat-label">${t('dash.mileage')}</div>
           </div>
         </div>
@@ -171,14 +171,17 @@ export async function render(container, { userId, tripId }) {
     // Load weather async
     loadWeather(trip);
 
-    // Subscribe to itinerary for upcoming section
+    // Subscribe to itinerary for upcoming section + live mileage
     if (_unsubItinerary) _unsubItinerary();
-    _unsubItinerary = subscribeItinerary(userId, tripId, (items) => {
+    _unsubItinerary = subscribeItinerary(userId, tripId, async (items) => {
       const upcomingEl = document.getElementById('upcoming-body');
       if (upcomingEl) {
         const upcoming = items.filter(i => i.date >= today).slice(0, 5);
         upcomingEl.innerHTML = renderUpcoming(upcoming);
       }
+      _mileageDetail = await calcMileageDetail(items);
+      const mileageEl = document.getElementById('mileage-stat-value');
+      if (mileageEl) mileageEl.textContent = `${_mileageDetail.total} km`;
     });
 
   } catch (e) {
@@ -267,7 +270,7 @@ function renderUpcoming(items) {
       <div class="empty-sub">${t('dash.no_events')}</div>
     </div>`;
   }
-  const typeIcons = { travel: '✈️', meal: '🍽️', activity: '⚡', rest: '🏨', shopping: '🛍️', other: '📌' };
+  const typeIcons = { travel: '✈️', meal: '🍽️', activity: '⚡', rest: '🏨', shopping: '🛍️', home: '🏠', other: '📌' };
   return items.map(item => `
     <div class="list-item">
       <div class="list-icon" style="background:var(--surface-2)">${typeIcons[item.type] || '📌'}</div>

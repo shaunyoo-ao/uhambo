@@ -68,10 +68,10 @@ export async function render(container, ctx) {
       tripDays = Math.round((new Date(trip.endDate) - new Date(trip.startDate)) / 86400000) + 1;
     }
 
-    // Places visited (unique locations from itinerary + activities)
+    // Places visited (unique locations from itinerary + activities, excluding home type)
     const places = new Set();
     [...itinerary, ...activities].forEach(item => {
-      if (item.location) places.add(item.location.split(',')[0].trim());
+      if (item.location && item.type !== 'home') places.add(item.location.split(',')[0].trim());
     });
     accommodation.forEach(a => {
       if (a.address) places.add(a.address.split(',')[0].trim());

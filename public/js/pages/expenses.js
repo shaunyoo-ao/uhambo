@@ -228,7 +228,7 @@ function openItemModal(item) {
             <label class="form-label">${t('exp.amount')} *</label>
             <div style="display:flex;gap:6px">
               <input id="exp-amount-input" class="form-input" name="amount" type="number" min="0" step="any" value="${item?.amount || ''}" placeholder="0" required style="flex:1">
-              <button type="button" class="btn btn-secondary btn-sm" onclick="window.__openCalc('exp-amount-input')" style="flex-shrink:0;font-size:16px">🖩</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="window.__openCalc('exp-amount-input')" style="flex-shrink:0;padding:0 10px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:block"><rect x="4" y="2" width="16" height="20" rx="2"/><rect x="8" y="6" width="8" height="3" rx="0.5" fill="currentColor" stroke="none"/><circle cx="9" cy="13" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="13" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="13" r="1" fill="currentColor" stroke="none"/><circle cx="9" cy="17" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="17" r="1" fill="currentColor" stroke="none"/></svg></button>
             </div>
           </div>
           <div class="form-group" style="flex:1">
