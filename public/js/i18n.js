@@ -40,6 +40,8 @@ const translations = {
     'dash.recent_exp':   'RECENT EXPENSES',
     'dash.no_expenses':  'No expenses yet',
     'dash.mileage':      'MILEAGE',
+    'dash.weather_ref':  'Current conditions (forecast available 16 days before departure)',
+    'dash.mileage_detail': 'Route Detail',
     // Itinerary
     'itin.title':       'Itinerary',
     'itin.add':         'Add Event',
@@ -87,7 +89,6 @@ const translations = {
     'act.cats.outdoor': 'Outdoor',
     'act.cats.culture': 'Culture',
     'act.cats.sport':   'Sport',
-    'act.cats.shopping':'Shopping',
     'act.cats.other':   'Other',
     // Expenses
     'exp.title':        'Expenses',
@@ -162,6 +163,8 @@ const translations = {
     'dash.recent_exp':   '최근 지출',
     'dash.no_expenses':  '지출 없음',
     'dash.mileage':      '마일리지',
+    'dash.weather_ref':  '현재 날씨 기준 참고용 — 예보는 출발 16일 전부터 제공됩니다',
+    'dash.mileage_detail': '이동 경로 상세',
     // Itinerary
     'itin.title':       'Itinerary',
     'itin.add':         '일정 추가',
@@ -209,7 +212,6 @@ const translations = {
     'act.cats.outdoor': '야외',
     'act.cats.culture': '문화',
     'act.cats.sport':   '스포츠',
-    'act.cats.shopping':'쇼핑',
     'act.cats.other':   '기타',
     // Expenses
     'exp.title':        '지출',

@@ -1,7 +1,7 @@
 {
-  "name": "Uhambo — Family Trip Manager",
+  "name": "Uhambo",
   "short_name": "Uhambo",
-  "description": "Plan and track family trips together",
+  "description": "Plan and track trips together",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait-primary",

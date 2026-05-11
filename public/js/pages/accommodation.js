@@ -5,6 +5,7 @@ import {
 } from '../db.js';
 import { openModal, closeModal, showToast, showConfirm, setModalSaving } from '../app.js';
 import { formatConverted, getCurrency, CURRENCIES } from '../currency.js';
+import { openCalc } from '../calculator.js';
 
 let _unsub = null;
 let _ctx = null;
@@ -154,7 +155,10 @@ function openItemModal(item) {
         <div class="form-row">
           <div class="form-group" style="flex:2">
             <label class="form-label">${t('accom.cost')} (${t('accom.total').toLowerCase()})</label>
-            <input class="form-input" name="cost" type="number" min="0" value="${item?.cost || ''}" placeholder="0">
+            <div style="display:flex;gap:6px">
+              <input id="accom-cost-input" class="form-input" name="cost" type="number" min="0" value="${item?.cost || ''}" placeholder="0" style="flex:1">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="window.__openCalc('accom-cost-input')" style="flex-shrink:0;font-size:16px">🖩</button>
+            </div>
           </div>
           <div class="form-group" style="flex:1">
             <label class="form-label">${t('accom.currency')}</label>
@@ -182,6 +186,8 @@ function openItemModal(item) {
       <button class="btn btn-primary" style="flex:2" onclick="window.__saveAccomItem(${isEdit ? `'${item.id}'` : 'null'})">
         ${isEdit ? t('common.save') : t('common.add')}</button>`
   });
+
+  window.__openCalc = openCalc;
 
   window.__accomAddLink = () => {
     const inp = document.getElementById('accom-link-input');

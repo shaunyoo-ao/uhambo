@@ -10,8 +10,8 @@ export function destroy() {
   if (_unsub) { _unsub(); _unsub = null; }
 }
 
-const TYPE_ICONS = { travel: '✈️', meal: '🍽️', activity: '⚡', rest: '🏨', other: '📌' };
-const TYPE_COLORS = { travel: 'var(--sky)', meal: 'var(--sun)', activity: 'var(--accent)', rest: 'var(--mint)', other: 'var(--muted)' };
+const TYPE_ICONS = { travel: '✈️', meal: '🍽️', activity: '⚡', rest: '🏨', shopping: '🛍️', other: '📌' };
+const TYPE_COLORS = { travel: 'var(--sky)', meal: 'var(--sun)', activity: 'var(--accent)', rest: 'var(--mint)', shopping: 'var(--sky)', other: 'var(--muted)' };
 
 export async function render(container, ctx) {
   _ctx = ctx;
@@ -108,7 +108,7 @@ function linkListHTML(links) {
 function openItemModal(item) {
   const isEdit = !!item;
   const today = new Date().toISOString().slice(0, 10);
-  const types = ['travel', 'meal', 'activity', 'rest', 'other'];
+  const types = ['travel', 'meal', 'activity', 'rest', 'shopping', 'other'];
   _links = item?.links ? [...item.links] : [];
 
   openModal({

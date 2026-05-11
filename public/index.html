@@ -50,7 +50,6 @@
 <div id="login-screen" class="hidden">
   <div class="login-logo">u</div>
   <div class="login-wordmark">Uhambo</div>
-  <p class="login-tagline">Plan and track family trips together</p>
   <button class="login-btn" id="google-login-btn">
     <svg class="google-icon" viewBox="0 0 24 24">
       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -60,7 +59,7 @@
     </svg>
     Continue with Google
   </button>
-  <p class="login-footer" style="text-align:center">Copyright ⓒ 2026, YONKE All rights reserved.<br>Version 1.0.6</p>
+  <p class="login-footer" style="text-align:center">Copyright ⓒ 2026, YONKE All rights reserved.<br>Version 1.0.7</p>
 </div>
 
 <!-- Main App -->
@@ -170,6 +169,36 @@
     <div class="confirm-actions">
       <button class="btn btn-ghost btn-full" id="confirm-cancel">Cancel</button>
       <button class="btn btn-danger btn-full" id="confirm-ok">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Calculator overlay -->
+<div id="calc-root" class="calc-overlay">
+  <div class="calc-sheet">
+    <div class="calc-expr" id="calc-expr"></div>
+    <div class="calc-display" id="calc-display">0</div>
+    <div class="calc-grid">
+      <button class="calc-btn calc-btn-clear" onclick="window.__calcClear()">C</button>
+      <button class="calc-btn calc-btn-op" onclick="window.__calcInput('(')">(&nbsp;)</button>
+      <button class="calc-btn calc-btn-op" onclick="window.__calcInput('%')">%</button>
+      <button class="calc-btn calc-btn-op" onclick="window.__calcInput('÷')">÷</button>
+      <button class="calc-btn" onclick="window.__calcInput('7')">7</button>
+      <button class="calc-btn" onclick="window.__calcInput('8')">8</button>
+      <button class="calc-btn" onclick="window.__calcInput('9')">9</button>
+      <button class="calc-btn calc-btn-op" onclick="window.__calcInput('×')">×</button>
+      <button class="calc-btn" onclick="window.__calcInput('4')">4</button>
+      <button class="calc-btn" onclick="window.__calcInput('5')">5</button>
+      <button class="calc-btn" onclick="window.__calcInput('6')">6</button>
+      <button class="calc-btn calc-btn-op" onclick="window.__calcInput('-')">−</button>
+      <button class="calc-btn" onclick="window.__calcInput('1')">1</button>
+      <button class="calc-btn" onclick="window.__calcInput('2')">2</button>
+      <button class="calc-btn" onclick="window.__calcInput('3')">3</button>
+      <button class="calc-btn calc-btn-op" onclick="window.__calcInput('+')">+</button>
+      <button class="calc-btn calc-btn-zero" onclick="window.__calcInput('0')">0</button>
+      <button class="calc-btn" onclick="window.__calcInput('.')">.</button>
+      <button class="calc-btn calc-btn-eq" onclick="window.__calcEval()">=</button>
+      <button class="calc-btn calc-btn-confirm" onclick="window.__calcConfirm()">✓ Use</button>
     </div>
   </div>
 </div>
