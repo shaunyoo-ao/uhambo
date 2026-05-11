@@ -37,6 +37,10 @@ Examples:
 
 **Always bump sw.js VERSION and update `index.html` version text together on every commit, even without an explicit version request.**
 
+**On every commit, version string must appear in BOTH:**
+1. `public/index.html` — login footer `<p class="login-footer">`
+2. `public/js/app.js` — `APP_VERSION` constant (shown in settings popup)
+
 ## Tech Stack
 - **Frontend:** Vanilla HTML5, CSS3, ES Modules (no bundler)
 - **Backend:** Firebase Firestore (Spark plan)
