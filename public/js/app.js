@@ -3,7 +3,9 @@ import { setLang, getLang, t } from './i18n.js';
 import { setCurrency, getCurrency, CURRENCIES } from './currency.js';
 import { getTrips, createTrip, getTrip, updateTrip, deleteTrip } from './db.js';
 
-const APP_VERSION = '1.1.1';
+const APP_VERSION = '1.1.3';
+
+const COUNTRIES = ['Australia','Austria','Belgium','Brazil','Canada','China','Croatia','Czech Republic','Denmark','Egypt','Finland','France','Germany','Greece','Hong Kong','Hungary','Iceland','India','Indonesia','Ireland','Israel','Italy','Japan','Malaysia','Mexico','Morocco','Netherlands','New Zealand','Norway','Philippines','Poland','Portugal','Romania','Russia','Singapore','South Africa','South Korea','Spain','Sweden','Switzerland','Taiwan','Thailand','Turkey','United Arab Emirates','United Kingdom','United States','Vietnam'];
 
 // ── Global state ────────────────────────────────────────────────
 export let currentUser = null;
@@ -269,6 +271,13 @@ function openNewTrip() {
             </div>
           </div>
           <div class="form-group">
+            <label class="form-label">Country</label>
+            <select class="form-select" name="country">
+              <option value="">— Select country —</option>
+              ${COUNTRIES.map(c => `<option value="${c}">${c}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
             <label class="form-label">Base Currency</label>
             <select class="form-select" name="baseCurrency">
               ${CURRENCIES.map(c => `<option value="${c.code}">${c.symbol} ${c.code} — ${c.label}</option>`).join('')}
@@ -412,6 +421,13 @@ window.__editCurrentTrip = async () => {
                 <label class="form-label">End Date</label>
                 <input class="form-input" name="endDate" type="date" value="${trip.endDate || ''}">
               </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Country</label>
+              <select class="form-select" name="country">
+                <option value="">— Select country —</option>
+                ${COUNTRIES.map(c => `<option value="${c}" ${trip.country === c ? 'selected' : ''}>${c}</option>`).join('')}
+              </select>
             </div>
             <div class="form-group">
               <label class="form-label">Base Currency</label>

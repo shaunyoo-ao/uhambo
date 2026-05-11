@@ -27,6 +27,7 @@ const PRECACHE = [
   '/icons/icon-512.png',
 ];
 
+// ── Install: precache app shell ──────────────────────────────────
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(APP_SHELL)
@@ -35,6 +36,7 @@ self.addEventListener('install', event => {
   );
 });
 
+// ── Activate: prune old caches ───────────────────────────────────
 self.addEventListener('activate', event => {
   const KEEP = [APP_SHELL, MAP_CACHE, API_CACHE];
   event.waitUntil(
@@ -46,10 +48,12 @@ self.addEventListener('activate', event => {
   );
 });
 
+// ── Fetch: route by resource type ────────────────────────────────
 self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
 
+  // Skip non-GET and any Firebase/Google auth traffic
   if (request.method !== 'GET') return;
   if (url.hostname.includes('firestore.googleapis.com')) return;
   if (url.hostname.includes('firebase.googleapis.com')) return;
@@ -58,27 +62,32 @@ self.addEventListener('fetch', event => {
   if (url.hostname.includes('accounts.google.com')) return;
   if (url.hostname.includes('firebaseapp.com')) return;
 
+  // OSM map tiles → Cache First (long-lived)
   if (url.hostname.includes('openstreetmap.org') || url.hostname.includes('tile.')) {
     event.respondWith(cacheFirst(request, MAP_CACHE, 7 * 24 * 3600));
     return;
   }
 
+  // Weather + currency APIs → Network First with fallback
   if (url.hostname.includes('open-meteo.com') || url.hostname.includes('er-api.com') ||
       url.hostname.includes('nominatim.openstreetmap.org')) {
     event.respondWith(networkFirst(request, API_CACHE));
     return;
   }
 
+  // Google Fonts → Cache First
   if (url.hostname.includes('fonts.googleapis.com') || url.hostname.includes('fonts.gstatic.com')) {
     event.respondWith(cacheFirst(request, APP_SHELL));
     return;
   }
 
+  // Firebase CDN (SDK) → Cache First
   if (url.hostname.includes('gstatic.com') || url.hostname.includes('firebasejs')) {
     event.respondWith(cacheFirst(request, APP_SHELL));
     return;
   }
 
+  // App shell → Cache First, fallback to network
   if (url.origin === self.location.origin) {
     event.respondWith(cacheFirst(request, APP_SHELL));
     return;

@@ -6,6 +6,7 @@ import {
   serverTimestamp, Timestamp
 } from 'firebase/firestore';
 
+// ── Helpers ──────────────────────────────────────────────────────
 function userRef(uid) { return doc(db, 'users', uid); }
 function tripsRef(uid) { return collection(db, 'users', uid, 'trips'); }
 function tripRef(uid, tid) { return doc(db, 'users', uid, 'trips', tid); }
@@ -23,6 +24,7 @@ function sortByDateTime(items) {
   });
 }
 
+// ── Trips ────────────────────────────────────────────────────────
 export async function getTrips(uid) {
   const q = query(tripsRef(uid), orderBy('createdAt', 'desc'));
   const s = await getDocs(q);
@@ -64,6 +66,7 @@ export async function deleteAllTrips(uid) {
   }
 }
 
+// ── Itinerary ────────────────────────────────────────────────────
 export async function getItinerary(uid, tid) {
   const q = query(subRef(uid, tid, 'itinerary'), orderBy('date'));
   const s = await getDocs(q);
@@ -87,6 +90,7 @@ export async function deleteItineraryItem(uid, tid, id) {
   return deleteDoc(subDocRef(uid, tid, 'itinerary', id));
 }
 
+// ── Accommodation ────────────────────────────────────────────────
 export async function getAccommodation(uid, tid) {
   const q = query(subRef(uid, tid, 'accommodation'), orderBy('checkIn'));
   const s = await getDocs(q);
@@ -110,6 +114,7 @@ export async function deleteAccommodation(uid, tid, id) {
   return deleteDoc(subDocRef(uid, tid, 'accommodation', id));
 }
 
+// ── Activities ───────────────────────────────────────────────────
 export async function getActivities(uid, tid) {
   const q = query(subRef(uid, tid, 'activities'), orderBy('date'));
   const s = await getDocs(q);
@@ -141,6 +146,7 @@ export async function toggleActivity(uid, tid, id, completed) {
   return updateDoc(subDocRef(uid, tid, 'activities', id), { completed });
 }
 
+// ── Expenses ─────────────────────────────────────────────────────
 export async function getExpenses(uid, tid) {
   const q = query(subRef(uid, tid, 'expenses'), orderBy('date', 'desc'));
   const s = await getDocs(q);
@@ -164,6 +170,7 @@ export async function deleteExpense(uid, tid, id) {
   return deleteDoc(subDocRef(uid, tid, 'expenses', id));
 }
 
+// ── Linked expense helpers ────────────────────────────────────────
 export async function upsertLinkedExpense(uid, tid, sourceId, sourceType, data) {
   const all = await getDocs(subRef(uid, tid, 'expenses'));
   const existing = all.docs.find(d => d.data().sourceId === sourceId && d.data().sourceType === sourceType);
@@ -181,6 +188,7 @@ export async function deleteLinkedExpense(uid, tid, sourceId, sourceType) {
   if (match) await deleteDoc(match.ref);
 }
 
+// ── Linked itinerary helpers ──────────────────────────────────────
 export async function upsertLinkedItinItem(uid, tid, sourceId, sourceType, sourceSubType, data) {
   const all = await getDocs(subRef(uid, tid, 'itinerary'));
   const existing = all.docs.find(d => {
