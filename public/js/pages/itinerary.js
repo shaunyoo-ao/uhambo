@@ -125,7 +125,11 @@ function openItemModal(item) {
         <div class="form-group">
           <label class="form-label">${t('itin.type')}</label>
           <select class="form-select" name="type">
-            ${types.map(tp => `<option value="${tp}" ${item?.type === tp ? 'selected' : ''}>${TYPE_ICONS[tp]} ${tp.charAt(0).toUpperCase() + tp.slice(1)}</option>`).join('')}
+            ${types.map(tp => {
+              let label = tp.charAt(0).toUpperCase() + tp.slice(1);
+              if (tp === 'rest') label = 'Accommodation';
+              return `<option value="${tp}" ${item?.type === tp ? 'selected' : ''}>${TYPE_ICONS[tp]} ${label}</option>`;
+            }).join('')}
           </select>
         </div>
         <div class="form-row">

@@ -49,6 +49,7 @@ async function loadTrips(userId) {
   const btn = document.getElementById('trip-selector-btn');
   try {
     _trips = await getTrips(userId);
+    _trips.sort((a, b) => new Date(b.startDate || 0) - new Date(a.startDate || 0));
     if (_trips.length === 0) {
       if (btn) btn.textContent = '— No trips —';
       currentTripId = null;
@@ -208,18 +209,19 @@ export function showConfirm(title, msg) {
 function openSettings() {
   const lang = getLang();
   const currency = getCurrency();
+  const isKo = lang === 'ko';
   openModal({
-    title: 'Settings',
+    title: isKo ? '설정' : 'Settings',
     body: `
       <div class="settings-group">
-        <div class="eyebrow" style="margin-bottom:10px">Language</div>
+        <div class="eyebrow" style="margin-bottom:10px">${isKo ? '언어' : 'Language'}</div>
         <div style="display:flex;gap:8px">
           <button class="btn btn-sm ${lang === 'en' ? 'btn-primary' : 'btn-secondary'}" onclick="window.__setLang('en')">English</button>
           <button class="btn btn-sm ${lang === 'ko' ? 'btn-primary' : 'btn-secondary'}" onclick="window.__setLang('ko')">한국어</button>
         </div>
       </div>
       <div class="settings-group">
-        <div class="eyebrow" style="margin-bottom:10px">Display Currency</div>
+        <div class="eyebrow" style="margin-bottom:10px">${isKo ? '통화' : 'Display Currency'}</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           ${CURRENCIES.map(c => `
             <button class="btn btn-sm ${currency === c.code ? 'btn-primary' : 'btn-secondary'}"
@@ -228,10 +230,10 @@ function openSettings() {
         </div>
       </div>
       <div class="settings-group">
-        <div class="eyebrow" style="margin-bottom:10px">Trip</div>
-        <button class="btn btn-secondary btn-sm" onclick="window.__newTrip()">+ New Trip</button>
-        <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="window.__editCurrentTrip()">Edit Current Trip</button>
-        <button class="btn btn-danger btn-sm" style="margin-top:8px" onclick="window.__deleteCurrentTrip()">Delete Current Trip</button>
+        <div class="eyebrow" style="margin-bottom:10px">${isKo ? '여행' : 'Trip'}</div>
+        <button class="btn btn-secondary btn-sm" onclick="window.__newTrip()">${isKo ? '새 여행' : '+ New Trip'}</button>
+        <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="window.__editCurrentTrip()">${isKo ? '현재 여행 수정' : 'Edit Current Trip'}</button>
+        <button class="btn btn-danger btn-sm" style="margin-top:8px" onclick="window.__deleteCurrentTrip()">${isKo ? '현재 여행 삭제' : 'Delete Current Trip'}</button>
       </div>
       <div class="settings-group" style="margin-top:16px">
         <button class="btn btn-ghost btn-full" onclick="window.__signOut()">Sign Out</button>
