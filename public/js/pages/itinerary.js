@@ -1,5 +1,5 @@
 import { t } from '../i18n.js';
-import { subscribeItinerary, addItineraryItem, updateItineraryItem, deleteItineraryItem, getTrip } from '../db.js';
+import { subscribeItinerary, addItineraryItem, updateItineraryItem, deleteItineraryItem, getTrip, getAccommodation, getActivities } from '../db.js';
 import { openModal, closeModal, showToast, showConfirm, setModalSaving } from '../app.js';
 import { geocodeCity } from '../weather.js';
 import { initMap, destroyMap } from '../map.js';
@@ -12,15 +12,26 @@ let _map = null;
 let _mapItems = [];
 let _activeTab = 'schedule';
 let _geoCache = {};
+let _accomItems = null;
+let _actItems = null;
 
 export function destroy() {
   if (_unsub) { _unsub(); _unsub = null; }
   if (_map) { destroyMap(_map); _map = null; }
+  _accomItems = null;
+  _actItems = null;
 }
 
 const TYPE_ICONS = { home: '🏠', travel: '✈️', rest: '🏨', meal: '🍽️', activity: '⚡', shopping: '🛍️', other: '📌' };
 const TYPE_COLORS = { home: 'var(--muted)', travel: 'var(--sky)', rest: 'var(--mint)', meal: 'var(--sun)', activity: 'var(--accent)', shopping: 'var(--sky)', other: 'var(--muted)' };
-const TYPE_COLORS_HEX = { home: '#7c8089', travel: '#6ea6e8', rest: '#5fb88c', meal: '#e8c87c', activity: '#ee6c3a', shopping: '#6ea6e8', other: '#7c8089' };
+const TYPE_COLORS_HEX = {
+  travel:   '#1565C0',
+  rest:     '#2E7D32',
+  meal:     '#BF360C',
+  activity: '#AD1457',
+  shopping: '#4A148C',
+  other:    '#37474F',
+};
 
 export async function render(container, ctx) {
   _ctx = ctx;
@@ -131,28 +142,60 @@ function renderList(items) {
   }).join('');
 }
 
-async function renderMap(items) {
+async function renderMap(itinItems) {
   const mapEl = document.getElementById('itin-map');
   if (!mapEl) return;
 
   if (_map) { destroyMap(_map); _map = null; }
 
-  const withLocations = items.filter(i => i.location);
-  if (withLocations.length === 0) {
+  // Load accommodation and activities once per trip
+  if (_accomItems === null) {
+    [_accomItems, _actItems] = await Promise.all([
+      getAccommodation(_ctx.userId, _ctx.tripId).catch(() => []),
+      getActivities(_ctx.userId, _ctx.tripId).catch(() => []),
+    ]);
+  }
+
+  // Merge all sources — exclude home type from itinerary
+  const markerCandidates = [
+    ...itinItems.filter(i => i.location && i.type !== 'home').map(i => ({
+      id: i.id, source: 'itin', type: i.type,
+      title: i.title, location: i.location,
+      lat: i.lat ? parseFloat(i.lat) : 0,
+      lng: i.lng ? parseFloat(i.lng) : 0,
+      date: i.date, time: i.time, description: i.description,
+    })),
+    ..._accomItems.filter(a => a.address).map(a => ({
+      id: a.id, source: 'accom', type: 'rest',
+      title: a.name, location: a.address,
+      lat: 0, lng: 0,
+      date: a.checkIn, time: a.checkInTime, description: a.notes,
+      checkOut: a.checkOut,
+    })),
+    ..._actItems.filter(a => a.location).map(a => ({
+      id: a.id, source: 'activity', type: 'activity',
+      title: a.name, location: a.location,
+      lat: 0, lng: 0,
+      date: a.date, time: a.time, description: a.notes,
+      category: a.category,
+    })),
+  ];
+
+  if (markerCandidates.length === 0) {
     mapEl.innerHTML = `<div class="empty-state" style="padding-top:60px">
       <div class="empty-icon">🗺️</div>
       <div class="empty-title">No locations</div>
-      <div class="empty-sub">Add locations to events to see them on the map</div>
+      <div class="empty-sub">Add locations to events, stays, or activities to see them on the map</div>
     </div>`;
     return;
   }
 
   mapEl.innerHTML = `<div class="loading-center" style="height:100%"><div class="spinner"></div></div>`;
 
+  // Geocode items without stored coordinates
   const resolved = [];
-  for (const item of withLocations) {
-    let lat = item.lat ? parseFloat(item.lat) : 0;
-    let lng = item.lng ? parseFloat(item.lng) : 0;
+  for (const item of markerCandidates) {
+    let { lat, lng } = item;
     if (!lat || !lng) {
       const key = item.location;
       if (_geoCache[key]) {
@@ -187,10 +230,11 @@ async function renderMap(items) {
   const { fromLonLat } = window.ol.proj;
 
   const features = resolved.map(item => {
-    const color = TYPE_COLORS_HEX[item.type] || '#ee6c3a';
+    const color = TYPE_COLORS_HEX[item.type] || '#37474F';
     const emoji = TYPE_ICONS[item.type] || '📌';
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="44" viewBox="0 0 36 44">
-      <path fill="${color}" d="M18 0C11.4 0 6 5.4 6 12c0 9 12 26 12 26S30 21 30 12C30 5.4 24.6 0 18 0z"/>
+      <path fill="rgba(0,0,0,0.25)" d="M18 2C11.4 2 6 7.4 6 14c0 9 12 26 12 26S30 23 30 14C30 7.4 24.6 2 18 2z" transform="translate(2,3)"/>
+      <path fill="${color}" stroke="#fff" stroke-width="1.5" d="M18 0C11.4 0 6 5.4 6 12c0 9 12 26 12 26S30 21 30 12C30 5.4 24.6 0 18 0z"/>
       <circle fill="#fff" cx="18" cy="12" r="9"/>
       <text x="18" y="16" text-anchor="middle" font-size="11" font-family="sans-serif">${emoji}</text>
     </svg>`;
@@ -225,19 +269,37 @@ async function renderMap(items) {
     if (!feature) { popupEl.style.display = 'none'; return; }
     const item = feature.get('item');
     if (!item) return;
-    const typeLabel = item.type === 'rest' ? 'Accommodation' : (item.type ? item.type.charAt(0).toUpperCase() + item.type.slice(1) : 'Other');
+
+    let badge = '', meta = '', actions = '';
+
+    if (item.source === 'accom') {
+      badge = `<span class="badge badge-muted" style="margin-left:auto;font-size:10px">🏨 Stay</span>`;
+      meta = `${item.date ? `<div class="text-xs text-muted" style="margin-bottom:3px">📅 ${item.date}${item.checkOut ? ' → ' + item.checkOut : ''}</div>` : ''}
+              ${item.location ? `<div class="text-xs text-muted" style="margin-bottom:3px">📍 ${item.location}</div>` : ''}`;
+    } else if (item.source === 'activity') {
+      badge = `<span class="badge badge-muted" style="margin-left:auto;font-size:10px">⚡ Activity</span>`;
+      meta = `${item.date ? `<div class="text-xs text-muted" style="margin-bottom:3px">📅 ${item.date}${item.time ? ' · ' + item.time : ''}</div>` : ''}
+              ${item.category ? `<div class="text-xs text-muted" style="margin-bottom:3px">🏷️ ${item.category}</div>` : ''}
+              ${item.location ? `<div class="text-xs text-muted" style="margin-bottom:3px">📍 ${item.location}</div>` : ''}`;
+    } else {
+      const typeLabel = item.type === 'rest' ? 'Accommodation' : (item.type ? item.type.charAt(0).toUpperCase() + item.type.slice(1) : 'Other');
+      badge = `<span class="badge badge-muted" style="margin-left:auto;font-size:10px">${typeLabel}</span>`;
+      meta = `${item.date ? `<div class="text-xs text-muted" style="margin-bottom:3px">📅 ${item.date}${item.time ? ' · ' + item.time : ''}</div>` : ''}
+              ${item.location ? `<div class="text-xs text-muted" style="margin-bottom:3px">📍 ${item.location}</div>` : ''}`;
+      actions = `<button class="btn btn-ghost btn-sm" style="margin-top:10px;width:100%" onclick="window.__editItinItem('${item.id}');document.getElementById('itin-map-popup').style.display='none'">✏️ Edit</button>`;
+    }
+
     popupEl.innerHTML = `
       <div class="itin-map-popup-inner">
         <button class="itin-map-popup-close" onclick="document.getElementById('itin-map-popup').style.display='none'">×</button>
         <div class="row gap-8" style="margin-bottom:6px">
           <span>${TYPE_ICONS[item.type] || '📌'}</span>
           <span class="text-sm font-medium">${item.title || '—'}</span>
-          <span class="badge badge-muted" style="margin-left:auto;font-size:10px">${typeLabel}</span>
+          ${badge}
         </div>
-        ${item.date ? `<div class="text-xs text-muted" style="margin-bottom:3px">📅 ${item.date}${item.time ? ' · ' + item.time : ''}</div>` : ''}
-        ${item.location ? `<div class="text-xs text-muted" style="margin-bottom:3px">📍 ${item.location}</div>` : ''}
+        ${meta}
         ${item.description ? `<div class="text-sm" style="color:var(--cream-dim);margin-top:6px">${item.description}</div>` : ''}
-        <button class="btn btn-ghost btn-sm" style="margin-top:10px;width:100%" onclick="window.__editItinItem('${item.id}');document.getElementById('itin-map-popup').style.display='none'">✏️ Edit</button>
+        ${actions}
       </div>`;
     popupEl.style.display = 'block';
   });
