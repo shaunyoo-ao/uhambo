@@ -9,16 +9,6 @@ Mobile-first PWA for planning and tracking family trips. Single-page app with va
 
 ---
 
-## Git Workflow
-
-**Two branches only: `main` and `claude-code-work`.**
-- All development goes on `claude-code-work`.
-- After each task, merge `claude-code-work` → `main` (squash merge via PR).
-- CI/CD deploys automatically on push to `main` via GitHub Actions.
-- Never create other branches.
-
----
-
 ## Version Naming Rule
 
 The service worker version (`sw.js` `VERSION`) maps to the in-app display version:
