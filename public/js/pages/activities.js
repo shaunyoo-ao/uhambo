@@ -156,7 +156,7 @@ function openItemModal(item) {
   _links = item?.links ? [...item.links] : [];
 
   openModal({
-    title: isEdit ? 'Edit Activity' : t('act.add'),
+    title: isEdit ? t('modal.edit_activity') : t('act.add'),
     body: `
       <form id="act-form">
         <div class="form-group">
@@ -256,11 +256,11 @@ function openItemModal(item) {
       let savedId = id;
       if (id) {
         await updateActivity(userId, tripId, id, data);
-        showToast('Activity updated');
+        showToast(t('toast.activity_updated'));
       } else {
         const ref = await addActivity(userId, tripId, data);
         savedId = ref.id;
-        showToast('Activity added');
+        showToast(t('toast.activity_added'));
       }
       // Expense sync
       await upsertLinkedExpense(userId, tripId, savedId, 'activity', {
@@ -307,7 +307,7 @@ function openItemModal(item) {
         deleteLinkedExpense(userId, tripId, id, 'activity'),
         deleteLinkedItinItems(userId, tripId, id, 'activity'),
       ]);
-      showToast('Activity deleted');
+      showToast(t('toast.activity_deleted'));
     } catch (e) { showToast('Error: ' + e.message); }
   };
 }

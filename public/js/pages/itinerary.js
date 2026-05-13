@@ -115,7 +115,7 @@ function openItemModal(item) {
   _links = item?.links ? [...item.links] : [];
 
   openModal({
-    title: isEdit ? t('common.edit') + ' Event' : t('itin.add'),
+    title: isEdit ? t('modal.edit_event') : t('itin.add'),
     body: `
       <form id="itin-form">
         <div class="form-group">
@@ -198,10 +198,10 @@ function openItemModal(item) {
       }
       if (id) {
         await updateItineraryItem(_ctx.userId, _ctx.tripId, id, data);
-        showToast('Event updated');
+        showToast(t('toast.event_updated'));
       } else {
         await addItineraryItem(_ctx.userId, _ctx.tripId, data);
-        showToast('Event added');
+        showToast(t('toast.event_added'));
       }
       closeModal();
     } catch (e) {
@@ -216,7 +216,7 @@ function openItemModal(item) {
     if (!confirmed) return;
     try {
       await deleteItineraryItem(_ctx.userId, _ctx.tripId, id);
-      showToast('Event deleted');
+      showToast(t('toast.event_deleted'));
     } catch (e) { showToast('Error: ' + e.message); }
   };
 }

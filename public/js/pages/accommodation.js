@@ -230,11 +230,11 @@ function openItemModal(item) {
       let savedId = id;
       if (id) {
         await updateAccommodation(userId, tripId, id, data);
-        showToast('Stay updated');
+        showToast(t('toast.stay_updated'));
       } else {
         const ref = await addAccommodation(userId, tripId, data);
         savedId = ref.id;
-        showToast('Stay added');
+        showToast(t('toast.stay_added'));
       }
       // Expense sync
       if (data.cost) {
@@ -299,7 +299,7 @@ function openItemModal(item) {
         deleteLinkedExpense(userId, tripId, id, 'accommodation'),
         deleteLinkedItinItems(userId, tripId, id, 'accommodation'),
       ]);
-      showToast('Stay deleted');
+      showToast(t('toast.stay_deleted'));
     } catch (e) { showToast('Error: ' + e.message); }
   };
 }

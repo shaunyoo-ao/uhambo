@@ -216,7 +216,7 @@ function openItemModal(item) {
   _links = item?.links ? [...item.links] : [];
 
   openModal({
-    title: isEdit ? 'Edit Expense' : t('exp.add'),
+    title: isEdit ? t('modal.edit_expense') : t('exp.add'),
     body: `
       <form id="exp-form">
         <div class="form-group">
@@ -297,10 +297,10 @@ function openItemModal(item) {
     try {
       if (id) {
         await updateExpense(_ctx.userId, _ctx.tripId, id, data);
-        showToast('Expense updated');
+        showToast(t('toast.expense_updated'));
       } else {
         await addExpense(_ctx.userId, _ctx.tripId, data);
-        showToast('Expense added');
+        showToast(t('toast.expense_added'));
       }
       closeModal();
     } catch (e) {
@@ -315,7 +315,7 @@ function openItemModal(item) {
     if (!confirmed) return;
     try {
       await deleteExpense(_ctx.userId, _ctx.tripId, id);
-      showToast('Expense deleted');
+      showToast(t('toast.expense_deleted'));
     } catch (e) { showToast('Error: ' + e.message); }
   };
 }
