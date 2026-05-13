@@ -163,7 +163,7 @@ export function setModalSaving(saving) {
     if (primary) {
       primary._origText   = primary.textContent.trim();
       const isAdd = primary._origText === t('common.add');
-      primary.textContent = isAdd ? 'Adding…' : 'Saving…';
+      primary.textContent = isAdd ? t('common.adding') : t('common.saving');
       primary.disabled    = true;
     }
     if (ghost) ghost.disabled = true;

@@ -70,7 +70,7 @@ export async function render(container, { userId, tripId }) {
         const elapsed = Math.round((now - start) / 86400000) + 1;
         daysLeft = `Day ${elapsed} of ${totalDays}`;
       } else {
-        daysLeft = `${totalDays} days · Completed`;
+        daysLeft = `${totalDays} days · ${t('common.completed').toLowerCase()}`;
       }
     }
 
