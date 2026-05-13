@@ -14,9 +14,15 @@ const CAT_COLORS = {
   activity: '#ee6c3a', shopping: '#d97a7a', other: '#7c8089'
 };
 const CAT_ICONS = {
-  transport: '🚗', food: '🍔', accom: '🏨',
+  transport: '🚗', food: '🍽️', accom: '🏨',
   activity: '⚡', shopping: '🛍️', other: '💳'
 };
+
+function extractCity(loc) {
+  const parts = loc.split(',').map(s => s.trim()).filter(Boolean);
+  if (parts.length <= 1) return parts[0] || null;
+  return parts[parts.length - 2];
+}
 
 export function destroy() {}
 
@@ -95,7 +101,7 @@ async function renderContent() {
   let totalDays = 0;
   let totalMileage = 0;
   let totalStays = 0;
-  const places = new Set();
+  const placeEntries = [];
   let totalActivities = 0;
   let completedActivities = 0;
   const allActivities = [];
@@ -122,10 +128,16 @@ async function renderContent() {
     allActivities.push(...activities);
 
     [...itinerary, ...activities].forEach(item => {
-      if (item.location && item.type !== 'home') places.add(item.location.split(',')[0].trim());
+      if (item.location && item.type !== 'home') {
+        const city = extractCity(item.location);
+        if (city) placeEntries.push({ city, date: item.date || '' });
+      }
     });
     accommodation.forEach(a => {
-      if (a.address) places.add(a.address.split(',')[0].trim());
+      if (a.address) {
+        const city = extractCity(a.address);
+        if (city) placeEntries.push({ city, date: a.checkIn || '' });
+      }
     });
 
     const country = trip.country || (trip.destination ? trip.destination.split(',').pop().trim() : null);
@@ -136,6 +148,16 @@ async function renderContent() {
 
   const catEntries = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
   const tripCount = filtered.length;
+
+  placeEntries.sort((a, b) => b.date.localeCompare(a.date));
+  const seenCities = new Set();
+  const uniquePlaces = placeEntries.filter(p => {
+    if (seenCities.has(p.city)) return false;
+    seenCities.add(p.city);
+    return true;
+  }).map(p => p.city);
+
+  allActivities.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
   el.innerHTML = `
     <div style="padding:0 16px 32px">
@@ -198,11 +220,11 @@ async function renderContent() {
         </div>
       </div>` : ''}
 
-      ${places.size > 0 ? `
+      ${uniquePlaces.length > 0 ? `
       <div class="card" style="margin-bottom:16px">
         <div class="card-header"><span class="eyebrow">${t('arch.places')}</span></div>
         <div class="card-body" style="padding:10px 14px;display:flex;flex-wrap:wrap;gap:8px">
-          ${[...places].map(p => `<div class="badge badge-sky">📍 ${p}</div>`).join('')}
+          ${uniquePlaces.map(p => `<div class="badge badge-sky">📍 ${p}</div>`).join('')}
         </div>
       </div>` : ''}
 
@@ -216,12 +238,11 @@ async function renderContent() {
           <div class="progress-bar" style="height:8px;margin-bottom:10px">
             <div class="progress-fill" style="width:${totalActivities > 0 ? Math.round(completedActivities / totalActivities * 100) : 0}%"></div>
           </div>
-          ${allActivities.slice(0, 6).map(a => `
+          ${allActivities.map(a => `
             <div class="row gap-8" style="padding:5px 0;border-bottom:1px solid var(--line-soft)">
               <div class="check-box ${a.completed ? 'checked' : ''}" style="pointer-events:none"></div>
               <span class="text-sm ${a.completed ? 'text-muted' : ''}" style="${a.completed ? 'text-decoration:line-through' : ''}">${a.name || '—'}</span>
             </div>`).join('')}
-          ${allActivities.length > 6 ? `<div class="text-xs text-muted" style="margin-top:6px">+${allActivities.length - 6} more</div>` : ''}
         </div>
       </div>` : ''}
     </div>`;

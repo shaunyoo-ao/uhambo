@@ -17,8 +17,12 @@ export function destroy() {
 }
 
 const CAT_ICONS = {
-  transport: '🚗', food: '🍔', accom: '🏨',
+  transport: '🚗', food: '🍽️', accom: '🏨',
   activity: '⚡', shopping: '🛍️', other: '💳'
+};
+const CAT_COLORS = {
+  transport: '#6ea6e8', food: '#e8c87c', accom: '#5fb88c',
+  activity: '#ee6c3a', shopping: '#d97a7a', other: '#7c8089'
 };
 const CATS = ['food', 'shopping', 'transport', 'activity', 'accom', 'other'];
 
@@ -84,6 +88,8 @@ async function renderSummary(items) {
 
   const totalStr = formatCurrency(total, currency);
 
+  const catEntries = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
+
   el.innerHTML = `
     <div class="card">
       <div class="card-body" style="padding:12px 14px">
@@ -97,62 +103,29 @@ async function renderSummary(items) {
             <div class="text-sm text-muted">${currency}</div>
           </div>
         </div>
-        ${items.length > 0 ? `
-          <canvas id="exp-chart" class="chart-canvas" width="180" height="180"></canvas>
-          <div id="exp-legend" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px"></div>
-        ` : ''}
+        ${catEntries.map(([cat, val]) => {
+          const pct = total > 0 ? Math.round((val / total) * 100) : 0;
+          return `
+            <div style="margin-bottom:10px">
+              <div class="row-between" style="margin-bottom:3px">
+                <div class="row gap-6">
+                  <span>${CAT_ICONS[cat] || '💳'}</span>
+                  <span class="text-sm">${t('exp.cats.' + cat)}</span>
+                </div>
+                <div class="row gap-8">
+                  <span class="text-xs text-muted mono">${pct}%</span>
+                  <span class="mono text-sm text-accent">${formatCurrency(val, currency)}</span>
+                </div>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width:${pct}%;background:${CAT_COLORS[cat] || 'var(--accent)'}"></div>
+              </div>
+            </div>`;
+        }).join('')}
       </div>
     </div>`;
-
-  if (items.length > 0) {
-    drawPieChart(byCat, total);
-  }
 }
 
-function drawPieChart(byCat, total) {
-  const canvas = document.getElementById('exp-chart');
-  const legend = document.getElementById('exp-legend');
-  if (!canvas || total === 0) return;
-
-  const ctx2d = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
-  const cx = W / 2, cy = H / 2, r = Math.min(W, H) / 2 - 8;
-
-  const COLORS = {
-    transport: '#6ea6e8', food: '#e8c87c', accom: '#5fb88c',
-    activity: '#ee6c3a', shopping: '#d97a7a', other: '#7c8089'
-  };
-
-  ctx2d.clearRect(0, 0, W, H);
-
-  let angle = -Math.PI / 2;
-  const entries = Object.entries(byCat).filter(([, v]) => v > 0);
-
-  entries.forEach(([cat, val]) => {
-    const sweep = (val / total) * 2 * Math.PI;
-    ctx2d.beginPath();
-    ctx2d.moveTo(cx, cy);
-    ctx2d.arc(cx, cy, r, angle, angle + sweep);
-    ctx2d.closePath();
-    ctx2d.fillStyle = COLORS[cat] || '#7c8089';
-    ctx2d.fill();
-    angle += sweep;
-  });
-
-  ctx2d.beginPath();
-  ctx2d.arc(cx, cy, r * 0.52, 0, 2 * Math.PI);
-  ctx2d.fillStyle = '#16181c';
-  ctx2d.fill();
-
-  if (legend) {
-    legend.innerHTML = entries.map(([cat, val]) => {
-      const pct = Math.round((val / total) * 100);
-      return `<div class="badge" style="background:${COLORS[cat] || '#7c8089'}22;color:${COLORS[cat] || '#7c8089'};border:1px solid ${COLORS[cat] || '#7c8089'}44">
-        ${CAT_ICONS[cat]} ${pct}%
-      </div>`;
-    }).join('');
-  }
-}
 
 async function renderList(items) {
   const el = document.getElementById('exp-list');
@@ -321,9 +294,9 @@ function openItemModal(item) {
 }
 
 function addFAB(onClick) {
-  document.querySelector('.fab')?.remove();
   const fab = document.createElement('button');
   fab.className = 'fab';
+  fab.dataset.route = 'expenses';
   fab.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
   fab.addEventListener('click', onClick);
   document.getElementById('app').appendChild(fab);

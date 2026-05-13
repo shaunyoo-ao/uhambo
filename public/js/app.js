@@ -3,20 +3,31 @@ import { setLang, getLang, t } from './i18n.js';
 import { setCurrency, getCurrency, CURRENCIES } from './currency.js';
 import { getTrips, createTrip, getTrip, updateTrip, deleteTrip } from './db.js';
 
-const APP_VERSION = '1.1.3';
+const APP_VERSION = '1.1.4';
 
 const COUNTRIES = ['Australia','Austria','Belgium','Brazil','Canada','China','Croatia','Czech Republic','Denmark','Egypt','Finland','France','Germany','Greece','Hong Kong','Hungary','Iceland','India','Indonesia','Ireland','Israel','Italy','Japan','Malaysia','Mexico','Morocco','Netherlands','New Zealand','Norway','Philippines','Poland','Portugal','Romania','Russia','Singapore','South Africa','South Korea','Spain','Sweden','Switzerland','Taiwan','Thailand','Turkey','United Arab Emirates','United Kingdom','United States','Vietnam'];
 
 // ── Global state ────────────────────────────────────────────────
 export let currentUser = null;
 export let currentTripId = null;
-let currentPage = null;
 let _appInitialized = false;
 let _savingTrip = false;
 let _trips = [];
 
-// ── Page cache ───────────────────────────────────────────────────
-const pageCache = new Map();
+// ── Per-page keep-alive tracking ─────────────────────────────────
+const _renderedPages = new Set();  // routes rendered for current trip
+const _pageModules   = new Map();  // route → module instance
+
+function _clearAllPages() {
+  for (const [route, mod] of _pageModules) {
+    if (mod?.destroy) mod.destroy();
+    const el = document.getElementById(`page-${route}`);
+    if (el) el.innerHTML = '';
+  }
+  _renderedPages.clear();
+  _pageModules.clear();
+  document.querySelectorAll('.fab').forEach(f => f.remove());
+}
 
 // ── Page registry ────────────────────────────────────────────────
 const routes = {
@@ -94,7 +105,7 @@ function selectTrip(tripId) {
 }
 
 function dispatchTripChange(tripId) {
-  pageCache.clear();
+  _clearAllPages();
   document.dispatchEvent(new CustomEvent('tripchange', { detail: { tripId } }));
 }
 
@@ -106,31 +117,29 @@ export async function navigate(route) {
   document.querySelectorAll('.tab-btn').forEach(b =>
     b.classList.toggle('active', b.dataset.route === route));
 
-  const container = document.getElementById('page-content');
+  // Show active page container, hide others
+  document.querySelectorAll('.page-container').forEach(el => {
+    el.style.display = (el.id === `page-${route}`) ? '' : 'none';
+  });
 
-  // Restore from cache for instant display
-  const cacheKey = `${route}:${currentTripId}`;
-  const cached = pageCache.get(cacheKey);
-  if (cached) {
-    container.innerHTML = cached;
-  } else {
-    container.innerHTML = '<div class="loading-center"><div class="spinner"></div></div>';
-  }
+  // Show only this route's FAB
+  document.querySelectorAll('.fab').forEach(fab => {
+    fab.style.display = (fab.dataset.route === route) ? '' : 'none';
+  });
 
-  // Cleanup previous page and FAB
-  if (currentPage?.destroy) currentPage.destroy();
-  document.querySelector('.fab')?.remove();
-  currentPage = null;
+  localStorage.setItem('lastRoute', route);
 
+  // Already rendered for current trip → instant (live subscription still active)
+  if (_renderedPages.has(route)) return;
+
+  // First render for this trip
+  const container = document.getElementById(`page-${route}`);
+  container.innerHTML = '<div class="loading-center"><div class="spinner"></div></div>';
   try {
     const mod = await routes[route]();
-    currentPage = mod;
+    _pageModules.set(route, mod);
     await mod.render(container, { userId: currentUser.uid, tripId: currentTripId });
-    localStorage.setItem('lastRoute', route);
-    // Save rendered content to cache (after onSnapshot may have updated it)
-    setTimeout(() => {
-      if (container.children.length) pageCache.set(cacheKey, container.innerHTML);
-    }, 500);
+    _renderedPages.add(route);
   } catch (e) {
     console.error('navigate:', e);
     container.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Failed to load</div><div class="empty-sub">${e.message}</div></div>`;
@@ -367,13 +376,14 @@ window.__signOut = async () => {
 };
 window.__setLang = (lang) => {
   setLang(lang);
+  _clearAllPages();
   closeModal();
   navigate(localStorage.getItem('lastRoute') || 'dashboard');
 };
 window.__setCurrency = (code) => {
   setCurrency(code);
   document.dispatchEvent(new CustomEvent('currencychange', { detail: { currency: code } }));
-  pageCache.clear();
+  _clearAllPages();
   closeModal();
   navigate(localStorage.getItem('lastRoute') || 'dashboard');
 };
@@ -388,7 +398,7 @@ window.__deleteCurrentTrip = async () => {
     await deleteTrip(currentUser.uid, currentTripId);
     currentTripId = null;
     localStorage.removeItem('lastTripId');
-    pageCache.clear();
+    _clearAllPages();
     await loadTrips(currentUser.uid);
     navigate('dashboard');
     showToast('Trip deleted');
@@ -457,7 +467,7 @@ window.__saveEditTrip = async () => {
     if (tr) tr.name = data.name;
     const btn = document.getElementById('trip-selector-btn');
     if (btn && currentTripId) btn.textContent = data.name;
-    pageCache.clear();
+    _clearAllPages();
     closeModal();
     showToast('Trip updated');
     navigate(localStorage.getItem('lastRoute') || 'dashboard');
@@ -486,7 +496,7 @@ async function initApp(user) {
   // Bind header buttons
   document.getElementById('settings-btn').addEventListener('click', openSettings);
   document.getElementById('refresh-btn').addEventListener('click', () => {
-    pageCache.clear();
+    _clearAllPages();
     navigate(localStorage.getItem('lastRoute') || 'dashboard');
   });
 
