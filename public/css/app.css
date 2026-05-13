@@ -999,3 +999,12 @@ a { color: var(--accent); text-decoration: none; }
 }
 .img-slot-banner { aspect-ratio:unset; width:100%; height:110px; }
 .img-slot-banner img { width:100%; max-width:100%; height:100%; object-fit:cover; display:block; }
+
+/* ── Itinerary Schedule / Map tabs ──────────────────────────────── */
+.itin-tab-bar { display:flex; padding:0 16px 12px; gap:8px; }
+.itin-tab { flex:1; padding:8px 0; border-radius:8px; border:1px solid var(--line); background:var(--surface-2); color:var(--muted); font-size:13px; font-weight:500; cursor:pointer; transition:background 0.15s, color 0.15s, border-color 0.15s; }
+.itin-tab.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+.itin-map-wrap { height:calc(100dvh - 220px); min-height:300px; width:100%; }
+.itin-map-popup { position:absolute; bottom:0; left:0; right:0; z-index:100; background:var(--surface); border-top:1px solid var(--line); border-radius:12px 12px 0 0; padding:16px; box-shadow:0 -4px 24px rgba(0,0,0,0.5); }
+.itin-map-popup-inner { position:relative; padding-right:28px; }
+.itin-map-popup-close { position:absolute; top:-4px; right:-4px; width:24px; height:24px; border-radius:50%; background:var(--surface-2); border:1px solid var(--line); color:var(--muted); cursor:pointer; font-size:16px; line-height:1; display:flex; align-items:center; justify-content:center; }
