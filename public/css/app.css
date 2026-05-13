@@ -978,7 +978,7 @@ a { color: var(--accent); text-decoration: none; }
 
 /* ── Image upload slots ─────────────────────────────────────────── */
 .img-upload-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-.img-slot { position:relative; aspect-ratio:4/3; border-radius:8px; overflow:hidden; cursor:pointer; }
+.img-slot { position:relative; width:100%; max-width:100%; aspect-ratio:4/3; border-radius:8px; overflow:hidden; cursor:pointer; }
 .img-slot-empty {
   border:2px dashed var(--line);
   background:var(--surface-2);
@@ -987,7 +987,7 @@ a { color: var(--accent); text-decoration: none; }
   transition:border-color 0.15s, color 0.15s;
 }
 .img-slot-empty:hover { border-color:var(--accent); color:var(--accent); }
-.img-slot-filled img { width:100%; height:100%; object-fit:cover; display:block; }
+.img-slot-filled img { width:100%; max-width:100%; height:100%; object-fit:cover; display:block; }
 .img-slot-del {
   position:absolute; top:4px; right:4px;
   width:22px; height:22px;
@@ -997,5 +997,5 @@ a { color: var(--accent); text-decoration: none; }
   font-size:14px; line-height:1;
   display:flex; align-items:center; justify-content:center;
 }
-.img-slot-banner { aspect-ratio:unset; height:110px; }
-.img-slot-banner img { width:100%; height:100%; object-fit:cover; display:block; }
+.img-slot-banner { aspect-ratio:unset; width:100%; height:110px; }
+.img-slot-banner img { width:100%; max-width:100%; height:100%; object-fit:cover; display:block; }
