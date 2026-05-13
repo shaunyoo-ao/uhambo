@@ -94,7 +94,7 @@ firestore.rules       # Auth + email-whitelist security rules
 | Dashboard | #dashboard | Trip overview, weather, quick stats |
 | Itinerary | #itinerary | Timeline grouped by date |
 | Accommodation | #accommodation | Hotels/stays, check-in/out dates |
-| Activities | #activities | Activities with completion toggle |
+| Activity | #activities | Activities with completion toggle |
 | Expenses | #expenses | Costs with currency conversion |
 | Archive | #archive | Stats dashboard (computed) |
 
