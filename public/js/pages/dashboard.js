@@ -75,6 +75,8 @@ export async function render(container, { userId, tripId }) {
     }
 
     const completedActs = activities.filter(a => a.completed).length;
+    const candidateStays = accommodation.filter(a => a.status === 'candidate').length;
+    const bookedStays = accommodation.length - candidateStays;
 
     // Mileage
     _mileageDetail = await calcMileageDetail(itinerary);
@@ -106,6 +108,10 @@ export async function render(container, { userId, tripId }) {
           <div class="stat-card" style="cursor:pointer" onclick="window.__navigate('accommodation')">
             <div class="stat-value mono">${accommodation.length}</div>
             <div class="stat-label">${t('dash.stays')}</div>
+            <div class="stat-sub">${[
+              candidateStays > 0 ? `🔖${candidateStays}` : '',
+              bookedStays > 0 ? `✅${bookedStays}` : ''
+            ].filter(Boolean).join(' · ')}</div>
           </div>
           <div class="stat-card" style="cursor:pointer" onclick="window.__showMileageDetail()">
             <div class="stat-value mono" id="mileage-stat-value">${mileageKm} km</div>

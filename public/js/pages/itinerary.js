@@ -84,7 +84,7 @@ function renderList(items) {
               <div class="row gap-8" style="margin-bottom:4px">
                 <span>${TYPE_ICONS[item.type] || '📌'}</span>
                 <span class="text-sm font-medium">${item.title || '—'}</span>
-                <span class="badge badge-muted" style="margin-left:auto;font-size:10px">${item.type || 'other'}</span>
+                <span class="badge badge-muted" style="margin-left:auto;font-size:10px">${item.type === 'rest' ? 'accommodation' : (item.type || 'other')}</span>
               </div>
               ${item.location ? `<div class="text-xs text-muted">📍 ${item.location}</div>` : ''}
               ${item.description ? `<div class="text-sm" style="color:var(--cream-dim);margin-top:4px">${item.description}</div>` : ''}
@@ -225,6 +225,7 @@ function addFAB(container, onClick) {
   const fab = document.createElement('button');
   fab.className = 'fab';
   fab.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
+  fab.dataset.route = 'itinerary';
   fab.addEventListener('click', onClick);
   document.getElementById('app').appendChild(fab);
 }
