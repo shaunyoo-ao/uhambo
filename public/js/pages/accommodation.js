@@ -8,11 +8,13 @@ import { openModal, closeModal, showToast, showConfirm, setModalSaving } from '.
 import { formatConverted, getCurrency, CURRENCIES } from '../currency.js';
 import { openCalc } from '../calculator.js';
 import { geocodeCity } from '../weather.js';
+import { resizeImageToBlob, uploadToImgBB } from '../imgbb.js';
 
 let _unsub = null;
 let _ctx = null;
 let _items = [];
 let _links = [];
+let _imageSlots = [];
 let _tripCountry = '';
 
 export function destroy() {
@@ -102,6 +104,7 @@ async function renderList(items) {
           </div>
           ${(item.links || []).length > 0 ? `<div class="row gap-6" style="margin-top:8px;flex-wrap:wrap">${item.links.map(u => `<a href="${u}" target="_blank" rel="noopener" class="text-xs" style="color:var(--sky)" onclick="event.stopPropagation()">🔗 Link</a>`).join('')}</div>` : ''}
           ${item.notes ? `<div class="text-xs text-muted" style="margin-top:8px">${item.notes}</div>` : ''}
+          ${(item.images || []).length > 0 ? `<div style="margin-top:10px;display:grid;grid-template-columns:${(item.images || []).length > 1 ? '1fr 1fr' : '1fr'};gap:6px;border-radius:8px;overflow:hidden">${(item.images || []).slice(0, 4).map(u => `<img src="${u}" style="width:100%;aspect-ratio:4/3;object-fit:cover;display:block">`).join('')}</div>` : ''}
         </div>
       </div>`;
   }));
@@ -112,6 +115,13 @@ async function renderList(items) {
     const item = _items.find(i => i.id === id);
     if (item) openItemModal(item);
   };
+}
+
+function accomImgGridHTML() {
+  return _imageSlots.map((slot, i) => {
+    if (slot.type === 'empty') return `<div class="img-slot img-slot-empty" onclick="window.__accomImgPick(${i})"><span>+</span></div>`;
+    return `<div class="img-slot img-slot-filled"><img src="${slot.preview}" alt=""><button type="button" class="img-slot-del" onclick="event.stopPropagation();window.__accomImgRemove(${i})">×</button></div>`;
+  }).join('');
 }
 
 function linkListHTML(links) {
@@ -126,6 +136,8 @@ function openItemModal(item) {
   const isEdit = !!item;
   const today = new Date().toISOString().slice(0, 10);
   _links = item?.links ? [...item.links] : [];
+  _imageSlots = (item?.images || []).slice(0, 4).map(url => ({ type: 'url', value: url, preview: url }));
+  while (_imageSlots.length < 4) _imageSlots.push({ type: 'empty', value: null, preview: null });
 
   openModal({
     title: isEdit ? t('accom.edit_stay') : t('accom.add'),
@@ -183,6 +195,11 @@ function openItemModal(item) {
           </div>
         </div>
         <div class="form-group">
+          <label class="form-label">Photos</label>
+          <div class="img-upload-grid" id="accom-img-grid">${accomImgGridHTML()}</div>
+          <input type="file" id="accom-file-input" accept="image/*" style="display:none" onchange="window.__accomFileChange(this)">
+        </div>
+        <div class="form-group">
           <label class="form-label">${t('common.status')}</label>
           <select class="form-select" name="status">
             <option value="booked" ${(item?.status || 'booked') === 'booked' ? 'selected' : ''}>✅ ${t('common.booked')}</option>
@@ -218,6 +235,28 @@ function openItemModal(item) {
     if (el) el.innerHTML = linkListHTML(_links);
   };
 
+  window.__accomImgPick = (idx) => {
+    const inp = document.getElementById('accom-file-input');
+    if (!inp) return;
+    inp.dataset.slotIdx = String(idx);
+    inp.click();
+  };
+  window.__accomFileChange = (input) => {
+    const idx = parseInt(input.dataset.slotIdx || '0', 10);
+    const file = input.files[0];
+    if (!file) return;
+    const preview = URL.createObjectURL(file);
+    _imageSlots[idx] = { type: 'file', value: file, preview };
+    const grid = document.getElementById('accom-img-grid');
+    if (grid) grid.innerHTML = accomImgGridHTML();
+    input.value = '';
+  };
+  window.__accomImgRemove = (idx) => {
+    _imageSlots[idx] = { type: 'empty', value: null, preview: null };
+    const grid = document.getElementById('accom-img-grid');
+    if (grid) grid.innerHTML = accomImgGridHTML();
+  };
+
   window.__saveAccomItem = async (id) => {
     const form = document.getElementById('accom-form');
     if (!form.checkValidity()) { form.reportValidity(); return; }
@@ -226,6 +265,17 @@ function openItemModal(item) {
     data.links = _links;
     const { userId, tripId } = _ctx;
     setModalSaving(true);
+    // Upload new image files
+    const images = [];
+    for (const slot of _imageSlots) {
+      if (slot.type === 'file') {
+        const blob = await resizeImageToBlob(slot.value);
+        images.push(await uploadToImgBB(blob));
+      } else if (slot.type === 'url') {
+        images.push(slot.value);
+      }
+    }
+    data.images = images;
     try {
       let savedId = id;
       if (id) {

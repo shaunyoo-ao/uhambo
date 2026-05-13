@@ -2,8 +2,9 @@ import { signInWithGoogle, signOut, onAuthStateChange, handleRedirectResult } fr
 import { setLang, getLang, t } from './i18n.js';
 import { setCurrency, getCurrency, CURRENCIES } from './currency.js';
 import { getTrips, createTrip, getTrip, updateTrip, deleteTrip } from './db.js';
+import { resizeImageToBlob, uploadToImgBB } from './imgbb.js';
 
-const APP_VERSION = '1.1.4';
+const APP_VERSION = '1.1.5';
 
 const COUNTRIES = ['Australia','Austria','Belgium','Brazil','Canada','China','Croatia','Czech Republic','Denmark','Egypt','Finland','France','Germany','Greece','Hong Kong','Hungary','Iceland','India','Indonesia','Ireland','Israel','Italy','Japan','Malaysia','Mexico','Morocco','Netherlands','New Zealand','Norway','Philippines','Poland','Portugal','Romania','Russia','Singapore','South Africa','South Korea','Spain','Sweden','Switzerland','Taiwan','Thailand','Turkey','United Arab Emirates','United Kingdom','United States','Vietnam'];
 
@@ -13,6 +14,12 @@ export let currentTripId = null;
 let _appInitialized = false;
 let _savingTrip = false;
 let _trips = [];
+let _tripImageSlot = { type: 'empty', value: null, preview: null };
+
+function tripImageSlotHTML(slot) {
+  if (slot.type === 'empty') return `<div class="img-slot img-slot-empty img-slot-banner" onclick="window.__tripImgPick()"><span style="font-size:13px">+ Cover photo</span></div>`;
+  return `<div class="img-slot img-slot-filled img-slot-banner"><img src="${slot.preview}" alt=""><button type="button" class="img-slot-del" onclick="window.__tripImgRemove()">×</button></div>`;
+}
 
 // ── Per-page keep-alive tracking ─────────────────────────────────
 const _renderedPages = new Set();  // routes rendered for current trip
@@ -259,6 +266,7 @@ function openSettings() {
 function openNewTrip() {
   closeModal();
   setTimeout(() => {
+    _tripImageSlot = { type: 'empty', value: null, preview: null };
     openModal({
       title: 'New Trip',
       body: `
@@ -294,6 +302,11 @@ function openNewTrip() {
               ${CURRENCIES.map(c => `<option value="${c.code}">${c.symbol} ${c.code} — ${c.label}</option>`).join('')}
             </select>
           </div>
+          <div class="form-group">
+            <label class="form-label">Cover Photo</label>
+            <div id="trip-img-slot">${tripImageSlotHTML(_tripImageSlot)}</div>
+            <input type="file" id="trip-img-input" accept="image/*" style="display:none" onchange="window.__tripImgChange(this)">
+          </div>
         </form>
       `,
       footer: `
@@ -314,6 +327,12 @@ async function submitNewTrip() {
   setModalSaving(true);
   const data = Object.fromEntries(new FormData(form));
   try {
+    if (_tripImageSlot.type === 'file') {
+      const blob = await resizeImageToBlob(_tripImageSlot.value);
+      data.imageUrl = await uploadToImgBB(blob);
+    } else if (_tripImageSlot.type === 'url') {
+      data.imageUrl = _tripImageSlot.value;
+    }
     const tripId = await createTrip(currentUser.uid, data);
     localStorage.setItem('lastTripId', tripId);
     currentTripId = tripId;
@@ -389,6 +408,21 @@ window.__setCurrency = (code) => {
 };
 window.__newTrip = openNewTrip;
 window.__submitNewTrip = submitNewTrip;
+window.__tripImgPick = () => document.getElementById('trip-img-input')?.click();
+window.__tripImgRemove = () => {
+  _tripImageSlot = { type: 'empty', value: null, preview: null };
+  const el = document.getElementById('trip-img-slot');
+  if (el) el.innerHTML = tripImageSlotHTML(_tripImageSlot);
+};
+window.__tripImgChange = (input) => {
+  const file = input.files[0];
+  if (!file) return;
+  const preview = URL.createObjectURL(file);
+  _tripImageSlot = { type: 'file', value: file, preview };
+  const el = document.getElementById('trip-img-slot');
+  if (el) el.innerHTML = tripImageSlotHTML(_tripImageSlot);
+  input.value = '';
+};
 window.__deleteCurrentTrip = async () => {
   if (!currentTripId) { showToast('No trip selected'); return; }
   closeModal();
@@ -411,6 +445,9 @@ window.__editCurrentTrip = async () => {
   try {
     const trip = await getTrip(currentUser.uid, currentTripId);
     if (!trip) { showToast('Trip not found'); return; }
+    _tripImageSlot = trip.imageUrl
+      ? { type: 'url', value: trip.imageUrl, preview: trip.imageUrl }
+      : { type: 'empty', value: null, preview: null };
     setTimeout(() => {
       openModal({
         title: 'Edit Trip',
@@ -447,6 +484,11 @@ window.__editCurrentTrip = async () => {
                 ${CURRENCIES.map(c => `<option value="${c.code}" ${(trip.baseCurrency || 'KRW') === c.code ? 'selected' : ''}>${c.symbol} ${c.code} — ${c.label}</option>`).join('')}
               </select>
             </div>
+            <div class="form-group">
+              <label class="form-label">Cover Photo</label>
+              <div id="trip-img-slot">${tripImageSlotHTML(_tripImageSlot)}</div>
+              <input type="file" id="trip-img-input" accept="image/*" style="display:none" onchange="window.__tripImgChange(this)">
+            </div>
           </form>`,
         footer: `
           <button class="btn btn-ghost" style="flex:1" onclick="window.__closeModal()">Cancel</button>
@@ -462,6 +504,14 @@ window.__saveEditTrip = async () => {
   const data = Object.fromEntries(new FormData(form));
   setModalSaving(true);
   try {
+    if (_tripImageSlot.type === 'file') {
+      const blob = await resizeImageToBlob(_tripImageSlot.value);
+      data.imageUrl = await uploadToImgBB(blob);
+    } else if (_tripImageSlot.type === 'url') {
+      data.imageUrl = _tripImageSlot.value;
+    } else {
+      data.imageUrl = '';
+    }
     await updateTrip(currentUser.uid, currentTripId, data);
     const tr = _trips.find(t => t.id === currentTripId);
     if (tr) tr.name = data.name;

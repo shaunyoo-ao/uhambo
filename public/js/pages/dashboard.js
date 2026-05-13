@@ -94,6 +94,8 @@ export async function render(container, { userId, tripId }) {
           ${trip.startDate && trip.endDate ? `<div class="text-xs text-muted" style="margin-top:2px">${trip.startDate} → ${trip.endDate}</div>` : ''}
         </div>
 
+        ${trip.imageUrl ? `<div style="margin:0 0 16px;border-radius:12px;overflow:hidden"><img src="${trip.imageUrl}" alt="" style="width:100%;height:160px;object-fit:cover;display:block"></div>` : ''}
+
         <!-- Quick stats -->
         <div class="stat-grid" style="margin-bottom:16px">
           <div class="stat-card" style="cursor:pointer" onclick="window.__navigate('expenses')">
