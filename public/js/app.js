@@ -1,16 +1,20 @@
-import { signInWithGoogle, signOut, onAuthStateChange, handleRedirectResult } from './auth.js';
+import { signInWithGoogle, signOut, signInAnonymously, onAuthStateChange, handleRedirectResult } from './auth.js';
 import { setLang, getLang, t } from './i18n.js';
 import { setCurrency, getCurrency, CURRENCIES } from './currency.js';
-import { getTrips, createTrip, getTrip, updateTrip, deleteTrip } from './db.js';
+import { getTrips, createTrip, getTrip, updateTrip, deleteTrip, getGuestCode, setGuestCode, removeGuestCode, lookupGuestCode } from './db.js';
 import { resizeImageToBlob, uploadToImgBB } from './imgbb.js';
 
-const APP_VERSION = '1.1.7';
+const APP_VERSION = '1.2.0';
 
 const COUNTRIES = ['Australia','Austria','Belgium','Brazil','Canada','China','Croatia','Czech Republic','Denmark','Egypt','Finland','France','Germany','Greece','Hong Kong','Hungary','Iceland','India','Indonesia','Ireland','Israel','Italy','Japan','Malaysia','Mexico','Morocco','Netherlands','New Zealand','Norway','Philippines','Poland','Portugal','Romania','Russia','Singapore','South Africa','South Korea','Spain','Sweden','Switzerland','Taiwan','Thailand','Turkey','United Arab Emirates','United Kingdom','United States','Vietnam'];
 
 // ── Global state ────────────────────────────────────────────────
 export let currentUser = null;
 export let currentTripId = null;
+export let isGuest = false;
+let _guestOwnerUid = null;
+let _guestTripId = null;
+let _pendingGuestCode = null;
 let _appInitialized = false;
 let _savingTrip = false;
 let _trips = [];
@@ -145,7 +149,8 @@ export async function navigate(route) {
   try {
     const mod = await routes[route]();
     _pageModules.set(route, mod);
-    await mod.render(container, { userId: currentUser.uid, tripId: currentTripId });
+    const renderUid = isGuest ? _guestOwnerUid : currentUser.uid;
+    await mod.render(container, { userId: renderUid, tripId: currentTripId, isGuest });
     _renderedPages.add(route);
   } catch (e) {
     console.error('navigate:', e);
@@ -251,6 +256,11 @@ function openSettings() {
         <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="window.__editCurrentTrip()">${isKo ? '현재 여행 수정' : 'Edit Current Trip'}</button>
         <button class="btn btn-danger btn-sm" style="margin-top:8px" onclick="window.__deleteCurrentTrip()">${isKo ? '현재 여행 삭제' : 'Delete Current Trip'}</button>
       </div>
+      <div class="settings-group">
+        <div class="eyebrow" style="margin-bottom:6px">${isKo ? '게스트 접근' : 'Guest Access'}</div>
+        <div class="text-xs text-muted" style="margin-bottom:8px">${isKo ? '이 코드를 가진 누구나 이 여행을 읽기 전용으로 볼 수 있습니다.' : 'Anyone with this code can view this trip (read-only).'}</div>
+        <div id="guest-access-body"><div class="spinner" style="width:16px;height:16px;border-width:2px"></div></div>
+      </div>
       <div class="settings-group" style="margin-top:16px">
         <button class="btn btn-ghost btn-full" onclick="window.__signOut()">Sign Out</button>
       </div>
@@ -260,7 +270,94 @@ function openSettings() {
     `,
     footer: ''
   });
+  setTimeout(() => _renderGuestCodeUI(), 50);
 }
+
+function _generateCode() {
+  const ch = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789#$&*?+!';
+  return Array.from(crypto.getRandomValues(new Uint8Array(6)), b => ch[b % ch.length]).join('');
+}
+
+async function _renderGuestCodeUI() {
+  const el = document.getElementById('guest-access-body');
+  if (!el || !currentTripId) return;
+  const code = await getGuestCode(currentUser.uid, currentTripId).catch(() => null);
+  el.innerHTML = code
+    ? `<div class="guest-code-display"><span class="mono" style="font-size:20px;letter-spacing:4px">${code}</span></div>
+       <div style="display:flex;gap:6px;margin-top:8px">
+         <button class="btn btn-secondary btn-sm" onclick="window.__copyGuestCode('${code}')">📋 Copy</button>
+         <button class="btn btn-secondary btn-sm" onclick="window.__regenGuestCode('${code}')">🔄 New</button>
+         <button class="btn btn-danger btn-sm" onclick="window.__deleteGuestCode('${code}')">🗑️ Delete</button>
+       </div>`
+    : `<button class="btn btn-secondary btn-sm" onclick="window.__generateGuestCode()">+ Generate Guest Code</button>`;
+}
+
+window.__generateGuestCode = async () => {
+  const code = _generateCode();
+  try {
+    await setGuestCode(currentUser.uid, currentTripId, code);
+    await _renderGuestCodeUI();
+  } catch (e) { showToast('Error: ' + e.message); }
+};
+window.__regenGuestCode = async (oldCode) => {
+  const newCode = _generateCode();
+  try {
+    await removeGuestCode(currentUser.uid, currentTripId, oldCode);
+    await setGuestCode(currentUser.uid, currentTripId, newCode);
+    await _renderGuestCodeUI();
+  } catch (e) { showToast('Error: ' + e.message); }
+};
+window.__deleteGuestCode = async (code) => {
+  try {
+    await removeGuestCode(currentUser.uid, currentTripId, code);
+    await _renderGuestCodeUI();
+  } catch (e) { showToast('Error: ' + e.message); }
+};
+window.__copyGuestCode = (code) => {
+  navigator.clipboard.writeText(code).then(() => showToast('Code copied!')).catch(() => showToast(code));
+};
+
+function openGuestSettings() {
+  const lang = getLang();
+  const currency = getCurrency();
+  const isKo = lang === 'ko';
+  openModal({
+    title: isKo ? '설정' : 'Settings',
+    body: `
+      <div class="settings-group">
+        <div class="eyebrow" style="margin-bottom:10px">${isKo ? '언어' : 'Language'}</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-sm ${lang === 'en' ? 'btn-primary' : 'btn-secondary'}" onclick="window.__setLang('en')">English</button>
+          <button class="btn btn-sm ${lang === 'ko' ? 'btn-primary' : 'btn-secondary'}" onclick="window.__setLang('ko')">한국어</button>
+        </div>
+      </div>
+      <div class="settings-group">
+        <div class="eyebrow" style="margin-bottom:10px">${isKo ? '통화' : 'Display Currency'}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${CURRENCIES.map(c => `
+            <button class="btn btn-sm ${currency === c.code ? 'btn-primary' : 'btn-secondary'}"
+              onclick="window.__setCurrency('${c.code}')">${c.symbol} ${c.code}</button>
+          `).join('')}
+        </div>
+      </div>
+      <div class="settings-group" style="margin-top:16px">
+        <button class="btn btn-ghost btn-full" onclick="window.__guestExit()">← ${isKo ? '나가기' : 'Exit Guest'}</button>
+      </div>
+      <div class="settings-group" style="text-align:center;color:var(--muted);font-size:11px;margin-top:16px">
+        Copyright ⓒ 2026, YONKE All rights reserved.<br>Version ${APP_VERSION}
+      </div>
+    `,
+    footer: ''
+  });
+}
+
+window.__guestExit = async () => {
+  await signOut();
+  ['guestCode', 'guestOwnerUid', 'guestTripId'].forEach(k => localStorage.removeItem(k));
+  isGuest = false; _guestOwnerUid = null; _guestTripId = null; _appInitialized = false;
+  closeModal();
+  location.reload();
+};
 
 // ── New trip form ────────────────────────────────────────────────
 function openNewTrip() {
@@ -533,10 +630,20 @@ async function initApp(user) {
   hideLogin();
   hideLoading();
 
-  await loadTrips(user.uid);
-
-  window.__openTripPicker = openTripPicker;
-  window.__selectTrip = selectTrip;
+  if (isGuest) {
+    // Guest mode: fixed trip, no trip picker, hide archive tab
+    currentTripId = _guestTripId;
+    const trip = await getTrip(_guestOwnerUid, _guestTripId).catch(() => null);
+    const btn = document.getElementById('trip-selector-btn');
+    if (btn) { btn.textContent = trip?.name || 'Guest View'; btn.disabled = true; }
+    const archiveTab = document.querySelector('.tab-btn[data-route="archive"]');
+    if (archiveTab) archiveTab.style.display = 'none';
+    window.__openTripPicker = () => {};
+  } else {
+    await loadTrips(user.uid);
+    window.__openTripPicker = openTripPicker;
+    window.__selectTrip = selectTrip;
+  }
 
   // Bind nav tabs
   document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -544,7 +651,7 @@ async function initApp(user) {
   });
 
   // Bind header buttons
-  document.getElementById('settings-btn').addEventListener('click', openSettings);
+  document.getElementById('settings-btn').addEventListener('click', isGuest ? openGuestSettings : openSettings);
   document.getElementById('refresh-btn').addEventListener('click', () => {
     _clearAllPages();
     navigate(localStorage.getItem('lastRoute') || 'dashboard');
@@ -598,6 +705,23 @@ document.getElementById('google-login-btn').addEventListener('click', async () =
   }
 });
 
+document.getElementById('guest-enter-btn').addEventListener('click', async () => {
+  const code = document.getElementById('guest-code-input').value.trim();
+  if (!code) return;
+  _pendingGuestCode = code;
+  const btn = document.getElementById('guest-enter-btn');
+  btn.disabled = true;
+  btn.textContent = 'Verifying…';
+  try {
+    await signInAnonymously();
+  } catch (e) {
+    _pendingGuestCode = null;
+    btn.disabled = false;
+    btn.textContent = 'Enter as Guest';
+    showToast('Error: ' + e.message);
+  }
+});
+
 // handleRedirectResult() MUST be awaited before onAuthStateChanged is
 // registered. Without the await, Firebase fires an initial null auth state
 // before the redirect result is processed, which triggers showLogin() even
@@ -607,7 +731,7 @@ document.getElementById('google-login-btn').addEventListener('click', async () =
   const redirectUser = await handleRedirectResult();
   _alog('handleRedirectResult() done — user: ' + (redirectUser ? redirectUser.email : 'null'));
 
-  onAuthStateChange((user, err) => {
+  onAuthStateChange(async (user, err) => {
     if (err === 'access_denied') {
       _alog('onAuthStateChanged → access_denied');
       _appInitialized = false;
@@ -624,9 +748,36 @@ document.getElementById('google-login-btn').addEventListener('click', async () =
       }
       return;
     }
-    _alog('onAuthStateChanged → ' + user.email + ' (appInitialized=' + _appInitialized + ')');
     if (_appInitialized) return;
     _appInitialized = true;
+
+    if (user.isAnonymous) {
+      _alog('onAuthStateChanged → anonymous guest');
+      const code = _pendingGuestCode || localStorage.getItem('guestCode');
+      _pendingGuestCode = null;
+      const info = code ? await lookupGuestCode(code).catch(() => null) : null;
+      if (!info) {
+        await signOut();
+        _appInitialized = false;
+        ['guestCode', 'guestOwnerUid', 'guestTripId'].forEach(k => localStorage.removeItem(k));
+        hideLoading();
+        showLogin();
+        const btn = document.getElementById('guest-enter-btn');
+        if (btn) { btn.disabled = false; btn.textContent = 'Enter as Guest'; }
+        showToast('Invalid or expired code');
+        return;
+      }
+      isGuest = true;
+      _guestOwnerUid = info.ownerUid;
+      _guestTripId = info.tripId;
+      localStorage.setItem('guestCode', code);
+      localStorage.setItem('guestOwnerUid', info.ownerUid);
+      localStorage.setItem('guestTripId', info.tripId);
+      initApp(user);
+      return;
+    }
+
+    _alog('onAuthStateChanged → ' + user.email + ' (appInitialized=' + _appInitialized + ')');
     initApp(user);
   });
 })();

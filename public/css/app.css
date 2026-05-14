@@ -1008,3 +1008,11 @@ a { color: var(--accent); text-decoration: none; }
 .itin-map-popup { position:absolute; bottom:0; left:0; right:0; z-index:100; background:var(--surface); border-top:1px solid var(--line); border-radius:12px 12px 0 0; padding:16px; box-shadow:0 -4px 24px rgba(0,0,0,0.5); }
 .itin-map-popup-inner { position:relative; padding-right:28px; }
 .itin-map-popup-close { position:absolute; top:-4px; right:-4px; width:24px; height:24px; border-radius:50%; background:var(--surface-2); border:1px solid var(--line); color:var(--muted); cursor:pointer; font-size:16px; line-height:1; display:flex; align-items:center; justify-content:center; }
+
+/* ── Guest mode ──────────────────────────────────────────────── */
+.login-divider { display:flex; align-items:center; gap:12px; margin:20px 0 14px; color:var(--muted); font-size:12px; width:100%; max-width:340px; }
+.login-divider::before,.login-divider::after { content:''; flex:1; height:1px; background:var(--line); }
+.guest-code-input { width:100%; padding:14px; border-radius:12px; border:1px solid var(--line); background:var(--surface-2); color:var(--cream); font-size:20px; text-align:center; letter-spacing:6px; font-family:'Geist Mono',monospace; margin-bottom:10px; box-sizing:border-box; outline:none; transition:border-color 0.15s; }
+.guest-code-input:focus { border-color:var(--accent); }
+.guest-code-input::placeholder { letter-spacing:normal; font-size:14px; font-family:'Geist',sans-serif; }
+.guest-code-display { background:var(--surface-2); border-radius:8px; padding:12px 16px; text-align:center; border:1px solid var(--line); }

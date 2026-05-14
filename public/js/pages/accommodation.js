@@ -24,7 +24,7 @@ export function destroy() {
 
 export async function render(container, ctx) {
   _ctx = ctx;
-  const { userId, tripId } = ctx;
+  const { userId, tripId, isGuest } = ctx;
   getTrip(userId, tripId).then(tr => { _tripCountry = tr?.country || ''; }).catch(() => {});
 
   if (!tripId) {
@@ -42,7 +42,7 @@ export async function render(container, ctx) {
     <div id="accom-list"><div class="loading-center"><div class="spinner"></div></div></div>
     <div style="height:80px"></div>`;
 
-  addFAB(() => openItemModal(null));
+  if (!isGuest) addFAB(() => openItemModal(null));
 
   if (_unsub) _unsub();
   _unsub = subscribeAccommodation(userId, tripId, items => {
@@ -71,7 +71,7 @@ async function renderList(items) {
     const priceStr = item.cost ? await formatConverted(item.cost, item.currency || 'KRW') : null;
 
     return `
-      <div class="card" style="margin:0 16px 12px;cursor:pointer" onclick="window.__editAccomItem('${item.id}')">
+      <div class="card" style="margin:0 16px 12px;${_ctx?.isGuest ? '' : 'cursor:pointer'}" ${_ctx?.isGuest ? '' : `onclick="window.__editAccomItem('${item.id}')"`}>
         <div class="card-body" style="padding:14px">
           <div class="row-between" style="margin-bottom:8px">
             <div class="row gap-8">

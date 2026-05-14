@@ -5,6 +5,7 @@ import {
   signInWithRedirect,
   getRedirectResult,
   signOut as fbSignOut,
+  signInAnonymously as fbSignInAnon,
   onAuthStateChanged
 } from 'firebase/auth';
 
@@ -47,6 +48,11 @@ export async function signInWithGoogle() {
   }
 }
 
+export async function signInAnonymously() {
+  log('signInAnonymously()');
+  return fbSignInAnon(auth);
+}
+
 // Called once on every page load, BEFORE onAuthStateChanged is registered.
 // Processes any pending redirect result and clears stale redirect state.
 // All errors are swallowed — never drive UI from this function's errors.
@@ -68,6 +74,12 @@ export function signOut() {
 
 export function onAuthStateChange(callback) {
   return onAuthStateChanged(auth, user => {
+    // Allow anonymous users through — guest mode verification happens in app.js
+    if (user && user.isAnonymous) {
+      log('onAuthStateChanged → anonymous guest');
+      callback(user, null);
+      return;
+    }
     if (user && !ALLOWED.includes(user.email)) {
       log('onAuthStateChanged → ' + user.email + ' NOT in allowlist → signing out');
       fbSignOut(auth);

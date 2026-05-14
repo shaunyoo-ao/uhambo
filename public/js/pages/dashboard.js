@@ -16,7 +16,7 @@ export function destroy() {
   if (_unsubItinerary) { _unsubItinerary(); _unsubItinerary = null; }
 }
 
-export async function render(container, { userId, tripId }) {
+export async function render(container, { userId, tripId, isGuest }) {
   if (!tripId) {
     container.innerHTML = `
       <div class="empty-state" style="padding-top:80px">
@@ -88,6 +88,7 @@ export async function render(container, { userId, tripId }) {
       <div class="page" style="padding-bottom:24px">
         <!-- Trip header -->
         <div style="margin-bottom:20px;padding-top:4px">
+          ${isGuest ? `<div class="eyebrow" style="margin-bottom:4px;color:var(--muted)">👁 Guest View</div>` : ''}
           <div class="eyebrow" style="margin-bottom:4px">${daysLeft}</div>
           <div class="page-title">${trip.name || 'My Trip'}</div>
           ${trip.destination ? `<div class="text-sm text-muted" style="margin-top:2px">📍 ${trip.destination}</div>` : ''}

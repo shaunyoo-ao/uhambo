@@ -28,7 +28,7 @@ const CATS = ['food', 'shopping', 'transport', 'activity', 'accom', 'other'];
 
 export async function render(container, ctx) {
   _ctx = ctx;
-  const { userId, tripId } = ctx;
+  const { userId, tripId, isGuest } = ctx;
 
   if (!tripId) {
     container.innerHTML = noTripHTML();
@@ -50,7 +50,7 @@ export async function render(container, ctx) {
     <div id="exp-list"><div class="loading-center"><div class="spinner"></div></div></div>
     <div style="height:80px"></div>`;
 
-  addFAB(() => {
+  if (!isGuest) addFAB(() => {
     if (_adding) return;
     openItemModal(null);
   });
@@ -153,7 +153,7 @@ async function renderList(items) {
       ? `<div class="badge badge-sky" style="margin-top:4px;font-size:10px">↔ ${e.sourceType}</div>`
       : '';
     return `
-      <div class="list-item" onclick="window.__editExpItem('${e.id}')">
+      <div class="list-item" ${_ctx?.isGuest ? '' : `onclick="window.__editExpItem('${e.id}')"`}>
         <div class="list-icon" style="background:var(--surface-2)">${CAT_ICONS[e.category] || '💳'}</div>
         <div class="list-content">
           <div class="list-title">${e.title || '—'}</div>

@@ -140,6 +140,8 @@ const translations = {
     'exp.cats.activity':  'Activity',
     'exp.cats.shopping':  'Shopping',
     'exp.cats.other':     'Other',
+    // Guest
+    'guest.view_badge':  '👁 Guest View',
     // Archive
     'arch.title':        'Archive',
     'arch.total_spent':  'Total Spent',
@@ -305,6 +307,8 @@ const translations = {
     'settings.del_trip':  '현재 여행 삭제',
     'exp.cats.shopping':  '쇼핑',
     'exp.cats.other':     '기타',
+    // Guest
+    'guest.view_badge':  '👁 게스트 보기',
     // Archive
     'arch.title':        '아카이브',
     'arch.total_spent':  '총 지출',
