@@ -32,6 +32,18 @@ Examples:
 1. `public/index.html` — login footer `<p class="login-footer">`
 2. `public/js/app.js` — `APP_VERSION` constant (shown in settings popup)
 
+### Bug-fix / UI-fix Version Rule
+
+When a commit is **only** `<BUG_FIX>` or `<UI_FIX>` (no new feature), append a digit to the previous display version instead of incrementing the patch number:
+
+```
+1.2.1  → 1.2.11   (first bug fix on top of 1.2.1)
+1.2.11 → 1.2.12   (second bug fix)
+1.2.12 → 1.2.13   (third bug fix)
+```
+
+Feature commits resume normal patch increment (the suffix digits are dropped). The `sw.js` `VERSION` still increments by 1 on every commit as a cache-buster; once a bug-fix suffix is in use, it no longer maps deterministically to the display version.
+
 ## Tech Stack
 - **Frontend:** Vanilla HTML5, CSS3, ES Modules (no bundler)
 - **Backend:** Firebase Firestore (Spark plan)
@@ -102,7 +114,9 @@ users/{userId}/
     date (YYYY-MM-DD), time (HH:MM), title, description
     location (string), type (travel|meal|activity|rest), lat, lng
 
-  trips/{tripId}/bookings/{bookingId}
+  trips/{tripId}/accommodation/{bookingId}
+    # Collection name kept as `accommodation` for backward compatibility with pre-v1.2.1 data.
+    # Holds ALL booking categories — distinguished by the `category` field.
     category (accommodation|travel|rent)
     name, cost (number), currency, notes, links[], status (booked|candidate)
     -- Accommodation: checkIn, checkOut (YYYY-MM-DD), checkInTime, checkOutTime, address, lat, lng, images[]

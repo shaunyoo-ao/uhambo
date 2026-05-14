@@ -50,7 +50,7 @@ export async function updateTrip(uid, tid, data) {
   return updateDoc(tripRef(uid, tid), { ...data, updatedAt: serverTimestamp() });
 }
 
-const SUBCOLLECTIONS = ['itinerary', 'bookings', 'activities', 'expenses'];
+const SUBCOLLECTIONS = ['itinerary', 'accommodation', 'activities', 'expenses'];
 
 export async function deleteTrip(uid, tid) {
   // Clean up guest code if one exists
@@ -96,26 +96,26 @@ export async function deleteItineraryItem(uid, tid, id) {
   return deleteDoc(subDocRef(uid, tid, 'itinerary', id));
 }
 
-// ── Bookings ─────────────────────────────────────────────────────
+// ── Bookings (stored in `accommodation` collection for backward compat) ──
 export async function getBookings(uid, tid) {
-  const s = await getDocs(subRef(uid, tid, 'bookings'));
+  const s = await getDocs(subRef(uid, tid, 'accommodation'));
   return snap(s);
 }
 
 export function subscribeBookings(uid, tid, cb) {
-  return onSnapshot(subRef(uid, tid, 'bookings'), s => cb(snap(s)));
+  return onSnapshot(subRef(uid, tid, 'accommodation'), s => cb(snap(s)));
 }
 
 export async function addBooking(uid, tid, data) {
-  return addDoc(subRef(uid, tid, 'bookings'), { ...data, createdAt: serverTimestamp() });
+  return addDoc(subRef(uid, tid, 'accommodation'), { ...data, createdAt: serverTimestamp() });
 }
 
 export async function updateBooking(uid, tid, id, data) {
-  return updateDoc(subDocRef(uid, tid, 'bookings', id), data);
+  return updateDoc(subDocRef(uid, tid, 'accommodation', id), data);
 }
 
 export async function deleteBooking(uid, tid, id) {
-  return deleteDoc(subDocRef(uid, tid, 'bookings', id));
+  return deleteDoc(subDocRef(uid, tid, 'accommodation', id));
 }
 
 // ── Activities ───────────────────────────────────────────────────

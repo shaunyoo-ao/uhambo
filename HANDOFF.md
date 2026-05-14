@@ -2,7 +2,7 @@
 
 **Live URL:** https://yonke-uhambo.web.app/  
 **Firebase Project:** yonke-uhambo  
-**Current Version:** 1.2.1 (sw.js v21)  
+**Current Version:** 1.2.11 (sw.js v22)  
 **Stack:** Vanilla JS ES Modules · Firebase Firestore/Auth/Hosting · GitHub Actions CI/CD  
 **Allowed Users:** yooyoopd@gmail.com, 2yeonsoo@gmail.com
 
@@ -82,7 +82,17 @@
 - Add Stay (accommodation) and Activity markers to the map
 - Map pin visibility improvements
 
-### v1.2.1 — Coordinates Input + BOOKING Tab *(current)*
+### v1.2.11 — Bug fixes for v1.2.1 STAY→BOOKING migration *(current)*
+Fixes three regressions introduced by v1.2.1:
+1. **Dashboard / Itinerary failed to load** — both still imported `getAccommodation` from db.js (removed in v1.2.1). Replaced with `getBookings`.
+2. **Archive: "Missing or insufficient permissions"** — `getAllTripsData()` tried to read the new `bookings` collection, which the deployed Firestore rules did not allow.
+3. **Booking page infinite spinner** — existing accommodation entries lived in the `accommodation` collection but new code subscribed to `bookings`.
+
+**Fix strategy: keep the Firestore collection named `accommodation`** and only treat the rename as a JS-API / UI concept. JS helper names (`getBookings`, `addBooking`, etc.) are preserved. All booking categories (accommodation, travel, rent) live in the same `accommodation` Firestore collection distinguished by the `category` field. No data migration needed; existing user data is preserved transparently.
+
+Also introduced a new versioning rule in `CLAUDE.md`: bug-fix-only commits append a digit (`1.2.1 → 1.2.11 → 1.2.12`) instead of incrementing the patch number.
+
+### v1.2.1 — Coordinates Input + BOOKING Tab
 - **Coordinates input**: optional lat/lng override field below every Location input (Itinerary, Activities, Booking). Comma-separated format `-25.989, 28.005`. When filled, skips Nominatim geocoding; when empty, geocodes as before. Pre-fills on edit with stored coordinates.
 - **STAY → BOOKING tab**: renamed with briefcase icon. Three sub-categories:
   - **Accommodation**: identical to old Stay (check-in/out dates, times, address, photos, cost, expense sync, itinerary sync)

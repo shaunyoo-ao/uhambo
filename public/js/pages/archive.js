@@ -107,7 +107,8 @@ async function renderContent() {
   const allActivities = [];
   const countryCounts = {};
 
-  for (const { trip, expenses, activities, accommodation, itinerary } of filtered) {
+  for (const { trip, expenses, activities, bookings, itinerary } of filtered) {
+    const accomBookings = (bookings || []).filter(b => !b.category || b.category === 'accommodation');
     for (const e of expenses) {
       const amt = await convert(e.amount || 0, e.currency || 'KRW', currency);
       grandTotal += amt;
@@ -122,7 +123,7 @@ async function renderContent() {
     const mDetail = await calcMileageDetail(itinerary);
     totalMileage += mDetail.total || 0;
 
-    totalStays += accommodation.length;
+    totalStays += accomBookings.length;
     totalActivities += activities.length;
     completedActivities += activities.filter(a => a.completed).length;
     allActivities.push(...activities);
@@ -133,7 +134,7 @@ async function renderContent() {
         if (city) placeEntries.push({ city, date: item.date || '' });
       }
     });
-    accommodation.forEach(a => {
+    accomBookings.forEach(a => {
       if (a.address) {
         const city = extractCity(a.address);
         if (city) placeEntries.push({ city, date: a.checkIn || '' });
