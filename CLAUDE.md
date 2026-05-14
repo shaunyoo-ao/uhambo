@@ -24,13 +24,15 @@ Examples:
   v11 → Version 1.1.1
   v20 → Version 1.2.0
   v21 → Version 1.2.1
+  v23 → Version 1.2.12 (bug-fix suffix; no longer mapped 1:1)
 ```
 
-**Always bump sw.js VERSION and update `index.html` version text together on every commit, even without an explicit version request.**
+**Always bump sw.js VERSION and update `public/js/app.js` `APP_VERSION` together on every commit, even without an explicit version request.**
 
-**On every commit, version string must appear in BOTH:**
-1. `public/index.html` — login footer `<p class="login-footer">`
-2. `public/js/app.js` — `APP_VERSION` constant (shown in settings popup)
+**Single source of truth for the displayed version: `public/js/app.js` `APP_VERSION` constant.**
+- Settings popup reads `APP_VERSION` directly.
+- Login footer is a placeholder `<span id="login-version">` in `index.html`, populated at runtime by `app.js` from the same `APP_VERSION` constant.
+- **Never hardcode a version string in `index.html`** — that historically caused mismatch between the login footer and Settings popup whenever one was bumped and the other wasn't, or when the service worker precached stale `index.html` while loading fresh `app.js`.
 
 ### Bug-fix / UI-fix Version Rule
 
@@ -223,6 +225,16 @@ Apply these to **every** new page or feature:
 - Firestore rules require `request.auth.uid == userId` AND email in allowed list
 - Client-side email whitelist is UX-only; rules are the real gate
 - No secrets in client code (Firebase config is public by design)
+
+---
+
+## Deployment
+
+`.github/workflows/deploy.yml` runs on push to `main` and deploys BOTH:
+1. **Hosting** — `FirebaseExtended/action-hosting-deploy@v0` (the static files in `public/`).
+2. **Firestore rules + indexes** — `w9jds/firebase-action@v13.0.0` running `firebase deploy --only firestore`.
+
+**Step 2 is critical.** Step 1 alone does NOT deploy `firestore.rules` — historically every rules change had to be deployed manually. When client code expected a rule that wasn't live, Firestore returned "Missing or insufficient permissions". Never remove the second step.
 
 ---
 

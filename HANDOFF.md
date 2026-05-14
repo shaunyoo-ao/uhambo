@@ -2,7 +2,7 @@
 
 **Live URL:** https://yonke-uhambo.web.app/  
 **Firebase Project:** yonke-uhambo  
-**Current Version:** 1.2.11 (sw.js v22)  
+**Current Version:** 1.2.12 (sw.js v23)  
 **Stack:** Vanilla JS ES Modules · Firebase Firestore/Auth/Hosting · GitHub Actions CI/CD  
 **Allowed Users:** yooyoopd@gmail.com, 2yeonsoo@gmail.com
 
@@ -82,7 +82,23 @@
 - Add Stay (accommodation) and Activity markers to the map
 - Map pin visibility improvements
 
-### v1.2.11 — Bug fixes for v1.2.1 STAY→BOOKING migration *(current)*
+### v1.2.12 — Root-cause fixes for version mismatch + Firestore rules deploy *(current)*
+
+Three persistent issues that returned in v1.2.11 traced to deeper root causes:
+
+1. **Version mismatch (login footer vs Settings).** The version string lived in two separate places: hardcoded in `public/index.html` AND as `APP_VERSION` in `public/js/app.js`. The service worker's `cache.addAll(PRECACHE)` uses regular fetches that honor the browser's HTTP cache (`max-age=86400` set in `firebase.json`). After a deploy, the SW could precache STALE `index.html` (still in browser HTTP cache) while loading FRESH `app.js`, displaying two different version strings to the user.
+   - **Fix:** Single source of truth — `index.html` now has `<span id="login-version">…</span>` which `app.js` populates at runtime from `APP_VERSION`. Both screens always show the same value (even if files are stale).
+   - **Defense-in-depth:** SW precache now uses `new Request(url, { cache: 'reload' })` to bypass the browser HTTP cache and always fetch fresh files from the CDN.
+
+2. **"Missing or insufficient permissions" on Dashboard/Archive.** The GitHub Actions workflow `.github/workflows/deploy.yml` used `FirebaseExtended/action-hosting-deploy@v0` which deploys ONLY hosting — **Firestore rules were NEVER deployed automatically**. Every rules change since the project began was either deployed manually or never took effect. When client code expected a rule that wasn't live, Firestore denied the read.
+   - **Fix:** Added a second step to the workflow using `w9jds/firebase-action@v13.0.0` running `firebase deploy --only firestore`. This deploys both `firestore.rules` and `firestore.indexes.json` on every push to `main`.
+
+3. **Booking page infinite spinner.** Compound effect of (a) the SW serving cached v1.2.1 code that subscribed to the (non-existent in live rules) `bookings` collection, and (b) live rules not actually matching the repo's rules file (Issue 2). The subscription was silently rejected → spinner forever.
+   - **Fix:** This is auto-resolved by the combined fixes above — the SW now invalidates aggressively, the code in v1.2.11 already reads `accommodation`, and rules are now auto-deployed so the live rules will match the repo.
+
+Also documents this in `CLAUDE.md` (new "Deployment" section, updated "Version Naming Rule").
+
+### v1.2.11 — Bug fixes for v1.2.1 STAY→BOOKING migration
 Fixes three regressions introduced by v1.2.1:
 1. **Dashboard / Itinerary failed to load** — both still imported `getAccommodation` from db.js (removed in v1.2.1). Replaced with `getBookings`.
 2. **Archive: "Missing or insufficient permissions"** — `getAllTripsData()` tried to read the new `bookings` collection, which the deployed Firestore rules did not allow.
