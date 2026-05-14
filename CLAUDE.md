@@ -141,6 +141,64 @@ Based on dark-theme prototype (ebc28922-uhambo__standalone_.html):
 
 ---
 
+## Guest Mode
+
+v1.2.0 introduced read-only trip sharing via a 6-character guest access code. Guests sign in anonymously (Firebase Anonymous Auth) and view one specific trip without write access.
+
+### Architecture
+
+- Guest enters code on login screen → `signInAnonymously()` → `lookupGuestCode(code)` fetches `guest_codes/{code}` doc → gets `{ ownerUid, tripId }`
+- Guest context persisted in `localStorage`: `guestCode`, `guestOwnerUid`, `guestTripId` (survives reload)
+- `app.js` module-level flags: `isGuest`, `_guestOwnerUid`, `_guestTripId`
+- `navigate()` passes `{ userId: renderUid, tripId, isGuest }` to every page, where `renderUid = isGuest ? _guestOwnerUid : currentUser.uid`
+
+### Rule for New Pages and Features
+
+Every page module must check `ctx.isGuest` in its `render()` function. Store `ctx` module-level so Firestore subscription callbacks can also access it:
+
+```js
+let _ctx = null;
+
+export function render(container, ctx) {
+  _ctx = ctx;
+  // use _ctx.isGuest inside onSnapshot callbacks
+}
+```
+
+### Per-Page Guest Restrictions
+
+Apply these to **every** new page or feature:
+
+| Element | Guest behaviour |
+|---------|----------------|
+| FAB (add button) | Hidden — `if (!ctx.isGuest) addFAB(...)` |
+| Card / item onclick | No-op — `if (!ctx.isGuest) { openEditModal(...) }` |
+| Edit / delete buttons | Not rendered |
+| Completion toggles | Disabled or hidden |
+| Any Firestore write | Must not be called |
+
+### App-Level Guest Behaviour (handled in `app.js` — do not duplicate)
+
+- Archive tab hidden: `document.querySelector('[data-route="archive"]').style.display = 'none'`
+- Settings button opens `openGuestSettings()` — shows Language, Currency, and Exit only (no Trip section)
+- Trip selector button is disabled and shows the trip name
+- Dashboard renders a "👁️ Guest View" eyebrow banner above the page title
+
+### Firestore Rules Summary
+
+| Resource | Guest permission |
+|----------|-----------------|
+| `trips/{tripId}` | `get` only (point read; no list) |
+| Subcollections (itinerary, accommodation, activities, expenses) | `read` (get + list — needed for `onSnapshot` collection queries) |
+| `guest_codes/{code}` | `get` only (no list enumeration) |
+| Any write | Denied |
+
+### Guest Exit Flow
+
+`window.__guestExit()` → `signOut()` → clear `guestCode / guestOwnerUid / guestTripId` from localStorage → `location.reload()`
+
+---
+
 ## Security
 - Firestore rules require `request.auth.uid == userId` AND email in allowed list
 - Client-side email whitelist is UX-only; rules are the real gate
