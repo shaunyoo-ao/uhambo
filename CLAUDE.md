@@ -23,6 +23,7 @@ Examples:
   v10 → Version 1.1.0
   v11 → Version 1.1.1
   v20 → Version 1.2.0
+  v21 → Version 1.2.1
 ```
 
 **Always bump sw.js VERSION and update `index.html` version text together on every commit, even without an explicit version request.**
@@ -62,7 +63,7 @@ public/
     pages/
       dashboard.js    # Trip overview, weather, upcoming items
       itinerary.js    # Date-grouped timeline, add/edit events
-      accommodation.js# Accommodation cards, check-in/out
+      accommodation.js# Booking page (Accommodation/Travel/Rent categories)
       activities.js   # Activity list, completion toggle
       expenses.js     # Expense list, category chart, currency conversion
       archive.js      # Stats dashboard (computed from Firestore data)
@@ -83,8 +84,8 @@ firestore.rules       # Auth + email-whitelist security rules
 |-----|-------|-------------|
 | Dashboard | #dashboard | Trip overview, weather, quick stats |
 | Itinerary | #itinerary | Timeline grouped by date |
-| Accommodation | #accommodation | Hotels/stays, check-in/out dates |
-| Activity | #activities | Activities with completion toggle |
+| Booking | #booking | Accommodation/Travel/Rent bookings |
+| Activities | #activities | Activities with completion toggle |
 | Expenses | #expenses | Costs with currency conversion |
 | Archive | #archive | Stats dashboard (computed) |
 
@@ -101,9 +102,14 @@ users/{userId}/
     date (YYYY-MM-DD), time (HH:MM), title, description
     location (string), type (travel|meal|activity|rest), lat, lng
 
-  trips/{tripId}/accommodation/{itemId}
-    name, checkIn, checkOut (YYYY-MM-DD), address
-    cost (number), currency, notes, lat, lng
+  trips/{tripId}/bookings/{bookingId}
+    category (accommodation|travel|rent)
+    name, cost (number), currency, notes, links[], status (booked|candidate)
+    -- Accommodation: checkIn, checkOut (YYYY-MM-DD), checkInTime, checkOutTime, address, lat, lng, images[]
+    -- Travel: airline, flightNo, cabinClass, departureAirport, departureDate, departureTime,
+               arrivalAirport, arrivalDate, arrivalTime, pnr, depLat, depLng, arrLat, arrLng
+    -- Rent: rentalCompany, vehicleType, pickupLocation, pickupDate, pickupTime,
+             dropoffLocation, dropoffDate, dropoffTime, bookingRef, pickupLat, pickupLng, dropoffLat, dropoffLng
 
   trips/{tripId}/activities/{activityId}
     name, date, time, location, category

@@ -33,7 +33,7 @@ service cloud.firestore {
                        || (isAnonGuest() && get(/databases/$(database)/documents/users/$(userId)/trips/$(tripId)).data.guestCode != null);
           allow write: if isOwner(userId) && isAllowedEmail();
         }
-        match /accommodation/{itemId} {
+        match /bookings/{itemId} {
           allow read:  if (isOwner(userId) && isAllowedEmail())
                        || (isAnonGuest() && get(/databases/$(database)/documents/users/$(userId)/trips/$(tripId)).data.guestCode != null);
           allow write: if isOwner(userId) && isAllowedEmail();

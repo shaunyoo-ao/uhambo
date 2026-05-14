@@ -367,6 +367,10 @@ function openItemModal(item) {
           <label class="form-label">${t('itin.location')}</label>
           <input class="form-input" name="location" value="${item?.location || ''}" placeholder="e.g. Narita Airport">
         </div>
+        <div class="form-group" style="margin-top:-4px">
+          <label class="form-label" style="font-size:0.7rem;color:var(--muted)">${t('book.coords')} <span style="font-weight:400">(${t('book.coords_hint')})</span></label>
+          <input class="form-input" name="coords" value="${item?.lat && item?.lng ? `${item.lat.toFixed(6)}, ${item.lng.toFixed(6)}` : ''}" placeholder="e.g. -25.989, 28.005" autocomplete="off" style="font-size:0.8rem">
+        </div>
         <div class="form-group">
           <label class="form-label">${t('common.links')}</label>
           <div class="link-list" id="itin-link-list">${linkListHTML(_links)}</div>
@@ -408,9 +412,17 @@ function openItemModal(item) {
     if (!form.checkValidity()) { form.reportValidity(); return; }
     const data = Object.fromEntries(new FormData(form));
     data.links = _links;
+    const rawCoords = data.coords?.trim();
+    delete data.coords;
     setModalSaving(true);
     try {
-      if (data.location) {
+      if (rawCoords) {
+        const parts = rawCoords.split(',').map(s => parseFloat(s.trim()));
+        if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+          data.lat = parts[0];
+          data.lng = parts[1];
+        }
+      } else if (data.location) {
         try { localStorage.removeItem(`geo_${data.location.toLowerCase().trim().replace(/\s+/g, '_')}`); } catch(_) {}
         const geo = await geocodeCity(data.location, _tripCountry);
         if (geo) { data.lat = geo.lat; data.lng = geo.lng; }

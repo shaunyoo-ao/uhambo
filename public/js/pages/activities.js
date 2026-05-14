@@ -184,6 +184,10 @@ function openItemModal(item) {
           <label class="form-label">${t('act.location')}</label>
           <input class="form-input" name="location" value="${item?.location || ''}" placeholder="e.g. Odaiba, Tokyo">
         </div>
+        <div class="form-group" style="margin-top:-4px">
+          <label class="form-label" style="font-size:0.7rem;color:var(--muted)">${t('book.coords')} <span style="font-weight:400">(${t('book.coords_hint')})</span></label>
+          <input class="form-input" name="coords" value="${item?.lat && item?.lng ? `${item.lat.toFixed(6)}, ${item.lng.toFixed(6)}` : ''}" placeholder="e.g. -25.989, 28.005" autocomplete="off" style="font-size:0.8rem">
+        </div>
         <div class="form-row">
           <div class="form-group" style="flex:2">
             <label class="form-label">${t('act.cost')}</label>
@@ -250,6 +254,21 @@ function openItemModal(item) {
     const data = Object.fromEntries(new FormData(form));
     if (data.cost) data.cost = Number(data.cost);
     data.links = _links;
+    // Resolve lat/lng before save so coords string is not persisted.
+    const rawCoords = data.coords?.trim();
+    delete data.coords;
+    let geoFields = {};
+    if (rawCoords) {
+      const parts = rawCoords.split(',').map(s => parseFloat(s.trim()));
+      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        geoFields = { lat: parts[0], lng: parts[1] };
+        data.lat = parts[0]; data.lng = parts[1];
+      }
+    } else if (data.location) {
+      try { localStorage.removeItem(`geo_${data.location.toLowerCase().trim().replace(/\s+/g, '_')}`); } catch(_) {}
+      const geo = await geocodeCity(data.location, _tripCountry);
+      if (geo) { geoFields = { lat: geo.lat, lng: geo.lng }; data.lat = geo.lat; data.lng = geo.lng; }
+    }
     const { userId, tripId } = _ctx;
     _adding = true;
     setModalSaving(true);
@@ -272,14 +291,6 @@ function openItemModal(item) {
         category: 'activity',
         notes: '',
       });
-      // Geocode location for itinerary sync lat/lng; clear cache to force fresh geocode.
-      let geoCoords = null;
-      if (data.location) {
-        try { localStorage.removeItem(`geo_${data.location.toLowerCase().trim().replace(/\s+/g, '_')}`); } catch(_) {}
-        geoCoords = await geocodeCity(data.location, _tripCountry);
-      }
-      const geoFields = geoCoords ? { lat: geoCoords.lat, lng: geoCoords.lng } : {};
-
       // Itinerary sync
       await upsertLinkedItinItem(userId, tripId, savedId, 'activity', 'event', {
         title: data.name,
