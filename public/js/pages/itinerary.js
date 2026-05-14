@@ -1,5 +1,5 @@
 import { t } from '../i18n.js';
-import { subscribeItinerary, addItineraryItem, updateItineraryItem, deleteItineraryItem, getTrip, getAccommodation, getActivities } from '../db.js';
+import { subscribeItinerary, addItineraryItem, updateItineraryItem, deleteItineraryItem, getTrip, getBookings, getActivities } from '../db.js';
 import { openModal, closeModal, showToast, showConfirm, setModalSaving } from '../app.js';
 import { geocodeCity } from '../weather.js';
 import { initMap, destroyMap } from '../map.js';
@@ -152,7 +152,7 @@ async function renderMap(itinItems) {
   // Load accommodation and activities once per trip
   if (_accomItems === null) {
     [_accomItems, _actItems] = await Promise.all([
-      getAccommodation(_ctx.userId, _ctx.tripId).catch(() => []),
+      getBookings(_ctx.userId, _ctx.tripId).catch(() => []),
       getActivities(_ctx.userId, _ctx.tripId).catch(() => []),
     ]);
   }
@@ -176,7 +176,7 @@ async function renderMap(itinItems) {
       lng: i.lng ? parseFloat(i.lng) : 0,
       date: i.date, time: i.time, description: i.description,
     })),
-    ..._accomItems.filter(a => a.address).map(a => ({
+    ..._accomItems.filter(a => a.address && (!a.category || a.category === 'accommodation')).map(a => ({
       id: a.id, source: 'accom', type: 'rest',
       title: a.name, location: a.address,
       lat: 0, lng: 0,

@@ -2,7 +2,7 @@ import { t } from '../i18n.js';
 import { getTrip, getItinerary } from '../db.js';
 import { subscribeItinerary } from '../db.js';
 import { getExpenses } from '../db.js';
-import { getAccommodation } from '../db.js';
+import { getBookings } from '../db.js';
 import { getActivities } from '../db.js';
 import { getTripWeather, getWeather, geocodeCity } from '../weather.js';
 import { formatConverted, getCurrency, getCurrencyMeta, ensureRates } from '../currency.js';
@@ -31,13 +31,14 @@ export async function render(container, { userId, tripId, isGuest }) {
   container.innerHTML = `<div class="loading-center"><div class="spinner"></div></div>`;
 
   try {
-    const [trip, expenses, accommodation, activities, itinerary] = await Promise.all([
+    const [trip, expenses, bookings, activities, itinerary] = await Promise.all([
       getTrip(userId, tripId),
       getExpenses(userId, tripId),
-      getAccommodation(userId, tripId),
+      getBookings(userId, tripId),
       getActivities(userId, tripId),
       getItinerary(userId, tripId),
     ]);
+    const accomBookings = bookings.filter(b => !b.category || b.category === 'accommodation');
 
     if (!trip) {
       container.innerHTML = `<div class="empty-state"><div class="empty-icon">❓</div><div class="empty-title">Trip not found</div></div>`;
@@ -75,8 +76,8 @@ export async function render(container, { userId, tripId, isGuest }) {
     }
 
     const completedActs = activities.filter(a => a.completed).length;
-    const candidateStays = accommodation.filter(a => a.status === 'candidate').length;
-    const bookedStays = accommodation.length - candidateStays;
+    const candidateStays = accomBookings.filter(a => a.status === 'candidate').length;
+    const bookedStays = accomBookings.length - candidateStays;
 
     // Mileage
     _mileageDetail = await calcMileageDetail(itinerary);
@@ -108,8 +109,8 @@ export async function render(container, { userId, tripId, isGuest }) {
             <div class="stat-label">${t('act.title')}</div>
             <div class="stat-sub">${completedActs} ${t('dash.completed').toLowerCase()}</div>
           </div>
-          <div class="stat-card" style="cursor:pointer" onclick="window.__navigate('accommodation')">
-            <div class="stat-value mono">${accommodation.length}</div>
+          <div class="stat-card" style="cursor:pointer" onclick="window.__navigate('booking')">
+            <div class="stat-value mono">${accomBookings.length}</div>
             <div class="stat-label">${t('dash.stays')}</div>
             <div class="stat-sub">${[
               candidateStays > 0 ? `🔖${candidateStays}` : '',
