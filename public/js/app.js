@@ -4,7 +4,7 @@ import { setCurrency, getCurrency, CURRENCIES } from './currency.js';
 import { getTrips, createTrip, getTrip, updateTrip, deleteTrip, getGuestCode, setGuestCode, removeGuestCode, lookupGuestCode } from './db.js';
 import { resizeImageToBlob, uploadToImgBB } from './imgbb.js';
 
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.2.1';
 
 const COUNTRIES = ['Australia','Austria','Belgium','Brazil','Canada','China','Croatia','Czech Republic','Denmark','Egypt','Finland','France','Germany','Greece','Hong Kong','Hungary','Iceland','India','Indonesia','Ireland','Israel','Italy','Japan','Malaysia','Mexico','Morocco','Netherlands','New Zealand','Norway','Philippines','Poland','Portugal','Romania','Russia','Singapore','South Africa','South Korea','Spain','Sweden','Switzerland','Taiwan','Thailand','Turkey','United Arab Emirates','United Kingdom','United States','Vietnam'];
 
@@ -44,7 +44,7 @@ function _clearAllPages() {
 const routes = {
   dashboard:     () => import('./pages/dashboard.js'),
   itinerary:     () => import('./pages/itinerary.js'),
-  accommodation: () => import('./pages/accommodation.js'),
+  booking:       () => import('./pages/accommodation.js'),
   activities:    () => import('./pages/activities.js'),
   expenses:      () => import('./pages/expenses.js'),
   archive:       () => import('./pages/archive.js'),

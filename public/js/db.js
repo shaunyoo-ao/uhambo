@@ -50,7 +50,7 @@ export async function updateTrip(uid, tid, data) {
   return updateDoc(tripRef(uid, tid), { ...data, updatedAt: serverTimestamp() });
 }
 
-const SUBCOLLECTIONS = ['itinerary', 'accommodation', 'activities', 'expenses'];
+const SUBCOLLECTIONS = ['itinerary', 'bookings', 'activities', 'expenses'];
 
 export async function deleteTrip(uid, tid) {
   // Clean up guest code if one exists
@@ -96,28 +96,26 @@ export async function deleteItineraryItem(uid, tid, id) {
   return deleteDoc(subDocRef(uid, tid, 'itinerary', id));
 }
 
-// ── Accommodation ────────────────────────────────────────────────
-export async function getAccommodation(uid, tid) {
-  const q = query(subRef(uid, tid, 'accommodation'), orderBy('checkIn'));
-  const s = await getDocs(q);
+// ── Bookings ─────────────────────────────────────────────────────
+export async function getBookings(uid, tid) {
+  const s = await getDocs(subRef(uid, tid, 'bookings'));
   return snap(s);
 }
 
-export function subscribeAccommodation(uid, tid, cb) {
-  const q = query(subRef(uid, tid, 'accommodation'), orderBy('checkIn'));
-  return onSnapshot(q, s => cb(snap(s)));
+export function subscribeBookings(uid, tid, cb) {
+  return onSnapshot(subRef(uid, tid, 'bookings'), s => cb(snap(s)));
 }
 
-export async function addAccommodation(uid, tid, data) {
-  return addDoc(subRef(uid, tid, 'accommodation'), { ...data, createdAt: serverTimestamp() });
+export async function addBooking(uid, tid, data) {
+  return addDoc(subRef(uid, tid, 'bookings'), { ...data, createdAt: serverTimestamp() });
 }
 
-export async function updateAccommodation(uid, tid, id, data) {
-  return updateDoc(subDocRef(uid, tid, 'accommodation', id), data);
+export async function updateBooking(uid, tid, id, data) {
+  return updateDoc(subDocRef(uid, tid, 'bookings', id), data);
 }
 
-export async function deleteAccommodation(uid, tid, id) {
-  return deleteDoc(subDocRef(uid, tid, 'accommodation', id));
+export async function deleteBooking(uid, tid, id) {
+  return deleteDoc(subDocRef(uid, tid, 'bookings', id));
 }
 
 // ── Activities ───────────────────────────────────────────────────
@@ -215,7 +213,7 @@ export async function getAllTripsData(uid) {
     trip,
     expenses:      await getExpenses(uid, trip.id),
     activities:    await getActivities(uid, trip.id),
-    accommodation: await getAccommodation(uid, trip.id),
+    bookings: await getBookings(uid, trip.id),
     itinerary:     await getItinerary(uid, trip.id),
   })));
 }
@@ -224,6 +222,15 @@ export async function deleteLinkedItinItems(uid, tid, sourceId, sourceType) {
   const all = await getDocs(subRef(uid, tid, 'itinerary'));
   const matches = all.docs.filter(d => d.data().sourceId === sourceId && d.data().sourceType === sourceType);
   await Promise.all(matches.map(d => deleteDoc(d.ref)));
+}
+
+export async function deleteLinkedItinItem(uid, tid, sourceId, sourceType, sourceSubType) {
+  const all = await getDocs(subRef(uid, tid, 'itinerary'));
+  const match = all.docs.find(d => {
+    const dd = d.data();
+    return dd.sourceId === sourceId && dd.sourceType === sourceType && dd.sourceSubType === sourceSubType;
+  });
+  if (match) await deleteDoc(match.ref);
 }
 
 // ── Guest code ────────────────────────────────────────────────────

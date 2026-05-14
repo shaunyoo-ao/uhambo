@@ -64,7 +64,7 @@
     <input class="guest-code-input" id="guest-code-input" placeholder="Guest Code" maxlength="8" autocomplete="off">
     <button class="btn btn-secondary btn-full" id="guest-enter-btn">Enter as Guest</button>
   </div>
-  <p class="login-footer" style="text-align:center">Copyright &#9400; 2026, YONKE All rights reserved.<br>Version 1.2.0</p>
+  <p class="login-footer" style="text-align:center">Copyright &#9400; 2026, YONKE All rights reserved.<br>Version 1.2.1</p>
 </div>
 
 <!-- Main App -->
@@ -93,7 +93,7 @@
   <main id="page-content">
     <div id="page-dashboard"     class="page-container"></div>
     <div id="page-itinerary"     class="page-container" style="display:none"></div>
-    <div id="page-accommodation" class="page-container" style="display:none"></div>
+    <div id="page-booking"        class="page-container" style="display:none"></div>
     <div id="page-activities"    class="page-container" style="display:none"></div>
     <div id="page-expenses"      class="page-container" style="display:none"></div>
     <div id="page-archive"       class="page-container" style="display:none"></div>
@@ -124,13 +124,14 @@
       </svg>
       <span>Itinerary</span>
     </button>
-    <button class="tab-btn" data-route="accommodation">
+    <button class="tab-btn" data-route="booking">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <path d="M3 22V8l9-5 9 5v14"/>
-        <path d="M9 22V12h6v10"/>
-        <rect x="9" y="12" width="6" height="10"/>
+        <rect x="2" y="7" width="20" height="14" rx="2"/>
+        <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+        <line x1="12" y1="12" x2="12" y2="16"/>
+        <line x1="10" y1="14" x2="14" y2="14"/>
       </svg>
-      <span>Stay</span>
+      <span>Booking</span>
     </button>
     <button class="tab-btn" data-route="activities">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">

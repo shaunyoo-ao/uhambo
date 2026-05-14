@@ -2,7 +2,7 @@
 
 **Live URL:** https://yonke-uhambo.web.app/  
 **Firebase Project:** yonke-uhambo  
-**Current Version:** 1.2.0 (sw.js v20)  
+**Current Version:** 1.2.1 (sw.js v21)  
 **Stack:** Vanilla JS ES Modules · Firebase Firestore/Auth/Hosting · GitHub Actions CI/CD  
 **Allowed Users:** yooyoopd@gmail.com, 2yeonsoo@gmail.com
 
@@ -82,7 +82,16 @@
 - Add Stay (accommodation) and Activity markers to the map
 - Map pin visibility improvements
 
-### v1.2.0 — Guest Access Code *(current)*
+### v1.2.1 — Coordinates Input + BOOKING Tab *(current)*
+- **Coordinates input**: optional lat/lng override field below every Location input (Itinerary, Activities, Booking). Comma-separated format `-25.989, 28.005`. When filled, skips Nominatim geocoding; when empty, geocodes as before. Pre-fills on edit with stored coordinates.
+- **STAY → BOOKING tab**: renamed with briefcase icon. Three sub-categories:
+  - **Accommodation**: identical to old Stay (check-in/out dates, times, address, photos, cost, expense sync, itinerary sync)
+  - **Travel (Flight)**: airline, flight no., cabin class, departure/arrival airport + coordinates, departure/arrival date+time, PNR, cost. Expense → transport. Itinerary → travel type, **only if time is filled**. Departure + arrival events synced independently.
+  - **Rent (Car)**: rental company, vehicle type, pickup/dropoff location + coordinates, pickup/dropoff date+time, booking ref, cost. Expense → transport. Itinerary → travel type, **only if time is filled**. Pickup + dropoff events synced independently.
+- **Firestore**: renamed collection `accommodation` → `bookings`. `sourceType` changed from `'accommodation'` to `'booking'` for linked items.
+- **db.js**: new exports `subscribeBookings`, `addBooking`, `updateBooking`, `deleteBooking`, `deleteLinkedItinItem` (singular, by subType)
+
+### v1.2.0 — Guest Access Code
 - Guest Mode: read-only trip sharing via 6-character code
 - Anonymous Firebase Auth (`signInAnonymously()`)
 - `guest_codes/{code}` Firestore collection: maps code → `{ ownerUid, tripId }`
@@ -118,7 +127,7 @@ public/
     pages/
       dashboard.js     Trip overview + weather
       itinerary.js     Timeline + Map tabs
-      accommodation.js Stay cards
+      accommodation.js Booking page (Accommodation/Travel/Rent categories)
       activities.js    Activity list + completion toggle
       expenses.js      Expenses + category chart
       archive.js       Stats dashboard
