@@ -19,18 +19,22 @@ function log(msg) {
   else console.log('[auth]', msg);
 }
 
-// iOS PWA (standalone mode) blocks window.open(), so signInWithPopup silently
-// fails — the popup opens in a separate Safari tab that never resolves the
-// Promise. Must use redirect instead.
-function isIOSPWA() {
-  return ('standalone' in navigator) && navigator.standalone === true;
+// Use redirect (not popup) for environments where signInWithPopup is unreliable:
+// 1. iOS home-screen PWA: navigator.standalone blocks window.open()
+// 2. Any PWA in standalone display mode (Android, etc.)
+// 3. iOS Safari browser: popups get silently closed, returning auth/popup-closed-by-user
+function shouldUseRedirect() {
+  if (('standalone' in navigator) && navigator.standalone === true) return true;
+  if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return true;
+  if (/iP(hone|ad|od)/.test(navigator.userAgent)) return true;
+  return false;
 }
 
 export async function signInWithGoogle() {
-  const iosPWA = isIOSPWA();
-  log('signInWithGoogle() — isIOSPWA=' + iosPWA + ' userAgent=' + navigator.userAgent.slice(0, 80));
-  if (iosPWA) {
-    log('iOS PWA detected → signInWithRedirect');
+  const useRedirect = shouldUseRedirect();
+  log('signInWithGoogle() — useRedirect=' + useRedirect + ' userAgent=' + navigator.userAgent.slice(0, 80));
+  if (useRedirect) {
+    log('mobile/PWA detected → signInWithRedirect');
     return signInWithRedirect(auth, provider);
   }
   log('attempting signInWithPopup...');
