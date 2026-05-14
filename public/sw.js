@@ -1,4 +1,4 @@
-const VERSION = 'v22';
+const VERSION = 'v23';
 const APP_SHELL = 'app-shell-' + VERSION;
 const MAP_CACHE  = 'map-tiles-' + VERSION;
 const API_CACHE  = 'api-' + VERSION;
@@ -29,10 +29,15 @@ const PRECACHE = [
 ];
 
 // ── Install: precache app shell ──────────────────────────────────
+// IMPORTANT: pass each entry as a Request with cache:'reload' so the SW
+// bypasses the browser HTTP cache and fetches fresh files from the CDN.
+// Without this, the SW can precache STALE index.html (cached for 24h via
+// Cache-Control max-age=86400) while precaching FRESH app.js, causing a
+// version-string mismatch between login footer (HTML) and Settings (JS).
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(APP_SHELL)
-      .then(cache => cache.addAll(PRECACHE))
+      .then(cache => cache.addAll(PRECACHE.map(url => new Request(url, { cache: 'reload' }))))
       .then(() => self.skipWaiting())
   );
 });

@@ -4,7 +4,18 @@ import { setCurrency, getCurrency, CURRENCIES } from './currency.js';
 import { getTrips, createTrip, getTrip, updateTrip, deleteTrip, getGuestCode, setGuestCode, removeGuestCode, lookupGuestCode } from './db.js';
 import { resizeImageToBlob, uploadToImgBB } from './imgbb.js';
 
-const APP_VERSION = '1.2.11';
+const APP_VERSION = '1.2.12';
+
+// Populate login footer version from this single source of truth.
+// Runs as soon as this module loads (before login screen is shown).
+document.addEventListener('DOMContentLoaded', () => {
+  const el = document.getElementById('login-version');
+  if (el) el.textContent = APP_VERSION;
+});
+if (document.readyState !== 'loading') {
+  const el = document.getElementById('login-version');
+  if (el) el.textContent = APP_VERSION;
+}
 
 const COUNTRIES = ['Australia','Austria','Belgium','Brazil','Canada','China','Croatia','Czech Republic','Denmark','Egypt','Finland','France','Germany','Greece','Hong Kong','Hungary','Iceland','India','Indonesia','Ireland','Israel','Italy','Japan','Malaysia','Mexico','Morocco','Netherlands','New Zealand','Norway','Philippines','Poland','Portugal','Romania','Russia','Singapore','South Africa','South Korea','Spain','Sweden','Switzerland','Taiwan','Thailand','Turkey','United Arab Emirates','United Kingdom','United States','Vietnam'];
 
