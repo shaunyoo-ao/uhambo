@@ -23,8 +23,9 @@ service cloud.firestore {
       allow read, write: if isOwner(userId) && isAllowedEmail();
 
       match /trips/{tripId} {
-        allow read:  if (isOwner(userId) && isAllowedEmail())
+        allow get:   if (isOwner(userId) && isAllowedEmail())
                      || (isAnonGuest() && resource.data.guestCode != null);
+        allow list:  if isOwner(userId) && isAllowedEmail();
         allow write: if isOwner(userId) && isAllowedEmail();
 
         match /itinerary/{itemId} {
@@ -50,9 +51,10 @@ service cloud.firestore {
       }
     }
 
-    // Guest code lookup — any authenticated user (incl. anonymous) can read
+    // Guest code lookup — point reads only; listing all codes is blocked
     match /guest_codes/{code} {
-      allow read:  if request.auth != null;
+      allow get:   if request.auth != null;
+      allow list:  if false;
       allow write: if isAllowedEmail();
     }
 
