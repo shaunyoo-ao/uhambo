@@ -1,2 +1,0 @@
-# uhambo
-Travel Log Development
