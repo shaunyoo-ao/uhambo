@@ -37,7 +37,7 @@ export async function render(container, ctx) {
   _ctx = ctx;
   _activeTab = 'schedule';
   _geoCache = {};
-  const { userId, tripId } = ctx;
+  const { userId, tripId, isGuest } = ctx;
   getTrip(userId, tripId).then(tr => { _tripCountry = tr?.country || ''; }).catch(() => {});
 
   if (!tripId) {
@@ -75,12 +75,13 @@ export async function render(container, ctx) {
     if (tab === 'map') renderMap(_mapItems);
   });
 
-  addFAB(container, () => openItemModal(null));
+  if (!isGuest) addFAB(container, () => openItemModal(null));
 
   if (_unsub) _unsub();
   _unsub = subscribeItinerary(userId, tripId, items => {
     _mapItems = items;
     window.__editItinItem = (id) => {
+      if (_ctx.isGuest) return;
       const item = _mapItems.find(i => i.id === id);
       if (item) openItemModal(item);
     };
@@ -127,7 +128,7 @@ function renderList(items) {
             ${idx < dayItems.length - 1 ? '<div class="timeline-line"></div>' : ''}
           </div>
           <div style="flex:1;padding-bottom:10px">
-            <div class="timeline-card" onclick="window.__editItinItem('${item.id}')">
+            <div class="timeline-card" ${_ctx?.isGuest ? '' : `onclick="window.__editItinItem('${item.id}')"`}>
               <div class="row gap-8" style="margin-bottom:4px">
                 <span>${TYPE_ICONS[item.type] || '📌'}</span>
                 <span class="text-sm font-medium">${item.title || '—'}</span>
@@ -286,7 +287,7 @@ async function renderMap(itinItems) {
       badge = `<span class="badge badge-muted" style="margin-left:auto;font-size:10px">${typeLabel}</span>`;
       meta = `${item.date ? `<div class="text-xs text-muted" style="margin-bottom:3px">📅 ${item.date}${item.time ? ' · ' + item.time : ''}</div>` : ''}
               ${item.location ? `<div class="text-xs text-muted" style="margin-bottom:3px">📍 ${item.location}</div>` : ''}`;
-      actions = `<button class="btn btn-ghost btn-sm" style="margin-top:10px;width:100%" onclick="window.__editItinItem('${item.id}');document.getElementById('itin-map-popup').style.display='none'">✏️ Edit</button>`;
+      if (!_ctx?.isGuest) actions = `<button class="btn btn-ghost btn-sm" style="margin-top:10px;width:100%" onclick="window.__editItinItem('${item.id}');document.getElementById('itin-map-popup').style.display='none'">✏️ Edit</button>`;
     }
 
     popupEl.innerHTML = `

@@ -29,7 +29,7 @@ const CATS = ['outdoor', 'sport', 'culture', 'museum', 'site', 'other'];
 
 export async function render(container, ctx) {
   _ctx = ctx;
-  const { userId, tripId } = ctx;
+  const { userId, tripId, isGuest } = ctx;
   getTrip(userId, tripId).then(tr => { _tripCountry = tr?.country || ''; }).catch(() => {});
 
   if (!tripId) {
@@ -52,7 +52,7 @@ export async function render(container, ctx) {
     <div id="act-list"><div class="loading-center"><div class="spinner"></div></div></div>
     <div style="height:80px"></div>`;
 
-  addFAB(() => {
+  if (!isGuest) addFAB(() => {
     if (_adding) return;
     openItemModal(null);
   });
@@ -122,19 +122,20 @@ async function renderList(items) {
 
 async function renderItem(item) {
   const priceStr = item.cost ? await formatConverted(item.cost, item.currency || 'KRW') : null;
+  const isGuest = _ctx?.isGuest;
   return `
     <div class="list-item" style="padding-left:12px">
       <div class="check-box ${item.completed ? 'checked' : ''}"
-           onclick="event.stopPropagation();window.__toggleAct('${item.id}', ${!item.completed})"></div>
+           ${isGuest ? 'style="opacity:0.5;pointer-events:none"' : `onclick="event.stopPropagation();window.__toggleAct('${item.id}', ${!item.completed})"`}></div>
       <div class="list-icon" style="background:var(--surface-2)">${CAT_ICONS[item.category] || '⚡'}</div>
-      <div class="list-content" onclick="window.__editActItem('${item.id}')">
+      <div class="list-content" ${isGuest ? '' : `onclick="window.__editActItem('${item.id}')"`}>
         <div class="list-title ${item.completed ? 'text-muted' : ''}" style="${item.completed ? 'text-decoration:line-through' : ''}">${item.name || '—'}</div>
         <div class="list-sub">
           ${item.time ? item.time + ' · ' : ''}
           ${item.location ? '📍' + item.location : ''}
         </div>
       </div>
-      <div class="list-meta" onclick="window.__editActItem('${item.id}')">
+      <div class="list-meta" ${isGuest ? '' : `onclick="window.__editActItem('${item.id}')"`}>
         ${priceStr ? `<div class="mono text-sm text-accent">${priceStr}</div>` : ''}
         <div class="badge badge-muted" style="margin-top:4px">${item.category || 'other'}</div>
         ${item.status === 'candidate' ? `<div class="badge" style="margin-top:4px;background:var(--sun-dim,rgba(232,200,124,0.15));color:var(--sun)">🔖</div>` : ''}

@@ -12,6 +12,7 @@ function tripsRef(uid) { return collection(db, 'users', uid, 'trips'); }
 function tripRef(uid, tid) { return doc(db, 'users', uid, 'trips', tid); }
 function subRef(uid, tid, sub) { return collection(db, 'users', uid, 'trips', tid, sub); }
 function subDocRef(uid, tid, sub, id) { return doc(db, 'users', uid, 'trips', tid, sub, id); }
+function guestCodeRef(code) { return doc(db, 'guest_codes', code); }
 
 function snap(snapshot) {
   return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -52,6 +53,11 @@ export async function updateTrip(uid, tid, data) {
 const SUBCOLLECTIONS = ['itinerary', 'accommodation', 'activities', 'expenses'];
 
 export async function deleteTrip(uid, tid) {
+  // Clean up guest code if one exists
+  const tripSnap = await getDoc(tripRef(uid, tid));
+  const existingCode = tripSnap.exists() ? tripSnap.data().guestCode : null;
+  if (existingCode) await deleteDoc(guestCodeRef(existingCode)).catch(() => {});
+
   for (const sub of SUBCOLLECTIONS) {
     const s = await getDocs(subRef(uid, tid, sub));
     await Promise.all(s.docs.map(d => deleteDoc(d.ref)));
@@ -218,4 +224,29 @@ export async function deleteLinkedItinItems(uid, tid, sourceId, sourceType) {
   const all = await getDocs(subRef(uid, tid, 'itinerary'));
   const matches = all.docs.filter(d => d.data().sourceId === sourceId && d.data().sourceType === sourceType);
   await Promise.all(matches.map(d => deleteDoc(d.ref)));
+}
+
+// ── Guest code ────────────────────────────────────────────────────
+export async function getGuestCode(uid, tid) {
+  const s = await getDoc(tripRef(uid, tid));
+  return s.exists() ? (s.data().guestCode || null) : null;
+}
+
+export async function setGuestCode(uid, tid, code) {
+  await Promise.all([
+    updateDoc(tripRef(uid, tid), { guestCode: code }),
+    setDoc(guestCodeRef(code), { ownerUid: uid, tripId: tid, createdAt: serverTimestamp() }),
+  ]);
+}
+
+export async function removeGuestCode(uid, tid, code) {
+  await Promise.all([
+    updateDoc(tripRef(uid, tid), { guestCode: null }),
+    deleteDoc(guestCodeRef(code)),
+  ]);
+}
+
+export async function lookupGuestCode(code) {
+  const s = await getDoc(guestCodeRef(code));
+  return s.exists() ? s.data() : null;
 }
