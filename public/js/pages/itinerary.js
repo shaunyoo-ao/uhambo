@@ -157,9 +157,19 @@ async function renderMap(itinItems) {
     ]);
   }
 
-  // Merge all sources — exclude home type from itinerary
+  // Identify first/last itinerary date to exclude home-side airports from map
+  const itinDates = [...new Set(itinItems.map(i => i.date).filter(Boolean))].sort();
+  const firstDate = itinDates[0];
+  const lastDate  = itinDates[itinDates.length - 1];
+  const multiDay  = itinDates.length >= 2 && firstDate !== lastDate;
+
+  // Merge all sources — exclude home type; also skip travel events on first/last day
   const markerCandidates = [
-    ...itinItems.filter(i => i.location && i.type !== 'home').map(i => ({
+    ...itinItems.filter(i => {
+      if (!i.location || i.type === 'home') return false;
+      if (multiDay && i.type === 'travel' && (i.date === firstDate || i.date === lastDate)) return false;
+      return true;
+    }).map(i => ({
       id: i.id, source: 'itin', type: i.type,
       title: i.title, location: i.location,
       lat: i.lat ? parseFloat(i.lat) : 0,

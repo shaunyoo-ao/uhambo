@@ -4,7 +4,7 @@ import { setCurrency, getCurrency, CURRENCIES } from './currency.js';
 import { getTrips, createTrip, getTrip, updateTrip, deleteTrip, getGuestCode, setGuestCode, removeGuestCode, lookupGuestCode } from './db.js';
 import { resizeImageToBlob, uploadToImgBB } from './imgbb.js';
 
-const APP_VERSION = '1.2.1';
+const APP_VERSION = '1.2.0';
 
 const COUNTRIES = ['Australia','Austria','Belgium','Brazil','Canada','China','Croatia','Czech Republic','Denmark','Egypt','Finland','France','Germany','Greece','Hong Kong','Hungary','Iceland','India','Indonesia','Ireland','Israel','Italy','Japan','Malaysia','Mexico','Morocco','Netherlands','New Zealand','Norway','Philippines','Poland','Portugal','Romania','Russia','Singapore','South Africa','South Korea','Spain','Sweden','Switzerland','Taiwan','Thailand','Turkey','United Arab Emirates','United Kingdom','United States','Vietnam'];
 
@@ -294,24 +294,30 @@ async function _renderGuestCodeUI() {
 
 window.__generateGuestCode = async () => {
   const code = _generateCode();
+  setModalSaving(true);
   try {
     await setGuestCode(currentUser.uid, currentTripId, code);
     await _renderGuestCodeUI();
   } catch (e) { showToast('Error: ' + e.message); }
+  finally { setModalSaving(false); }
 };
 window.__regenGuestCode = async (oldCode) => {
   const newCode = _generateCode();
+  setModalSaving(true);
   try {
     await removeGuestCode(currentUser.uid, currentTripId, oldCode);
     await setGuestCode(currentUser.uid, currentTripId, newCode);
     await _renderGuestCodeUI();
   } catch (e) { showToast('Error: ' + e.message); }
+  finally { setModalSaving(false); }
 };
 window.__deleteGuestCode = async (code) => {
+  setModalSaving(true);
   try {
     await removeGuestCode(currentUser.uid, currentTripId, code);
     await _renderGuestCodeUI();
   } catch (e) { showToast('Error: ' + e.message); }
+  finally { setModalSaving(false); }
 };
 window.__copyGuestCode = (code) => {
   navigator.clipboard.writeText(code).then(() => showToast('Code copied!')).catch(() => showToast(code));
