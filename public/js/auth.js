@@ -23,12 +23,12 @@ function log(msg) {
 // 1. iOS home-screen PWA: navigator.standalone blocks window.open()
 // 2. Any PWA in standalone display mode (Android, etc.)
 // 3. iOS Safari browser: popups get silently closed, returning auth/popup-closed-by-user
-// 4. Samsung Internet Browser: popup silently closed → auth/popup-closed-by-user
+// 4. Any Android browser: popup is unreliable across UA variants, in-app browsers, WebView
 function shouldUseRedirect() {
   if (('standalone' in navigator) && navigator.standalone === true) return true;
   if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return true;
   if (/iP(hone|ad|od)/.test(navigator.userAgent)) return true;
-  if (/SamsungBrowser/.test(navigator.userAgent)) return true;
+  if (/Android/i.test(navigator.userAgent)) return true;
   return false;
 }
 
@@ -69,7 +69,10 @@ export async function handleRedirectResult() {
     log('getRedirectResult() → ' + (result ? result.user.email : 'null'));
     return result;
   } catch (e) {
-    log('getRedirectResult() ERROR (swallowed): ' + e.code + ' — ' + e.message);
+    log('getRedirectResult() ERROR: ' + e.code + ' — ' + e.message);
+    if (e.code && e.code !== 'auth/no-redirect-result') {
+      window._authRedirectError = e.code;
+    }
     return null;
   }
 }

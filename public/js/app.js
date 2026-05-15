@@ -4,7 +4,7 @@ import { setCurrency, getCurrency, CURRENCIES } from './currency.js';
 import { getTrips, createTrip, getTrip, updateTrip, deleteTrip, getGuestCode, setGuestCode, removeGuestCode, lookupGuestCode } from './db.js';
 import { resizeImageToBlob, uploadToImgBB } from './imgbb.js';
 
-const APP_VERSION = '1.2.18';
+const APP_VERSION = '1.2.19';
 
 // Populate login footer version from this single source of truth.
 // Runs as soon as this module loads (before login screen is shown).
@@ -693,12 +693,40 @@ async function initApp(user) {
 // ── Auth debug logger ────────────────────────────────────────────
 window._alog = (msg) => {
   console.log('[auth]', msg);
+  const ts = new Date().toISOString().slice(11, 23);
+  const line = `[${ts}] ${msg}\n`;
+  try {
+    const prev = sessionStorage.getItem('_auth_log') || '';
+    sessionStorage.setItem('_auth_log', prev + line);
+  } catch (_) {}
   const el = document.getElementById('auth-debug');
   if (!el) return;
-  const ts = new Date().toISOString().slice(11, 23);
-  el.textContent += `[${ts}] ${msg}\n`;
+  el.textContent += line;
   el.scrollTop = el.scrollHeight;
 };
+
+// Restore persisted auth logs on load + wire up version-tap debug toggle
+let _versionTaps = 0, _versionTapTimer = null;
+document.addEventListener('DOMContentLoaded', () => {
+  const el = document.getElementById('auth-debug');
+  if (el) {
+    el.textContent = sessionStorage.getItem('_auth_log') || '';
+    el.scrollTop = el.scrollHeight;
+  }
+  const versionEl = document.getElementById('login-version');
+  if (!versionEl) return;
+  versionEl.style.cursor = 'pointer';
+  versionEl.addEventListener('click', () => {
+    _versionTaps++;
+    clearTimeout(_versionTapTimer);
+    _versionTapTimer = setTimeout(() => { _versionTaps = 0; }, 1500);
+    if (_versionTaps >= 5) {
+      _versionTaps = 0;
+      const wrap = document.getElementById('auth-debug-wrap');
+      if (wrap) wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none';
+    }
+  });
+});
 
 // ── Bootstrap ────────────────────────────────────────────────────
 document.getElementById('google-login-btn').addEventListener('click', async () => {
@@ -747,6 +775,10 @@ document.getElementById('guest-enter-btn').addEventListener('click', async () =>
   _alog('page load — awaiting handleRedirectResult()');
   const redirectUser = await handleRedirectResult();
   _alog('handleRedirectResult() done — user: ' + (redirectUser ? redirectUser.email : 'null'));
+  if (window._authRedirectError) {
+    setTimeout(() => showToast('Sign-in error: ' + window._authRedirectError), 800);
+    window._authRedirectError = null;
+  }
 
   onAuthStateChange(async (user, err) => {
     if (err === 'access_denied') {
