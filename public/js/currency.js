@@ -1,5 +1,6 @@
 export const CURRENCIES = [
   { code: 'KRW', symbol: '₩', label: 'Korean Won',          decimals: 0 },
+  { code: 'JPY', symbol: '¥', label: 'Japanese Yen',         decimals: 0 },
   { code: 'USD', symbol: '$', label: 'US Dollar',            decimals: 2 },
   { code: 'EUR', symbol: '€', label: 'Euro',                 decimals: 2 },
   { code: 'ZAR', symbol: 'R', label: 'South African Rand',   decimals: 2 },
@@ -46,7 +47,7 @@ export async function ensureRates() {
   } catch (_) {}
 
   // Fallback static rates (approximate)
-  _rates = { KRW: 1, USD: 0.00075, EUR: 0.00069, ZAR: 0.01372 };
+  _rates = { KRW: 1, JPY: 0.107, USD: 0.00075, EUR: 0.00069, ZAR: 0.01372 };
   return _rates;
 }
 
@@ -60,10 +61,9 @@ export async function convert(amount, fromCode, toCode) {
 
 export function formatCurrency(amount, code) {
   const meta = getCurrencyMeta(code);
-  if (code === 'KRW') {
-    return `₩${Math.round(amount).toLocaleString('ko-KR')}`;
-  }
-  return `${meta.symbol}${Number(amount).toFixed(meta.decimals)}`;
+  const formatted = (meta.decimals === 0 ? Math.round(amount) : Number(amount))
+    .toLocaleString('en-US', { minimumFractionDigits: meta.decimals, maximumFractionDigits: meta.decimals });
+  return `${meta.symbol}${formatted}`;
 }
 
 export async function formatConverted(amount, fromCode) {
