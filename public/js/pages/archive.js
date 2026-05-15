@@ -100,6 +100,8 @@ async function renderContent() {
   const byCat = {};
   let totalDays = 0;
   let totalMileage = 0;
+  let totalTravelKm = 0;
+  let totalDriveKm = 0;
   let totalStays = 0;
   const placeEntries = [];
   let totalActivities = 0;
@@ -122,6 +124,8 @@ async function renderContent() {
 
     const mDetail = await calcMileageDetail(itinerary);
     totalMileage += mDetail.total || 0;
+    totalTravelKm += mDetail.travelTotal || 0;
+    totalDriveKm += mDetail.driveTotal || 0;
 
     totalStays += accomBookings.length;
     totalActivities += activities.length;
@@ -183,7 +187,7 @@ async function renderContent() {
         <div class="stat-card">
           <div class="stat-value mono">${totalMileage} km</div>
           <div class="stat-label">${t('arch.mileage')}</div>
-          <div class="stat-sub">${totalStays} ${t('arch.stays_label')}</div>
+          <div class="stat-sub">${totalTravelKm > 0 ? `✈️ ${totalTravelKm} · ` : ''}${totalDriveKm > 0 ? `🚗 ${totalDriveKm}` : ''}</div>
         </div>
         <div class="stat-card">
           <div class="stat-value mono">${completedActivities}</div>

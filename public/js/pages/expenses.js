@@ -6,6 +6,7 @@ import { formatConverted, convert, getCurrency, getCurrencyMeta, formatCurrency,
 
 let _unsub = null;
 let _ctx = null;
+let _tripStartDate = null;
 let _items = [];
 let _filterCat = 'all';
 let _adding = false;
@@ -28,6 +29,7 @@ const CATS = ['food', 'shopping', 'transport', 'activity', 'accom', 'other'];
 
 export async function render(container, ctx) {
   _ctx = ctx;
+  _tripStartDate = ctx.tripStartDate || null;
   const { userId, tripId, isGuest } = ctx;
 
   if (!tripId) {
@@ -185,7 +187,7 @@ function linkListHTML(links) {
 
 function openItemModal(item) {
   const isEdit = !!item;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = _tripStartDate || new Date().toISOString().slice(0, 10);
   _links = item?.links ? [...item.links] : [];
 
   openModal({
