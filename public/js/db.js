@@ -197,10 +197,10 @@ export async function upsertLinkedItinItem(uid, tid, sourceId, sourceType, sourc
   const all = await getDocs(subRef(uid, tid, 'itinerary'));
   const existing = all.docs.find(d => {
     const dd = d.data();
-    return dd.sourceId === sourceId && dd.sourceType === sourceType && dd.sourceSubType === sourceSubType;
+    return dd.sourceId === sourceId && dd.sourceSubType === sourceSubType;
   });
   if (existing) {
-    await updateDoc(existing.ref, data);
+    await updateDoc(existing.ref, { ...data, sourceType });
     return existing.id;
   }
   const ref = await addDoc(subRef(uid, tid, 'itinerary'), { ...data, sourceId, sourceType, sourceSubType, createdAt: serverTimestamp() });
