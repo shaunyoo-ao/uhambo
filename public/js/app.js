@@ -1,10 +1,10 @@
 import { signInWithGoogle, signOut, signInAnonymously, onAuthStateChange, handleRedirectResult } from './auth.js';
 import { setLang, getLang, t } from './i18n.js';
-import { setCurrency, getCurrency, CURRENCIES } from './currency.js';
+import { setCurrency, getCurrency, CURRENCIES, getCountryCurrency } from './currency.js';
 import { getTrips, createTrip, getTrip, updateTrip, deleteTrip, getGuestCode, setGuestCode, removeGuestCode, lookupGuestCode } from './db.js';
 import { resizeImageToBlob, uploadToImgBB } from './imgbb.js';
 
-const APP_VERSION = '1.2.22';
+const APP_VERSION = '1.2.23';
 
 // Populate login footer version from this single source of truth.
 // Runs as soon as this module loads (before login screen is shown).
@@ -92,6 +92,7 @@ async function loadTrips(userId) {
       const active = match || _trips[0];
       currentTripId = active.id;
       if (btn) btn.textContent = active.name;
+      if (!localStorage.getItem('currency')) setCurrency(getCountryCurrency(active.country));
     }
   } catch (e) {
     console.error('loadTrips:', e);
@@ -121,6 +122,7 @@ function selectTrip(tripId) {
   localStorage.setItem('lastTripId', tripId);
   const btn = document.getElementById('trip-selector-btn');
   if (btn) btn.textContent = trip.name;
+  setCurrency(getCountryCurrency(trip.country));
   closeModal();
   dispatchTripChange(tripId);
   navigate(localStorage.getItem('lastRoute') || 'dashboard');
