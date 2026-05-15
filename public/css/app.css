@@ -453,7 +453,7 @@ a { color: var(--accent); text-decoration: none; }
   border-color: var(--accent);
 }
 .form-input::placeholder { color: var(--muted-2); }
-.form-textarea { resize: vertical; min-height: 80px; }
+.form-textarea { resize: none; min-height: 80px; max-height: 180px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .form-select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237c8089' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
   background-repeat: no-repeat;

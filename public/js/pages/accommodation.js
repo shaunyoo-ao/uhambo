@@ -435,7 +435,7 @@ function openItemModal(item) {
           </select>
         </div>
         <div class="form-group" id="book-name-group" style="${cat === 'accommodation' ? 'display:none' : ''}">
-          <label class="form-label" id="book-name-label">${cat === 'travel' ? 'Flight Name' : 'Booking Name'} <span class="text-muted" style="font-weight:400">(optional)</span></label>
+          <label class="form-label" id="book-name-label">${cat === 'travel' ? '항공 이름' : '렌트 이름'} <span class="text-muted" style="font-weight:400">(선택)</span></label>
           <input class="form-input" name="name" id="book-name-input" value="${item?.name || ''}" placeholder="${cat === 'travel' ? 'e.g. Outbound KE001' : 'e.g. Hertz Compact'}">
         </div>
         <div id="book-cat-fields">${catFields}</div>
@@ -450,8 +450,8 @@ function openItemModal(item) {
         <div class="form-group">
           <label class="form-label">${t('common.status')}</label>
           <select class="form-select" name="status">
-            <option value="booked" ${(item?.status || 'booked') === 'booked' ? 'selected' : ''}>✅ ${t('common.booked')}</option>
-            <option value="candidate" ${item?.status === 'candidate' ? 'selected' : ''}>🔖 ${t('common.candidate')}</option>
+            <option value="booked" ${(item?.status || 'candidate') === 'booked' ? 'selected' : ''}>✅ ${t('common.booked')}</option>
+            <option value="candidate" ${(item?.status || 'candidate') === 'candidate' ? 'selected' : ''}>🔖 ${t('common.candidate')}</option>
           </select>
         </div>
         <div class="form-group">
@@ -494,7 +494,7 @@ function openItemModal(item) {
     const nameLabel = document.getElementById('book-name-label');
     if (nameGroup) {
       nameGroup.style.display = newCat === 'accommodation' ? 'none' : '';
-      if (nameLabel) nameLabel.innerHTML = (newCat === 'travel' ? 'Flight Name' : 'Booking Name') + ' <span class="text-muted" style="font-weight:400">(optional)</span>';
+      if (nameLabel) nameLabel.innerHTML = (newCat === 'travel' ? '항공 이름' : '렌트 이름') + ' <span class="text-muted" style="font-weight:400">(선택)</span>';
     }
   };
 
