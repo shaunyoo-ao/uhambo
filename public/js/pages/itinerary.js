@@ -164,6 +164,14 @@ async function renderMap(itinItems) {
   const multiDay  = itinDates.length >= 2 && firstDate !== lastDate;
 
   // Merge all sources — exclude home type; also skip travel events on first/last day
+  // Skip _accomItems / _actItems already represented by linked itinerary markers
+  const linkedBookingIds = new Set(
+    itinItems.filter(i => i.sourceType === 'booking' && i.sourceId).map(i => i.sourceId)
+  );
+  const linkedActivityIds = new Set(
+    itinItems.filter(i => i.sourceType === 'activity' && i.sourceId).map(i => i.sourceId)
+  );
+
   const markerCandidates = [
     ...itinItems.filter(i => {
       if (!i.location || i.type === 'home') return false;
@@ -176,14 +184,14 @@ async function renderMap(itinItems) {
       lng: i.lng ? parseFloat(i.lng) : 0,
       date: i.date, time: i.time, description: i.description,
     })),
-    ..._accomItems.filter(a => a.address && (!a.category || a.category === 'accommodation')).map(a => ({
+    ..._accomItems.filter(a => a.address && (!a.category || a.category === 'accommodation') && !linkedBookingIds.has(a.id)).map(a => ({
       id: a.id, source: 'accom', type: 'rest',
       title: a.name, location: a.address,
       lat: 0, lng: 0,
       date: a.checkIn, time: a.checkInTime, description: a.notes,
       checkOut: a.checkOut,
     })),
-    ..._actItems.filter(a => a.location).map(a => ({
+    ..._actItems.filter(a => a.location && !linkedActivityIds.has(a.id)).map(a => ({
       id: a.id, source: 'activity', type: 'activity',
       title: a.name, location: a.location,
       lat: 0, lng: 0,
@@ -417,7 +425,7 @@ function openItemModal(item) {
     setModalSaving(true);
     try {
       if (rawCoords) {
-        const parts = rawCoords.split(',').map(s => parseFloat(s.trim()));
+        const parts = rawCoords.replace(/(\d),(\d)/g, '$1.$2').split(',').map(s => parseFloat(s.trim()));
         if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
           data.lat = parts[0];
           data.lng = parts[1];

@@ -203,7 +203,7 @@ function coordsField(lat, lng, name = 'coords') {
 
 function parseCoords(raw) {
   if (!raw?.trim()) return null;
-  const parts = raw.split(',').map(s => parseFloat(s.trim()));
+  const parts = raw.trim().replace(/(\d),(\d)/g, '$1.$2').split(',').map(s => parseFloat(s.trim()));
   if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) return { lat: parts[0], lng: parts[1] };
   return null;
 }
