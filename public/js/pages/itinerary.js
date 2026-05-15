@@ -163,17 +163,33 @@ async function renderMap(itinItems) {
   const lastDate  = itinDates[itinDates.length - 1];
   const multiDay  = itinDates.length >= 2 && firstDate !== lastDate;
 
-  // Merge all sources — exclude home type; also skip travel events on first/last day
+  // Deduplicate ghost linked items: pre-v1.2.1 items had sourceType='accommodation';
+  // v1.2.1+ uses sourceType='booking'. For the same sourceId+sourceSubType keep 'booking'.
+  const linkedItemMap = new Map();
+  const nonLinkedItems = [];
+  for (const item of itinItems) {
+    if (item.sourceId && item.sourceSubType) {
+      const key = `${item.sourceId}:${item.sourceSubType}`;
+      if (!linkedItemMap.has(key) || item.sourceType === 'booking') {
+        linkedItemMap.set(key, item);
+      }
+    } else {
+      nonLinkedItems.push(item);
+    }
+  }
+  const dedupedItems = [...nonLinkedItems, ...linkedItemMap.values()];
+
   // Skip _accomItems / _actItems already represented by linked itinerary markers
+  // Include old sourceType='accommodation' so a 3rd marker isn't added from _accomItems
   const linkedBookingIds = new Set(
-    itinItems.filter(i => i.sourceType === 'booking' && i.sourceId).map(i => i.sourceId)
+    dedupedItems.filter(i => (i.sourceType === 'booking' || i.sourceType === 'accommodation') && i.sourceId).map(i => i.sourceId)
   );
   const linkedActivityIds = new Set(
-    itinItems.filter(i => i.sourceType === 'activity' && i.sourceId).map(i => i.sourceId)
+    dedupedItems.filter(i => i.sourceType === 'activity' && i.sourceId).map(i => i.sourceId)
   );
 
   const markerCandidates = [
-    ...itinItems.filter(i => {
+    ...dedupedItems.filter(i => {
       if (!i.location || i.type === 'home') return false;
       if (multiDay && i.type === 'travel' && (i.date === firstDate || i.date === lastDate)) return false;
       return true;
