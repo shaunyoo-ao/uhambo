@@ -1,3 +1,13 @@
+const EURO_COUNTRIES = new Set(['Austria','Belgium','Finland','France','Germany','Greece','Ireland','Italy','Netherlands','Portugal','Spain']);
+const COUNTRY_CURRENCY_MAP = { 'South Korea': 'KRW', 'Japan': 'JPY', 'South Africa': 'ZAR' };
+
+export function getCountryCurrency(country) {
+  if (!country) return 'USD';
+  if (COUNTRY_CURRENCY_MAP[country]) return COUNTRY_CURRENCY_MAP[country];
+  if (EURO_COUNTRIES.has(country)) return 'EUR';
+  return 'USD';
+}
+
 export const CURRENCIES = [
   { code: 'KRW', symbol: '₩', label: 'Korean Won',          decimals: 0 },
   { code: 'JPY', symbol: '¥', label: 'Japanese Yen',         decimals: 0 },
