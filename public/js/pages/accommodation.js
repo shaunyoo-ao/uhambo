@@ -180,7 +180,7 @@ async function renderList(items) {
         <div class="card-body" style="padding:14px">
           ${cardContent}
           ${(item.links || []).length > 0 ? `<div class="row gap-6" style="margin-top:8px;flex-wrap:wrap">${item.links.map(u => `<a href="${u}" target="_blank" rel="noopener" class="text-xs" style="color:var(--sky)" onclick="event.stopPropagation()">🔗 Link</a>`).join('')}</div>` : ''}
-          ${item.notes ? `<div class="text-xs text-muted" style="margin-top:8px">${item.notes}</div>` : ''}
+          ${item.notes ? `<div class="text-xs text-muted" style="margin-top:8px;white-space:pre-wrap">${item.notes}</div>` : ''}
         </div>
       </div>`;
   }));

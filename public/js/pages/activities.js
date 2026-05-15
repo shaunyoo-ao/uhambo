@@ -134,6 +134,7 @@ async function renderItem(item) {
           ${item.time ? item.time + ' · ' : ''}
           ${item.location ? '📍' + item.location : ''}
         </div>
+        ${item.notes ? `<div class="text-xs text-muted" style="margin-top:4px;white-space:pre-wrap">${item.notes}</div>` : ''}
       </div>
       <div class="list-meta" ${isGuest ? '' : `onclick="window.__editActItem('${item.id}')"`}>
         ${priceStr ? `<div class="mono text-sm text-accent">${priceStr}</div>` : ''}
