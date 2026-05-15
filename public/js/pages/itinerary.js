@@ -6,6 +6,7 @@ import { initMap, destroyMap } from '../map.js';
 
 let _unsub = null;
 let _ctx = null;
+let _tripStartDate = null;
 let _links = [];
 let _tripCountry = '';
 let _map = null;
@@ -35,6 +36,7 @@ const TYPE_COLORS_HEX = {
 
 export async function render(container, ctx) {
   _ctx = ctx;
+  _tripStartDate = ctx.tripStartDate || null;
   _activeTab = 'schedule';
   _geoCache = {};
   const { userId, tripId, isGuest } = ctx;
@@ -190,7 +192,7 @@ async function renderMap(itinItems) {
 
   const markerCandidates = [
     ...dedupedItems.filter(i => {
-      if (!i.location || i.type === 'home') return false;
+      if ((!i.location && (!i.lat || !i.lng)) || i.type === 'home') return false;
       if (multiDay && i.type === 'travel' && (i.date === firstDate || i.date === lastDate)) return false;
       return true;
     }).map(i => ({
@@ -355,7 +357,7 @@ function linkListHTML(links) {
 
 function openItemModal(item) {
   const isEdit = !!item;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = _tripStartDate || new Date().toISOString().slice(0, 10);
   const types = ['home', 'travel', 'rest', 'meal', 'activity', 'shopping', 'other'];
   _links = item?.links ? [...item.links] : [];
 

@@ -15,6 +15,7 @@ const BOOK_CAT_ICONS = { accommodation: '🏨', travel: '✈️', rent: '🚗' }
 
 let _unsub = null;
 let _ctx = null;
+let _tripStartDate = null;
 let _items = [];
 let _links = [];
 let _imageSlots = [];
@@ -29,6 +30,7 @@ export function destroy() {
 
 export async function render(container, ctx) {
   _ctx = ctx;
+  _tripStartDate = ctx.tripStartDate || null;
   _filter = 'all';
   const { userId, tripId, isGuest } = ctx;
   getTrip(userId, tripId).then(tr => { _tripCountry = tr?.country || ''; }).catch(() => {});
@@ -410,7 +412,7 @@ function rentFormHTML(item, today) {
 
 function openItemModal(item) {
   const isEdit = !!item;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = _tripStartDate || new Date().toISOString().slice(0, 10);
   const defaultCat = item?.category || 'accommodation';
   _links = item?.links ? [...item.links] : [];
   if (defaultCat === 'accommodation') {
