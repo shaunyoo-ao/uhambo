@@ -256,3 +256,65 @@ Update CLAUDE.md when:
 - Data model fields change
 - New external APIs are integrated
 - Design system tokens change
+
+---
+
+## Git Commit Guidelines
+
+All commits to this project serve as "Handoff Summaries" for AI session handoffs. Follow these guidelines for effective context preservation:
+
+### Format & Structure
+
+**Commit Message Rules:**
+1. **Subject line:** ≤ 50 characters (concise, imperative mood)
+2. **Body:** wrapped at 72 characters; paragraph breaks separate logical sections
+3. **No blank line before body** — keep subject and body together visually
+4. **Total message:** informative yet concise; aim for 3–5 readable paragraphs
+
+**Required Sections** (in this order):
+
+1. **Summary** (1–2 sentences)
+   - Concise overview of what changed and why
+   - Include the issue being fixed or feature being added
+
+2. **Context** (1–2 paragraphs if applicable)
+   - Root cause (for bugs) or motivation (for features)
+   - Any critical technical decisions made during development
+   - Non-obvious tradeoffs or constraints
+   - Reference relevant code paths or Firestore collections if notable
+
+3. **Status** (1 short paragraph; optional if nothing pending)
+   - Any incomplete work or known issues
+   - Follow-up tasks a new session should be aware of
+   - Edge cases not covered by this commit
+
+**Example Good Commit:**
+```
+fix: v1.2.18 — fix Google Sign-In on Samsung Internet Browser
+
+Samsung Internet Browser (Android) silently closes signInWithPopup
+and fires auth/popup-closed-by-user, causing login to fail with no
+error message.
+
+Root cause: shouldUseRedirect() didn't detect Samsung Internet →
+popup was attempted. The catch block only handled auth/popup-blocked,
+so auth/popup-closed-by-user was re-thrown → caught upstream as a
+generic error → user returned to login screen.
+
+Fix: (1) added /SamsungBrowser/ UA check to shouldUseRedirect(), and
+(2) catch auth/popup-closed-by-user as a redirect fallback to cover
+other mobile browsers with the same behavior.
+
+Also corrects version naming: bug-fix suffix must stay ≤ 2 digits
+(1.2.171 was wrong; correct sequence is 1.2.17 → 1.2.18).
+```
+
+### Why This Matters
+
+When a session ends and the conversation is handed off to a new AI session, that session has no prior context. These commit messages must contain enough information for a new Claude to:
+- Understand the problem being solved
+- Know the root technical cause (not just the symptom)
+- Recognize any pending work or edge cases
+- Make informed decisions about related changes
+
+Without this discipline, follow-up sessions waste time re-reading code and re-investigating closed issues.
