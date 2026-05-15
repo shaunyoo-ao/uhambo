@@ -23,10 +23,12 @@ function log(msg) {
 // 1. iOS home-screen PWA: navigator.standalone blocks window.open()
 // 2. Any PWA in standalone display mode (Android, etc.)
 // 3. iOS Safari browser: popups get silently closed, returning auth/popup-closed-by-user
+// 4. Samsung Internet Browser: popup silently closed → auth/popup-closed-by-user
 function shouldUseRedirect() {
   if (('standalone' in navigator) && navigator.standalone === true) return true;
   if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return true;
   if (/iP(hone|ad|od)/.test(navigator.userAgent)) return true;
+  if (/SamsungBrowser/.test(navigator.userAgent)) return true;
   return false;
 }
 
@@ -44,8 +46,8 @@ export async function signInWithGoogle() {
     return result;
   } catch (e) {
     log('signInWithPopup ERROR: ' + e.code + ' — ' + e.message);
-    if (e.code === 'auth/popup-blocked') {
-      log('popup blocked → falling back to signInWithRedirect');
+    if (e.code === 'auth/popup-blocked' || e.code === 'auth/popup-closed-by-user') {
+      log('popup blocked/closed → falling back to signInWithRedirect');
       return signInWithRedirect(auth, provider);
     }
     throw e;
