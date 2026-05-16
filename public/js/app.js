@@ -4,7 +4,7 @@ import { setCurrency, getCurrency, CURRENCIES, getCountryCurrency } from './curr
 import { getTrips, createTrip, getTrip, updateTrip, deleteTrip, getGuestCode, setGuestCode, removeGuestCode, lookupGuestCode, getItinerary, getBookings, getActivities, getExpenses } from './db.js';
 import { resizeImageToBlob, uploadToImgBB } from './imgbb.js';
 
-const APP_VERSION = '1.2.3';
+const APP_VERSION = '1.2.31';
 
 // Populate login footer version from this single source of truth.
 // Runs as soon as this module loads (before login screen is shown).
@@ -453,6 +453,11 @@ function openGuestSettings() {
           `).join('')}
         </div>
       </div>
+      <div class="settings-group">
+        <div class="eyebrow" style="margin-bottom:8px">${isKo ? 'AI 여행 도우미' : 'AI Trip Assistant'}</div>
+        <div class="text-xs text-muted" style="margin-bottom:8px">${isKo ? '모든 여행 데이터를 JSON 프롬프트로 생성하여 AI 대화창에 붙여넣으세요.' : 'Generate a JSON prompt with all trip data to paste into any AI chat assistant.'}</div>
+        <button class="btn btn-secondary btn-sm" onclick="window.__openAIPrompt()">📋 ${isKo ? '프롬프트 생성' : 'Generate AI Prompt'}</button>
+      </div>
       <div class="settings-group" style="margin-top:16px">
         <button class="btn btn-ghost btn-full" onclick="window.__guestExit()">← ${isKo ? '나가기' : 'Exit Guest'}</button>
       </div>
@@ -473,9 +478,31 @@ window.__guestExit = async () => {
 };
 
 // ── AI Trip Assistant ────────────────────────────────────────────
+const _PROMPT_STRIP = new Set(['id', 'createdAt', 'updatedAt', 'guestCode', 'imageUrl', 'links', 'images', 'sourceId']);
+
+function _cleanForPrompt(obj) {
+  const out = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (_PROMPT_STRIP.has(k)) continue;
+    if (v === null || v === undefined || v === '') continue;
+    if (Array.isArray(v)) {
+      if (v.length === 0) continue;
+      out[k] = v.map(item => (item !== null && typeof item === 'object' && !Array.isArray(item)) ? _cleanForPrompt(item) : item);
+    } else if (typeof v === 'object' && typeof v.toDate !== 'function') {
+      const nested = _cleanForPrompt(v);
+      if (Object.keys(nested).length > 0) out[k] = nested;
+    } else if (typeof v.toDate !== 'function') {
+      out[k] = v;
+    }
+  }
+  return out;
+}
+
 window.__openAIPrompt = async () => {
   const isKo = getLang() === 'ko';
-  if (!currentTripId) {
+  const uid = isGuest ? _guestOwnerUid : currentUser?.uid;
+  const tid = isGuest ? _guestTripId : currentTripId;
+  if (!tid) {
     showToast(isKo ? '여행을 선택하세요' : 'No trip selected');
     return;
   }
@@ -486,8 +513,6 @@ window.__openAIPrompt = async () => {
     footer: ''
   });
   try {
-    const uid = currentUser.uid;
-    const tid = currentTripId;
     const [trip, itinerary, bookings, activities, expenses] = await Promise.all([
       getTrip(uid, tid),
       getItinerary(uid, tid),
@@ -495,18 +520,19 @@ window.__openAIPrompt = async () => {
       getActivities(uid, tid),
       getExpenses(uid, tid),
     ]);
-    const cleanItems = (arr) => arr.map(({ id, createdAt, updatedAt, ...rest }) => rest);
-    const { id: _id, createdAt: _ca, updatedAt: _ua, ...tripClean } = trip;
+    const tripData = _cleanForPrompt(trip);
+    const travelers = (trip.travelers || []).map(t => _cleanForPrompt(t)).filter(t => Object.keys(t).length > 0);
+    if (travelers.length > 0) tripData.travelers = travelers;
     const promptObj = {
       instruction: isKo
         ? '아래 JSON 형식의 여행 정보를 꼼꼼히 검토하고, 이 여행과 관련하여 무엇을 도와드릴 수 있는지 먼저 친절하게 물어봐 주세요. 한국어로 답변해 주세요.'
         : 'Please carefully review the trip data below in JSON format and proactively ask what you can help me with regarding this trip. Please respond in English.',
       today: new Date().toISOString().slice(0, 10),
-      trip: { ...tripClean, travelers: trip.travelers || [] },
-      itinerary: cleanItems(itinerary),
-      bookings: cleanItems(bookings),
-      activities: cleanItems(activities),
-      expenses: cleanItems(expenses),
+      trip: tripData,
+      itinerary: itinerary.map(item => _cleanForPrompt(item)).filter(item => Object.keys(item).length > 0),
+      bookings: bookings.map(item => _cleanForPrompt(item)).filter(item => Object.keys(item).length > 0),
+      activities: activities.map(item => _cleanForPrompt(item)).filter(item => Object.keys(item).length > 0),
+      expenses: expenses.map(item => _cleanForPrompt(item)).filter(item => Object.keys(item).length > 0),
     };
     const promptStr = JSON.stringify(promptObj, null, 2);
     openModal({
