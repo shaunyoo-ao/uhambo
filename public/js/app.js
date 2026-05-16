@@ -1,10 +1,10 @@
 import { signInWithGoogle, signOut, signInAnonymously, onAuthStateChange, handleRedirectResult } from './auth.js';
 import { setLang, getLang, t } from './i18n.js';
 import { setCurrency, getCurrency, CURRENCIES, getCountryCurrency } from './currency.js';
-import { getTrips, createTrip, getTrip, updateTrip, deleteTrip, getGuestCode, setGuestCode, removeGuestCode, lookupGuestCode } from './db.js';
+import { getTrips, createTrip, getTrip, updateTrip, deleteTrip, getGuestCode, setGuestCode, removeGuestCode, lookupGuestCode, getItinerary, getBookings, getActivities, getExpenses } from './db.js';
 import { resizeImageToBlob, uploadToImgBB } from './imgbb.js';
 
-const APP_VERSION = '1.2.24';
+const APP_VERSION = '1.2.3';
 
 // Populate login footer version from this single source of truth.
 // Runs as soon as this module loads (before login screen is shown).
@@ -30,11 +30,99 @@ let _appInitialized = false;
 let _savingTrip = false;
 let _trips = [];
 let _tripImageSlot = { type: 'empty', value: null, preview: null };
+let _tripTravelers = [];
 
 function tripImageSlotHTML(slot) {
   if (slot.type === 'empty') return `<div class="img-slot img-slot-empty img-slot-banner" onclick="window.__tripImgPick()"><span style="font-size:13px">+ Cover photo</span></div>`;
   return `<div class="img-slot img-slot-filled img-slot-banner"><img src="${slot.preview}" alt=""><button type="button" class="img-slot-del" onclick="window.__tripImgRemove()">×</button></div>`;
 }
+
+const RELATION_OPTIONS = ['Self', 'Spouse', 'Child', 'Relative', 'Friend', 'Acquaintance'];
+const RELATION_KO = { Self: '본인', Spouse: '배우자', Child: '자녀', Relative: '친척', Friend: '친구', Acquaintance: '지인' };
+const PREFERENCE_OPTIONS = ['Adventure', 'Relaxation', 'Culture', 'Food & Dining', 'Shopping', 'Nature', 'Photography'];
+const PREFERENCE_KO = { 'Adventure': '모험', 'Relaxation': '휴식', 'Culture': '문화', 'Food & Dining': '음식', 'Shopping': '쇼핑', 'Nature': '자연', 'Photography': '사진' };
+
+function _travelersFormSection(isKo) {
+  return `
+    <div class="form-group">
+      <label class="form-label">${isKo ? '여행객' : 'Travelers'}</label>
+      <div id="travelers-list"></div>
+      <div style="margin-top:8px">
+        <div class="form-row">
+          <div class="form-group" style="margin-bottom:8px">
+            <select class="form-select" id="tr-relation" style="font-size:13px">
+              ${RELATION_OPTIONS.map(r => `<option value="${r}">${isKo ? RELATION_KO[r] : r}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:8px">
+            <select class="form-select" id="tr-nationality" style="font-size:13px">
+              <option value="">— ${isKo ? '국적' : 'Nationality'} —</option>
+              ${COUNTRIES.map(c => `<option value="${c}">${c}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="margin-bottom:8px">
+            <select class="form-select" id="tr-gender" style="font-size:13px">
+              <option value="Male">${isKo ? '남' : 'Male'}</option>
+              <option value="Female">${isKo ? '여' : 'Female'}</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:8px">
+            <input class="form-input" id="tr-age" type="number" min="0" max="120"
+              placeholder="${isKo ? '나이' : 'Age'}" style="font-size:13px">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:8px">
+          <select class="form-select" id="tr-preference" style="font-size:13px">
+            <option value="">— ${isKo ? '여행 성향 (선택)' : 'Travel Preference (optional)'} —</option>
+            ${PREFERENCE_OPTIONS.map(p => `<option value="${p}">${isKo ? PREFERENCE_KO[p] : p}</option>`).join('')}
+          </select>
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm btn-full" onclick="window.__addTraveler()">
+          + ${isKo ? '여행객 추가' : 'Add Traveler'}
+        </button>
+      </div>
+    </div>`;
+}
+
+function _renderTravelersList() {
+  const el = document.getElementById('travelers-list');
+  if (!el) return;
+  const isKo = getLang() === 'ko';
+  if (_tripTravelers.length === 0) { el.innerHTML = ''; return; }
+  el.innerHTML = _tripTravelers.map((t, i) => `
+    <div class="traveler-card">
+      <div class="traveler-card-info">
+        <span class="traveler-tag">${isKo ? (RELATION_KO[t.relation] || t.relation) : t.relation}</span>
+        ${t.nationality ? `<span class="traveler-tag">${t.nationality}</span>` : ''}
+        <span class="traveler-tag">${t.gender === 'Male' ? (isKo ? '남' : 'M') : (isKo ? '여' : 'F')}</span>
+        ${t.age ? `<span class="traveler-tag">${t.age}${isKo ? '세' : 'y'}</span>` : ''}
+        ${t.preference ? `<span class="traveler-tag" style="color:var(--sky)">${isKo ? (PREFERENCE_KO[t.preference] || t.preference) : t.preference}</span>` : ''}
+      </div>
+      <button type="button" class="traveler-remove" onclick="window.__removeTraveler(${i})">×</button>
+    </div>
+  `).join('');
+}
+
+window.__addTraveler = () => {
+  const relation = document.getElementById('tr-relation')?.value || 'Self';
+  const nationality = document.getElementById('tr-nationality')?.value || '';
+  const gender = document.getElementById('tr-gender')?.value || 'Male';
+  const age = document.getElementById('tr-age')?.value || '';
+  const preference = document.getElementById('tr-preference')?.value || '';
+  _tripTravelers.push({ relation, nationality, gender, age, preference });
+  _renderTravelersList();
+  const ageEl = document.getElementById('tr-age');
+  if (ageEl) ageEl.value = '';
+  const prefEl = document.getElementById('tr-preference');
+  if (prefEl) prefEl.value = '';
+};
+
+window.__removeTraveler = (i) => {
+  _tripTravelers.splice(i, 1);
+  _renderTravelersList();
+};
 
 // ── Per-page keep-alive tracking ─────────────────────────────────
 const _renderedPages = new Set();  // routes rendered for current trip
@@ -275,6 +363,11 @@ function openSettings() {
         <div class="text-xs text-muted" style="margin-bottom:8px">${isKo ? '이 코드를 가진 누구나 이 여행을 읽기 전용으로 볼 수 있습니다.' : 'Anyone with this code can view this trip (read-only).'}</div>
         <div id="guest-access-body"><div class="spinner" style="width:16px;height:16px;border-width:2px"></div></div>
       </div>
+      <div class="settings-group">
+        <div class="eyebrow" style="margin-bottom:8px">${isKo ? 'AI 여행 도우미' : 'AI Trip Assistant'}</div>
+        <div class="text-xs text-muted" style="margin-bottom:8px">${isKo ? '모든 여행 데이터를 JSON 프롬프트로 생성하여 AI 대화창에 붙여넣으세요.' : 'Generate a JSON prompt with all trip data to paste into any AI chat assistant.'}</div>
+        <button class="btn btn-secondary btn-sm" onclick="window.__openAIPrompt()">📋 ${isKo ? '프롬프트 생성' : 'Generate AI Prompt'}</button>
+      </div>
       <div class="settings-group" style="margin-top:16px">
         <button class="btn btn-ghost btn-full" onclick="window.__signOut()">Sign Out</button>
       </div>
@@ -379,58 +472,127 @@ window.__guestExit = async () => {
   location.reload();
 };
 
+// ── AI Trip Assistant ────────────────────────────────────────────
+window.__openAIPrompt = async () => {
+  const isKo = getLang() === 'ko';
+  if (!currentTripId) {
+    showToast(isKo ? '여행을 선택하세요' : 'No trip selected');
+    return;
+  }
+  closeModal();
+  openModal({
+    title: isKo ? 'AI 여행 도우미' : 'AI Trip Assistant',
+    body: `<div style="text-align:center;padding:32px"><div class="spinner"></div></div>`,
+    footer: ''
+  });
+  try {
+    const uid = currentUser.uid;
+    const tid = currentTripId;
+    const [trip, itinerary, bookings, activities, expenses] = await Promise.all([
+      getTrip(uid, tid),
+      getItinerary(uid, tid),
+      getBookings(uid, tid),
+      getActivities(uid, tid),
+      getExpenses(uid, tid),
+    ]);
+    const cleanItems = (arr) => arr.map(({ id, createdAt, updatedAt, ...rest }) => rest);
+    const { id: _id, createdAt: _ca, updatedAt: _ua, ...tripClean } = trip;
+    const promptObj = {
+      instruction: isKo
+        ? '아래 JSON 형식의 여행 정보를 꼼꼼히 검토하고, 이 여행과 관련하여 무엇을 도와드릴 수 있는지 먼저 친절하게 물어봐 주세요. 한국어로 답변해 주세요.'
+        : 'Please carefully review the trip data below in JSON format and proactively ask what you can help me with regarding this trip. Please respond in English.',
+      today: new Date().toISOString().slice(0, 10),
+      trip: { ...tripClean, travelers: trip.travelers || [] },
+      itinerary: cleanItems(itinerary),
+      bookings: cleanItems(bookings),
+      activities: cleanItems(activities),
+      expenses: cleanItems(expenses),
+    };
+    const promptStr = JSON.stringify(promptObj, null, 2);
+    openModal({
+      title: isKo ? 'AI 여행 도우미' : 'AI Trip Assistant',
+      body: `
+        <p class="text-xs text-muted" style="margin-bottom:10px">
+          ${isKo ? '아래 프롬프트를 복사하여 AI 대화창에 붙여넣으세요.' : 'Copy and paste this prompt into any AI chat assistant (ChatGPT, Claude, Gemini, etc.).'}
+        </p>
+        <div style="background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:12px;max-height:360px;overflow-y:auto;-webkit-overflow-scrolling:touch">
+          <pre id="ai-prompt-pre" style="font-family:var(--font-mono);font-size:10px;color:var(--cream);white-space:pre-wrap;word-break:break-all;margin:0">${promptStr.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>
+        </div>`,
+      footer: `
+        <button class="btn btn-ghost" style="flex:1" onclick="window.__closeModal()">${isKo ? '닫기' : 'Close'}</button>
+        <button class="btn btn-primary" style="flex:2" onclick="window.__copyAIPrompt()">📋 ${isKo ? '복사' : 'Copy Prompt'}</button>`
+    });
+  } catch (e) {
+    closeModal();
+    showToast('Error: ' + e.message);
+  }
+};
+
+window.__copyAIPrompt = () => {
+  const el = document.getElementById('ai-prompt-pre');
+  if (!el) return;
+  const isKo = getLang() === 'ko';
+  navigator.clipboard.writeText(el.textContent)
+    .then(() => showToast(isKo ? '복사되었습니다!' : 'Copied!'))
+    .catch(() => showToast('Copy failed'));
+};
+
 // ── New trip form ────────────────────────────────────────────────
 function openNewTrip() {
+  const isKo = getLang() === 'ko';
   closeModal();
   setTimeout(() => {
     _tripImageSlot = { type: 'empty', value: null, preview: null };
+    _tripTravelers = [];
     openModal({
-      title: 'New Trip',
+      title: isKo ? '새 여행' : 'New Trip',
       body: `
         <form id="new-trip-form">
           <div class="form-group">
-            <label class="form-label">Trip Name</label>
+            <label class="form-label">${isKo ? '여행 이름' : 'Trip Name'}</label>
             <input class="form-input" name="name" placeholder="e.g. Japan 2025" required>
           </div>
           <div class="form-group">
-            <label class="form-label">Destination</label>
+            <label class="form-label">${isKo ? '여행지' : 'Destination'}</label>
             <input class="form-input" name="destination" placeholder="e.g. Tokyo, Japan">
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label">Start Date</label>
+              <label class="form-label">${isKo ? '출발일' : 'Start Date'}</label>
               <input class="form-input" name="startDate" type="date">
             </div>
             <div class="form-group">
-              <label class="form-label">End Date</label>
+              <label class="form-label">${isKo ? '귀국일' : 'End Date'}</label>
               <input class="form-input" name="endDate" type="date">
             </div>
           </div>
           <div class="form-group">
-            <label class="form-label">Country</label>
+            <label class="form-label">${isKo ? '국가' : 'Country'}</label>
             <select class="form-select" name="country">
-              <option value="">— Select country —</option>
+              <option value="">— ${isKo ? '국가 선택' : 'Select country'} —</option>
               ${COUNTRIES.map(c => `<option value="${c}">${c}</option>`).join('')}
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label">Base Currency</label>
+            <label class="form-label">${isKo ? '기준 통화' : 'Base Currency'}</label>
             <select class="form-select" name="baseCurrency">
               ${CURRENCIES.map(c => `<option value="${c.code}">${c.symbol} ${c.code} — ${c.label}</option>`).join('')}
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label">Cover Photo</label>
+            <label class="form-label">${isKo ? '커버 사진' : 'Cover Photo'}</label>
             <div id="trip-img-slot">${tripImageSlotHTML(_tripImageSlot)}</div>
             <input type="file" id="trip-img-input" accept="image/*" style="display:none" onchange="window.__tripImgChange(this)">
           </div>
+          ${_travelersFormSection(isKo)}
         </form>
       `,
       footer: `
-        <button class="btn btn-ghost btn-full" onclick="window.__closeModal()">Cancel</button>
-        <button class="btn btn-primary btn-full" onclick="window.__submitNewTrip()">Create</button>
+        <button class="btn btn-ghost btn-full" onclick="window.__closeModal()">${isKo ? '취소' : 'Cancel'}</button>
+        <button class="btn btn-primary btn-full" onclick="window.__submitNewTrip()">${isKo ? '만들기' : 'Create'}</button>
       `
     });
+    setTimeout(_renderTravelersList, 0);
   }, 100);
 }
 
@@ -443,6 +605,7 @@ async function submitNewTrip() {
   _savingTrip = true;
   setModalSaving(true);
   const data = Object.fromEntries(new FormData(form));
+  data.travelers = _tripTravelers;
   try {
     if (_tripImageSlot.type === 'file') {
       const blob = await resizeImageToBlob(_tripImageSlot.value);
@@ -558,6 +721,7 @@ window.__deleteCurrentTrip = async () => {
 
 window.__editCurrentTrip = async () => {
   if (!currentTripId) { showToast('No trip selected'); return; }
+  const isKo = getLang() === 'ko';
   closeModal();
   try {
     const trip = await getTrip(currentUser.uid, currentTripId);
@@ -565,52 +729,55 @@ window.__editCurrentTrip = async () => {
     _tripImageSlot = trip.imageUrl
       ? { type: 'url', value: trip.imageUrl, preview: trip.imageUrl }
       : { type: 'empty', value: null, preview: null };
+    _tripTravelers = Array.isArray(trip.travelers) ? trip.travelers.map(t => ({ ...t })) : [];
     setTimeout(() => {
       openModal({
-        title: 'Edit Trip',
+        title: isKo ? '여행 수정' : 'Edit Trip',
         body: `
           <form id="edit-trip-form">
             <div class="form-group">
-              <label class="form-label">Trip Name</label>
+              <label class="form-label">${isKo ? '여행 이름' : 'Trip Name'}</label>
               <input class="form-input" name="name" value="${trip.name || ''}" required>
             </div>
             <div class="form-group">
-              <label class="form-label">Destination</label>
+              <label class="form-label">${isKo ? '여행지' : 'Destination'}</label>
               <input class="form-input" name="destination" value="${trip.destination || ''}" placeholder="e.g. Tokyo, Japan">
             </div>
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label">Start Date</label>
+                <label class="form-label">${isKo ? '출발일' : 'Start Date'}</label>
                 <input class="form-input" name="startDate" type="date" value="${trip.startDate || ''}">
               </div>
               <div class="form-group">
-                <label class="form-label">End Date</label>
+                <label class="form-label">${isKo ? '귀국일' : 'End Date'}</label>
                 <input class="form-input" name="endDate" type="date" value="${trip.endDate || ''}">
               </div>
             </div>
             <div class="form-group">
-              <label class="form-label">Country</label>
+              <label class="form-label">${isKo ? '국가' : 'Country'}</label>
               <select class="form-select" name="country">
-                <option value="">— Select country —</option>
+                <option value="">— ${isKo ? '국가 선택' : 'Select country'} —</option>
                 ${COUNTRIES.map(c => `<option value="${c}" ${trip.country === c ? 'selected' : ''}>${c}</option>`).join('')}
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label">Base Currency</label>
+              <label class="form-label">${isKo ? '기준 통화' : 'Base Currency'}</label>
               <select class="form-select" name="baseCurrency">
                 ${CURRENCIES.map(c => `<option value="${c.code}" ${(trip.baseCurrency || 'KRW') === c.code ? 'selected' : ''}>${c.symbol} ${c.code} — ${c.label}</option>`).join('')}
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label">Cover Photo</label>
+              <label class="form-label">${isKo ? '커버 사진' : 'Cover Photo'}</label>
               <div id="trip-img-slot">${tripImageSlotHTML(_tripImageSlot)}</div>
               <input type="file" id="trip-img-input" accept="image/*" style="display:none" onchange="window.__tripImgChange(this)">
             </div>
+            ${_travelersFormSection(isKo)}
           </form>`,
         footer: `
-          <button class="btn btn-ghost" style="flex:1" onclick="window.__closeModal()">Cancel</button>
-          <button class="btn btn-primary" style="flex:2" onclick="window.__saveEditTrip()">Save</button>`
+          <button class="btn btn-ghost" style="flex:1" onclick="window.__closeModal()">${isKo ? '취소' : 'Cancel'}</button>
+          <button class="btn btn-primary" style="flex:2" onclick="window.__saveEditTrip()">${isKo ? '저장' : 'Save'}</button>`
       });
+      setTimeout(_renderTravelersList, 0);
     }, 100);
   } catch (e) { showToast('Error: ' + e.message); }
 };
@@ -619,6 +786,7 @@ window.__saveEditTrip = async () => {
   const form = document.getElementById('edit-trip-form');
   if (!form || !form.checkValidity()) { form?.reportValidity(); return; }
   const data = Object.fromEntries(new FormData(form));
+  data.travelers = _tripTravelers;
   setModalSaving(true);
   try {
     if (_tripImageSlot.type === 'file') {

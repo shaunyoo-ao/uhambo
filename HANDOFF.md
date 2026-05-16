@@ -2,13 +2,38 @@
 
 **Live URL:** https://yonke-uhambo.web.app/  
 **Firebase Project:** yonke-uhambo  
-**Current Version:** 1.2.15 (sw.js v26)  
+**Current Version:** 1.2.3 (sw.js v37)  
 **Stack:** Vanilla JS ES Modules · Firebase Firestore/Auth/Hosting · GitHub Actions CI/CD  
 **Allowed Users:** yooyoopd@gmail.com, 2yeonsoo@gmail.com
 
 ---
 
 ## Version History & What Was Built
+
+### v1.2.3 — Trip Members + AI Trip Assistant *(current)*
+
+Two new features added to the app:
+
+**Trip Members (여행객 정보):**
+- New/Edit Trip forms now include a "Travelers" section for entering traveler profiles
+- Each traveler: relation (Self/Spouse/Child/Relative/Friend/Acquaintance), nationality, gender,
+  age, travel preference (optional: Adventure/Relaxation/Culture/Food & Dining/Shopping/Nature/Photography)
+- Travelers are added one at a time via a form row + "Add Traveler" button; displayed as
+  removable tag cards
+- Stored as `travelers: []` array in the trip Firestore document alongside existing trip fields
+- Module-level `_tripTravelers` state (like `_tripImageSlot`) manages the list between renders
+- Both EN and KO labels fully translated; `_travelersFormSection(isKo)` helper generates the HTML
+- Edit Trip pre-populates `_tripTravelers` from `trip.travelers` on open
+
+**AI Trip Assistant Prompt Generator:**
+- New "AI Trip Assistant" section added to owner Settings (not shown to guests)
+- "📋 Generate AI Prompt" button fetches all trip data (trip info + travelers + itinerary +
+  bookings + activities + expenses) in parallel and composes a JSON prompt
+- The instruction field tells the AI to review the data and proactively ask what to help with;
+  language is set based on current app language (`getLang()`)
+- Firestore internal fields (`id`, `createdAt`, `updatedAt`) stripped before JSON output
+- Prompt displayed in a scrollable code block modal with "Copy Prompt" button (clipboard API)
+- New db.js imports in app.js: `getItinerary`, `getBookings`, `getActivities`, `getExpenses`
 
 ### v1.0.0 — Foundation
 - App shell HTML, full CSS dark-theme design system, PWA manifest + icons
