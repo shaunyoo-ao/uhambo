@@ -119,6 +119,7 @@ const translations = {
     'book.booking_ref':         'Booking Ref',
     'book.coords':              'Coordinates',
     'book.coords_hint':         'optional — overrides geocoding',
+    'book.headcount':           'Headcount',
     // Accommodation
     'accom.tap_add':        'Tap + to add a stay',
     'act.tap_add':          'Tap + to add an activity',
@@ -310,6 +311,7 @@ const translations = {
     'book.booking_ref':         '예약 번호',
     'book.coords':              '좌표',
     'book.coords_hint':         '선택 — 지오코딩 대신 직접 입력',
+    'book.headcount':           '인원수',
     // Accommodation
     'accom.tap_add':        '+ 를 눌러 숙소를 추가해보세요',
     'act.tap_add':          '+ 를 눌러 활동을 추가해보세요',
