@@ -1,10 +1,8 @@
 # Uhambo — Project Handoff
 
-**Live URL:** https://yonke-uhambo.web.app/  
-**Firebase Project:** yonke-uhambo  
+Read CLAUDE.md
+ 
 **Current Version:** 1.2.32 (sw.js v39)  
-**Stack:** Vanilla JS ES Modules · Firebase Firestore/Auth/Hosting · GitHub Actions CI/CD  
-**Allowed Users:** yooyoopd@gmail.com, 2yeonsoo@gmail.com
 
 ---
 
