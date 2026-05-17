@@ -2,7 +2,7 @@
 
 **Live URL:** https://yonke-uhambo.web.app/  
 **Firebase Project:** yonke-uhambo  
-**Current Version:** 1.2.3 (sw.js v37)  
+**Current Version:** 1.2.32 (sw.js v39)  
 **Stack:** Vanilla JS ES Modules · Firebase Firestore/Auth/Hosting · GitHub Actions CI/CD  
 **Allowed Users:** yooyoopd@gmail.com, 2yeonsoo@gmail.com
 
@@ -10,7 +10,31 @@
 
 ## Version History & What Was Built
 
-### v1.2.3 — Trip Members + AI Trip Assistant *(current)*
+### v1.2.32 — Dashboard Travelers card, Currency default fix, Headcount field *(current)*
+
+Three UI fixes:
+
+**Dashboard Travelers card (조건부 인원수 표시):**
+- When a trip has traveler profiles, the Dashboard "Stays" stat card is replaced with a "TRAVELERS" card
+- Shows total traveler count as the main stat; secondary line shows Adults · Kids breakdown (adult = age ≥ 20)
+- When no travelers are saved, the original Stays card is displayed unchanged
+- `getLang()` imported in dashboard.js to show Korean labels (인원수 / 성인 / 어린이)
+
+**Default Display Currency fix:**
+- Previously, `loadTrips()` only set the display currency from trip country if no `currency` key existed in localStorage (`if (!localStorage.getItem('currency'))`)
+- This caused returning users to see stale currency (e.g. KRW from an old trip) even after switching to a new trip with a different country
+- Fixed by always calling `setCurrency(getCountryCurrency(active.country))` on app startup, consistent with `selectTrip()` which also always updates currency
+
+**Headcount (인원수) field added:**
+- Booking → Accommodation category: new `headcount` number input after check-in/check-out dates
+- Booking → Travel (Flight) category: new `headcount` number input after PNR
+- Activity → all categories: new `headcount` number input after coordinates field
+- Stored as `headcount` (Number) in Firestore; converted from string via `Number()` on save
+- New i18n keys: `book.headcount` → EN: "Headcount", KO: "인원수"
+
+### v1.2.31 — AI Prompt cleanup + Guest Mode support *(bug fix)*
+
+### v1.2.3 — Trip Members + AI Trip Assistant
 
 Two new features added to the app:
 

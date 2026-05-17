@@ -4,7 +4,7 @@ import { setCurrency, getCurrency, CURRENCIES, getCountryCurrency } from './curr
 import { getTrips, createTrip, getTrip, updateTrip, deleteTrip, getGuestCode, setGuestCode, removeGuestCode, lookupGuestCode, getItinerary, getBookings, getActivities, getExpenses } from './db.js';
 import { resizeImageToBlob, uploadToImgBB } from './imgbb.js';
 
-const APP_VERSION = '1.2.31';
+const APP_VERSION = '1.2.32';
 
 // Populate login footer version from this single source of truth.
 // Runs as soon as this module loads (before login screen is shown).
@@ -180,7 +180,7 @@ async function loadTrips(userId) {
       const active = match || _trips[0];
       currentTripId = active.id;
       if (btn) btn.textContent = active.name;
-      if (!localStorage.getItem('currency')) setCurrency(getCountryCurrency(active.country));
+      setCurrency(getCountryCurrency(active.country));
     }
   } catch (e) {
     console.error('loadTrips:', e);

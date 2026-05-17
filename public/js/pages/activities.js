@@ -191,6 +191,10 @@ function openItemModal(item) {
           <label class="form-label" style="font-size:0.7rem;color:var(--muted)">${t('book.coords')} <span style="font-weight:400">(${t('book.coords_hint')})</span></label>
           <input class="form-input" name="coords" value="${item?.lat && item?.lng ? `${item.lat.toFixed(6)}, ${item.lng.toFixed(6)}` : ''}" placeholder="e.g. -25.989, 28.005" autocomplete="off" style="font-size:0.8rem">
         </div>
+        <div class="form-group">
+          <label class="form-label">${t('book.headcount')}</label>
+          <input class="form-input" name="headcount" type="number" min="1" value="${item?.headcount || ''}" placeholder="2">
+        </div>
         <div class="form-row">
           <div class="form-group" style="flex:2">
             <label class="form-label">${t('act.cost')}</label>
@@ -256,6 +260,7 @@ function openItemModal(item) {
     if (!form.checkValidity()) { form.reportValidity(); return; }
     const data = Object.fromEntries(new FormData(form));
     if (data.cost) data.cost = Number(data.cost);
+    if (data.headcount) data.headcount = Number(data.headcount);
     data.links = _links;
     // Resolve lat/lng before save so coords string is not persisted.
     const rawCoords = data.coords?.trim();

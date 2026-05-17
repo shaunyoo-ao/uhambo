@@ -256,6 +256,10 @@ function accommodationFormHTML(item, today) {
         <input class="form-input" name="checkOutTime" type="time" value="${item?.checkOutTime || ''}">
       </div>
     </div>
+    <div class="form-group">
+      <label class="form-label">${t('book.headcount')}</label>
+      <input class="form-input" name="headcount" type="number" min="1" value="${item?.headcount || ''}" placeholder="2">
+    </div>
     <div class="form-row">
       <div class="form-group" style="flex:2">
         <label class="form-label">${t('accom.cost')}</label>
@@ -331,6 +335,10 @@ function travelFormHTML(item, today) {
     <div class="form-group">
       <label class="form-label">${t('book.pnr')}</label>
       <input class="form-input" name="pnr" value="${item?.pnr || ''}" placeholder="e.g. ABC123">
+    </div>
+    <div class="form-group">
+      <label class="form-label">${t('book.headcount')}</label>
+      <input class="form-input" name="headcount" type="number" min="1" value="${item?.headcount || ''}" placeholder="2">
     </div>
     <div class="form-row">
       <div class="form-group" style="flex:2">
@@ -543,6 +551,7 @@ function openItemModal(item) {
     if (!form.checkValidity()) { form.reportValidity(); return; }
     const data = Object.fromEntries(new FormData(form));
     if (data.cost) data.cost = Number(data.cost);
+    if (data.headcount) data.headcount = Number(data.headcount);
     data.links = _links;
     const cat = data.category || 'accommodation';
     const { userId, tripId } = _ctx;

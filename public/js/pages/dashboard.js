@@ -1,4 +1,4 @@
-import { t } from '../i18n.js';
+import { t, getLang } from '../i18n.js';
 import { getTrip, getItinerary } from '../db.js';
 import { subscribeItinerary } from '../db.js';
 import { getExpenses } from '../db.js';
@@ -79,6 +79,27 @@ export async function render(container, { userId, tripId, isGuest }) {
     const candidateStays = accomBookings.filter(a => a.status === 'candidate').length;
     const bookedStays = accomBookings.length - candidateStays;
 
+    const travelers = trip.travelers || [];
+    const travelerCount = travelers.length;
+    const adults = travelers.filter(tr => parseInt(tr.age || 0) >= 20).length;
+    const kids = travelerCount - adults;
+    const isKo = getLang() === 'ko';
+    const staysSub = [
+      candidateStays > 0 ? `🔖${candidateStays}` : '',
+      bookedStays > 0 ? `✅${bookedStays}` : ''
+    ].filter(Boolean).join(' · ');
+    const staysCardHTML = travelerCount > 0
+      ? `<div class="stat-card" style="cursor:pointer" onclick="window.__navigate('booking')">
+            <div class="stat-value mono">${travelerCount}</div>
+            <div class="stat-label">${isKo ? '인원수' : 'TRAVELERS'}</div>
+            <div class="stat-sub">${adults} ${isKo ? '성인' : 'Adults'} · ${kids} ${isKo ? '어린이' : 'Kids'}</div>
+          </div>`
+      : `<div class="stat-card" style="cursor:pointer" onclick="window.__navigate('booking')">
+            <div class="stat-value mono">${accomBookings.length}</div>
+            <div class="stat-label">${t('dash.stays')}</div>
+            <div class="stat-sub">${staysSub}</div>
+          </div>`;
+
     // Mileage
     _mileageDetail = await calcMileageDetail(itinerary);
     const mileageKm = _mileageDetail.total;
@@ -109,14 +130,7 @@ export async function render(container, { userId, tripId, isGuest }) {
             <div class="stat-label">${t('act.title')}</div>
             <div class="stat-sub">${completedActs} ${t('dash.completed').toLowerCase()}</div>
           </div>
-          <div class="stat-card" style="cursor:pointer" onclick="window.__navigate('booking')">
-            <div class="stat-value mono">${accomBookings.length}</div>
-            <div class="stat-label">${t('dash.stays')}</div>
-            <div class="stat-sub">${[
-              candidateStays > 0 ? `🔖${candidateStays}` : '',
-              bookedStays > 0 ? `✅${bookedStays}` : ''
-            ].filter(Boolean).join(' · ')}</div>
-          </div>
+          ${staysCardHTML}
           <div class="stat-card" style="cursor:pointer" onclick="window.__showMileageDetail()">
             <div class="stat-value mono" id="mileage-stat-value">${mileageKm} km</div>
             <div class="stat-label">${t('dash.mileage')}</div>
