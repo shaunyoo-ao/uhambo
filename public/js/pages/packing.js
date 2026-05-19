@@ -225,10 +225,17 @@ export async function render(container, ctx) {
     _items = items;
     if (!_seedAttempted && items.length === 0) {
       _seedAttempted = true;
-      await Promise.all(DEFAULTS.map(d => addPackingItem(ctx.userId, ctx.tripId, { ...d, isPacked: false, assignee: '' })));
+      try {
+        await Promise.all(DEFAULTS.map(d => addPackingItem(ctx.userId, ctx.tripId, { ...d, isPacked: false, assignee: '' })));
+      } catch (e) {
+        renderList();
+      }
       return;
     }
     renderList();
+  }, (err) => {
+    const listEl = document.getElementById('packing-list');
+    if (listEl) listEl.innerHTML = `<div class="empty-state" style="margin-top:40px"><div class="empty-icon">⚠️</div><div class="empty-sub">${err.message}</div></div>`;
   });
 
   // FAB

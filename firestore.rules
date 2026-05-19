@@ -48,6 +48,10 @@ service cloud.firestore {
                        || (isAnonGuest() && get(/databases/$(database)/documents/users/$(userId)/trips/$(tripId)).data.guestCode != null);
           allow write: if isOwner(userId) && isAllowedEmail();
         }
+        match /packing/{itemId} {
+          allow read:  if isOwner(userId) && isAllowedEmail();
+          allow write: if isOwner(userId) && isAllowedEmail();
+        }
       }
     }
 
