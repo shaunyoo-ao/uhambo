@@ -1087,6 +1087,17 @@ a { color: var(--accent); text-decoration: none; }
   margin: 0;
   flex: 1;
 }
+.pack-reset-btn {
+  background: none;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.72rem;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.pack-reset-btn:active { color: var(--rose); border-color: var(--rose); }
 .packing-progress-wrap {
   padding: 14px 16px 0;
   display: flex;
