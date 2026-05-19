@@ -4,7 +4,7 @@ import { setCurrency, getCurrency, CURRENCIES, getCountryCurrency } from './curr
 import { getTrips, createTrip, getTrip, updateTrip, deleteTrip, getGuestCode, setGuestCode, removeGuestCode, lookupGuestCode, getItinerary, getBookings, getActivities, getExpenses } from './db.js';
 import { resizeImageToBlob, uploadToImgBB } from './imgbb.js';
 
-const APP_VERSION = '1.2.4';
+const APP_VERSION = '1.2.41';
 
 // Populate login footer version from this single source of truth.
 // Runs as soon as this module loads (before login screen is shown).
@@ -886,7 +886,7 @@ async function initApp(user) {
       const { render: renderPacking, destroy: destroyPacking } = await import('./pages/packing.js');
       _packingDestroy = destroyPacking;
       const renderUid = currentUser.uid;
-      panel.style.display = '';
+      panel.style.display = 'block';
       await renderPacking(panel, { userId: renderUid, tripId: currentTripId, isGuest: false });
     });
   }
