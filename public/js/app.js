@@ -4,7 +4,7 @@ import { setCurrency, getCurrency, CURRENCIES, getCountryCurrency } from './curr
 import { getTrips, createTrip, getTrip, updateTrip, deleteTrip, getGuestCode, setGuestCode, removeGuestCode, lookupGuestCode, getItinerary, getBookings, getActivities, getExpenses } from './db.js';
 import { resizeImageToBlob, uploadToImgBB } from './imgbb.js';
 
-const APP_VERSION = '1.2.43';
+const APP_VERSION = '1.2.431';
 
 // Populate login footer version from this single source of truth.
 // Runs as soon as this module loads (before login screen is shown).
@@ -364,14 +364,14 @@ function openSettings() {
         <button class="btn btn-danger btn-sm" style="margin-top:8px" onclick="window.__deleteCurrentTrip()">${isKo ? '현재 여행 삭제' : 'Delete Current Trip'}</button>
       </div>
       <div class="settings-group">
-        <div class="eyebrow" style="margin-bottom:6px">${isKo ? '게스트 접근' : 'Guest Access'}</div>
-        <div class="text-xs text-muted" style="margin-bottom:8px">${isKo ? '이 코드를 가진 누구나 이 여행을 읽기 전용으로 볼 수 있습니다.' : 'Anyone with this code can view this trip (read-only).'}</div>
-        <div id="guest-access-body"><div class="spinner" style="width:16px;height:16px;border-width:2px"></div></div>
-      </div>
-      <div class="settings-group">
         <div class="eyebrow" style="margin-bottom:8px">${isKo ? 'AI 여행 도우미' : 'AI Trip Assistant'}</div>
         <div class="text-xs text-muted" style="margin-bottom:8px">${isKo ? '모든 여행 데이터를 JSON 프롬프트로 생성하여 AI 대화창에 붙여넣으세요.' : 'Generate a JSON prompt with all trip data to paste into any AI chat assistant.'}</div>
         <button class="btn btn-secondary btn-sm" onclick="window.__openAIPrompt()">📋 ${isKo ? '프롬프트 생성' : 'Generate AI Prompt'}</button>
+      </div>
+      <div class="settings-group">
+        <div class="eyebrow" style="margin-bottom:6px">${isKo ? '게스트 접근' : 'Guest Access'}</div>
+        <div class="text-xs text-muted" style="margin-bottom:8px">${isKo ? '이 코드를 가진 누구나 이 여행을 읽기 전용으로 볼 수 있습니다.' : 'Anyone with this code can view this trip (read-only).'}</div>
+        <div id="guest-access-body"><div class="spinner" style="width:16px;height:16px;border-width:2px"></div></div>
       </div>
       <div class="settings-group" style="margin-top:16px">
         <button class="btn btn-ghost btn-full" onclick="window.__signOut()">Sign Out</button>
