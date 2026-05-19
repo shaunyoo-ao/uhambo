@@ -50,7 +50,8 @@ export async function calcMileageDetail(itineraryItems) {
   const segments = [];
   for (let i = 1; i < unique.length; i++) {
     const a = coords[i - 1], b = coords[i];
-    const segmentType = (unique[i - 1].type === 'travel' || unique[i].type === 'travel') ? 'travel' : 'drive';
+    const _isFlight = p => p._isFlight !== undefined ? p._isFlight : (p.type === 'travel');
+    const segmentType = (_isFlight(unique[i - 1]) && _isFlight(unique[i])) ? 'travel' : 'drive';
     if (!a || !b) {
       segments.push({ from: unique[i - 1].location, to: unique[i].location, km: null, geocodeFailed: true, segmentType });
       continue;
