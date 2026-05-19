@@ -190,6 +190,16 @@ const translations = {
     'arch.stays_label':  'stays',
     'arch.trips':        'Trips',
     'arch.countries':    'countries',
+    // Packing
+    'packing.title':    'Packing Todo',
+    'packing.packed':   'Packed',
+    'packing.add':      'Add Item',
+    'packing.cat_crit': 'Critical',
+    'packing.cat_elec': 'Electronics',
+    'packing.cat_hlth': 'Health',
+    'packing.cat_clth': 'Clothing',
+    'packing.cat_cmft': 'Comfort',
+    'packing.cat_food': 'Food',
   },
   ko: {
     // Nav
@@ -390,6 +400,16 @@ const translations = {
     'arch.stays_label':  '숙박',
     'arch.trips':        '여행',
     'arch.countries':    '국가',
+    // Packing
+    'packing.title':    '짐 싸기',
+    'packing.packed':   '완료',
+    'packing.add':      '항목 추가',
+    'packing.cat_crit': '필수',
+    'packing.cat_elec': '전자기기',
+    'packing.cat_hlth': '건강',
+    'packing.cat_clth': '의류',
+    'packing.cat_cmft': '편의',
+    'packing.cat_food': '식품',
   }
 };
 
