@@ -1064,7 +1064,7 @@ a { color: var(--accent); text-decoration: none; }
 #packing-panel {
   position: fixed;
   inset: 0;
-  z-index: 200;
+  z-index: 50;
   background: var(--ink);
   overflow-y: auto;
   display: none;
