@@ -1175,3 +1175,20 @@ a { color: var(--accent); text-decoration: none; }
   flex-shrink: 0;
 }
 .pack-delete:active { color: var(--rose); }
+.pack-drag-handle {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: grab;
+  font-size: 18px;
+  padding: 0 4px;
+  flex-shrink: 0;
+  touch-action: none;
+  line-height: 1;
+}
+.pack-drag-handle:active { cursor: grabbing; }
+.pack-item--dragging { opacity: 0.3; }
+.pack-item--drag-over {
+  border-top: 2px solid var(--accent);
+  margin-top: -1px;
+}

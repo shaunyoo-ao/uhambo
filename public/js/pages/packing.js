@@ -1,5 +1,5 @@
 import { t, getLang } from '../i18n.js';
-import { subscribePacking, addPackingItem, deletePackingItem, togglePackingItem, getTrip } from '../db.js';
+import { subscribePacking, addPackingItem, deletePackingItem, togglePackingItem, updatePackingItem, getTrip } from '../db.js';
 import { openModal, closeModal, showToast, showConfirm, setModalSaving } from '../app.js';
 
 let _ctx = null;
@@ -8,6 +8,7 @@ let _items = [];
 let _trip = null;
 let _fab = null;
 let _seedAttempted = false;
+let _drag = null;
 
 const CATEGORIES = ['Critical', 'Electronics', 'Health', 'Clothing', 'Comfort', 'Food'];
 
@@ -97,29 +98,102 @@ function renderList() {
   for (const cat of CATEGORIES) {
     const catItems = _items.filter(i => i.category === cat);
     if (!catItems.length) continue;
-    const required = catItems.filter(i => i.isRequired);
-    const optional = catItems.filter(i => !i.isRequired);
-    const ordered = [...required, ...optional];
+    const ordered = [...catItems].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
     html += `<div class="pack-category">
       <div class="pack-category-label">${CAT_EMOJI[cat]} ${_catLabel(cat)}</div>
     </div>`;
     for (const item of ordered) {
       const esc = item.title.replace(/'/g, '&#39;');
-      html += `<div class="pack-item${item.isPacked ? ' pack-item--packed' : ''}">
+      html += `<div class="pack-item${item.isPacked ? ' pack-item--packed' : ''}" data-id="${item.id}" data-cat="${item.category}">
         <button class="pack-check" onclick="window.__togglePackItem('${item.id}', ${item.isPacked})"
           aria-label="${item.isPacked ? 'Unpack' : 'Pack'} ${esc}">
           ${_checkboxSVG(item.isPacked)}
         </button>
         <span class="pack-item-title">${item.title}</span>
         ${item.assignee ? `<span class="pack-assignee">${item.assignee}</span>` : ''}
-        ${!item.isRequired && !isGuest
-          ? `<button class="pack-delete" onclick="window.__deletePackItem('${item.id}')" aria-label="Delete">&#10005;</button>`
-          : ''}
+        ${!isGuest ? `<button class="pack-delete" onclick="window.__deletePackItem('${item.id}')" aria-label="Delete">&#10005;</button>` : ''}
+        ${!isGuest ? `<button class="pack-drag-handle" aria-label="Reorder">⠿</button>` : ''}
       </div>`;
     }
   }
   listEl.innerHTML = html || `<div class="empty-state" style="margin-top:40px"><div class="empty-sub">No items yet</div></div>`;
 }
+
+// ── Drag & Drop ───────────────────────────────────────────────────
+
+function _onTouchStart(e) {
+  const handle = e.target.closest('.pack-drag-handle');
+  if (!handle) return;
+  const itemEl = handle.closest('.pack-item[data-id]');
+  if (!itemEl) return;
+  e.preventDefault();
+
+  const t0 = e.touches[0];
+  const rect = itemEl.getBoundingClientRect();
+  const ghost = itemEl.cloneNode(true);
+  ghost.style.cssText = `position:fixed;left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;` +
+    `z-index:60;pointer-events:none;background:var(--surface-2);border-radius:6px;` +
+    `box-shadow:0 4px 20px rgba(0,0,0,0.5);`;
+  document.body.appendChild(ghost);
+
+  itemEl.classList.add('pack-item--dragging');
+  _drag = { id: itemEl.dataset.id, ghost, touchY: t0.clientY, itemEl };
+
+  document.addEventListener('touchmove', _onTouchMove, { passive: false });
+  document.addEventListener('touchend', _onTouchEnd);
+}
+
+function _onTouchMove(e) {
+  if (!_drag) return;
+  e.preventDefault();
+
+  const t0 = e.touches[0];
+  const dy = t0.clientY - _drag.touchY;
+  _drag.touchY = t0.clientY;
+  _drag.ghost.style.top = (parseFloat(_drag.ghost.style.top) + dy) + 'px';
+
+  document.querySelectorAll('.pack-item--drag-over').forEach(el => el.classList.remove('pack-item--drag-over'));
+  const els = document.elementsFromPoint(t0.clientX, t0.clientY);
+  const target = els.find(el => el.matches?.('.pack-item[data-id]') && el.dataset.id !== _drag.id);
+  if (target) target.classList.add('pack-item--drag-over');
+}
+
+async function _onTouchEnd() {
+  document.removeEventListener('touchmove', _onTouchMove);
+  document.removeEventListener('touchend', _onTouchEnd);
+  if (!_drag) return;
+
+  _drag.ghost.remove();
+  _drag.itemEl.classList.remove('pack-item--dragging');
+
+  const targetEl = document.querySelector('.pack-item--drag-over');
+  document.querySelectorAll('.pack-item--drag-over').forEach(el => el.classList.remove('pack-item--drag-over'));
+
+  const { id: dragId } = _drag;
+  _drag = null;
+
+  if (!targetEl || targetEl.dataset.id === dragId) return;
+
+  const dragItem = _items.find(i => i.id === dragId);
+  const targetItem = _items.find(i => i.id === targetEl.dataset.id);
+  if (!dragItem || !targetItem || dragItem.category !== targetItem.category) return;
+
+  const catItemEls = [...document.querySelectorAll(`.pack-item[data-cat="${dragItem.category}"]`)];
+  const orderedIds = catItemEls.map(el => el.dataset.id).filter(id => id !== dragId);
+  const targetIdx = orderedIds.indexOf(targetEl.dataset.id);
+  orderedIds.splice(targetIdx, 0, dragId);
+
+  await Promise.all(orderedIds.map((id, idx) =>
+    updatePackingItem(_ctx.userId, _ctx.tripId, id, { sortOrder: idx * 1000 })
+  ));
+}
+
+function _bindDrag() {
+  const listEl = document.getElementById('packing-list');
+  if (listEl) listEl.addEventListener('touchstart', _onTouchStart, { passive: false });
+}
+
+// ── Render & Export ───────────────────────────────────────────────
 
 export async function render(container, ctx) {
   _ctx = ctx;
@@ -136,6 +210,12 @@ export async function render(container, ctx) {
         </svg>
       </button>
       <h2 class="packing-title">${t('packing.title')}</h2>
+      ${!ctx.isGuest ? `<button class="icon-btn" onclick="window.__resetPacking()" aria-label="${isKo ? '초기화' : 'Reset'}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+          <path d="M3 3v5h5"/>
+        </svg>
+      </button>` : ''}
     </div>
     <div class="packing-progress-wrap">
       <div class="packing-progress-bar"><div id="packing-bar-fill" style="width:0%"></div></div>
@@ -145,10 +225,8 @@ export async function render(container, ctx) {
       <div class="loading-center" style="padding-top:40px"><div class="spinner"></div></div>
     </div>`;
 
-  // Fetch trip for travelers
   try { _trip = await getTrip(ctx.userId, ctx.tripId); } catch (_) {}
 
-  // Register globals
   window.__closePacking = () => {
     document.getElementById('packing-panel').style.display = 'none';
     destroy();
@@ -163,6 +241,18 @@ export async function render(container, ctx) {
     if (_ctx?.isGuest) return;
     const ok = await showConfirm(isKo ? '항목 삭제' : 'Delete item', isKo ? '이 항목을 삭제할까요?' : 'Remove this item?');
     if (ok) deletePackingItem(_ctx.userId, _ctx.tripId, id);
+  };
+
+  window.__resetPacking = async () => {
+    if (_ctx?.isGuest) return;
+    const ok = await showConfirm(
+      isKo ? '목록 초기화' : 'Reset List',
+      isKo ? '모든 항목을 삭제하고 기본 목록으로 초기화할까요?' : 'Delete all items and reset to defaults?'
+    );
+    if (!ok) return;
+    const toDelete = [..._items];
+    _seedAttempted = false;
+    await Promise.all(toDelete.map(item => deletePackingItem(_ctx.userId, _ctx.tripId, item.id)));
   };
 
   window.__openAddPackItem = () => {
@@ -206,9 +296,11 @@ export async function render(container, ctx) {
     if (!title) { titleEl?.focus(); return; }
     const category = catEl?.value || 'Critical';
     const assignee = assigneeEl?.value || '';
+    const catItems = _items.filter(i => i.category === category);
+    const maxOrder = catItems.reduce((max, i) => Math.max(max, i.sortOrder ?? 0), 0);
     setModalSaving(true);
     try {
-      await addPackingItem(_ctx.userId, _ctx.tripId, { title, category, isPacked: false, isRequired: false, assignee });
+      await addPackingItem(_ctx.userId, _ctx.tripId, { title, category, isPacked: false, isRequired: false, assignee, sortOrder: maxOrder + 1000 });
       closeModal();
     } catch (e) {
       setModalSaving(false);
@@ -216,19 +308,19 @@ export async function render(container, ctx) {
     }
   };
 
-  // Subscribe (seed on first empty snapshot)
   _unsub = subscribePacking(ctx.userId, ctx.tripId, async (items) => {
     _items = items;
     if (!_seedAttempted && items.length === 0) {
       _seedAttempted = true;
       try {
         const lang = getLang();
-        await Promise.all(DEFAULTS.map(d => addPackingItem(ctx.userId, ctx.tripId, {
+        await Promise.all(DEFAULTS.map((d, idx) => addPackingItem(ctx.userId, ctx.tripId, {
           title: lang === 'ko' ? d.ko : d.en,
           category: d.category,
           isPacked: false,
           isRequired: d.isRequired,
           assignee: '',
+          sortOrder: idx * 1000,
         })));
       } catch (e) {
         renderList();
@@ -241,7 +333,8 @@ export async function render(container, ctx) {
     if (listEl) listEl.innerHTML = `<div class="empty-state" style="margin-top:40px"><div class="empty-icon">⚠️</div><div class="empty-sub">${err.message}</div></div>`;
   });
 
-  // FAB
+  _bindDrag();
+
   if (!ctx.isGuest) {
     _fab = document.createElement('button');
     _fab.className = 'fab';
@@ -256,6 +349,10 @@ export async function render(container, ctx) {
 }
 
 export function destroy() {
+  document.removeEventListener('touchmove', _onTouchMove);
+  document.removeEventListener('touchend', _onTouchEnd);
+  if (_drag?.ghost) _drag.ghost.remove();
+  _drag = null;
   _unsub?.();
   _unsub = null;
   _items = [];
