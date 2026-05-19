@@ -251,13 +251,13 @@ CI does not do this automatically because the `FIREBASE_SERVICE_ACCOUNT` secret 
 ---
 
 ## Git Commit Guidelines
-- Max 250 chars
-- Format: Subj (≤50c) + Body (no blank line, 72c wrap)
-- Content:
- 1. Summary: What & why
- 2. Context: Root cause, technical decisions, constraints
- 3. Status: Pending tasks/edge cases
-- Goal: Enable handoff new sessions to resume work without context loss
+
+> **NEVER EXCEED 250 CHARS TOTAL** (subject + body + session URL combined).
+> Count before committing. Long messages are rejected on merge.
+
+- Subject: ≤50 chars, imperative (`fix:` / `feat:` / `chore:`)
+- Body: starts immediately after subject (NO blank line), 72-char wrap
+- Keep body to 1–2 short sentences — enough for handoff context only
 
 ---
 
