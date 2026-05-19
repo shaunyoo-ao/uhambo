@@ -17,34 +17,30 @@ const CAT_EMOJI = {
 };
 
 const DEFAULTS = [
-  { title: 'Passport',              category: 'Critical',    isRequired: true  },
-  { title: 'Credit / Debit Card',   category: 'Critical',    isRequired: true  },
-  { title: 'Travel Insurance Docs', category: 'Critical',    isRequired: true  },
-  { title: 'Emergency Contacts',    category: 'Critical',    isRequired: true  },
-  { title: 'Local Cash',            category: 'Critical',    isRequired: true  },
-  { title: 'Phone Charger',         category: 'Electronics', isRequired: false },
-  { title: 'Universal Adapter',     category: 'Electronics', isRequired: false },
-  { title: 'Power Bank',            category: 'Electronics', isRequired: false },
-  { title: 'Earphones / Headphones',category: 'Electronics', isRequired: false },
-  { title: 'Camera',                category: 'Electronics', isRequired: false },
-  { title: 'Prescription Medicine', category: 'Health',      isRequired: false },
-  { title: 'Pain Reliever',         category: 'Health',      isRequired: false },
-  { title: 'Band-Aids / Plasters',  category: 'Health',      isRequired: false },
-  { title: 'Sunscreen',             category: 'Health',      isRequired: false },
-  { title: 'Hand Sanitizer',        category: 'Health',      isRequired: false },
-  { title: 'Underwear (×3)',        category: 'Clothing',    isRequired: false },
-  { title: 'Socks (×3)',            category: 'Clothing',    isRequired: false },
-  { title: 'T-Shirts',              category: 'Clothing',    isRequired: false },
-  { title: 'Jacket / Hoodie',       category: 'Clothing',    isRequired: false },
-  { title: 'Comfortable Shoes',     category: 'Clothing',    isRequired: false },
-  { title: 'Neck Pillow',           category: 'Comfort',     isRequired: false },
-  { title: 'Eye Mask',              category: 'Comfort',     isRequired: false },
-  { title: 'Earplugs',              category: 'Comfort',     isRequired: false },
-  { title: 'Water Bottle',          category: 'Comfort',     isRequired: false },
-  { title: 'Reusable Bag',          category: 'Comfort',     isRequired: false },
-  { title: 'Snacks',                category: 'Food',        isRequired: false },
-  { title: 'Instant Noodles',       category: 'Food',        isRequired: false },
-  { title: 'Korean Instant Food',   category: 'Food',        isRequired: false },
+  { en: 'Passport',               ko: '여권',                category: 'Critical',    isRequired: true  },
+  { en: 'Credit / Debit Card',    ko: '신용카드 / 체크카드', category: 'Critical',    isRequired: true  },
+  { en: 'Travel Insurance Docs',  ko: '여행 보험 서류',      category: 'Critical',    isRequired: true  },
+  { en: 'Local Cash',             ko: '현지 현금',           category: 'Critical',    isRequired: true  },
+  { en: 'Phone Charger',          ko: '휴대폰 충전기',       category: 'Electronics', isRequired: false },
+  { en: 'Universal Adapter',      ko: '여행용 어댑터',       category: 'Electronics', isRequired: false },
+  { en: 'Power Bank',             ko: '보조 배터리',         category: 'Electronics', isRequired: false },
+  { en: 'Earphones / Headphones', ko: '이어폰 / 헤드폰',    category: 'Electronics', isRequired: false },
+  { en: 'Camera',                 ko: '카메라',              category: 'Electronics', isRequired: false },
+  { en: 'Pain Reliever',          ko: '진통제',              category: 'Health',      isRequired: false },
+  { en: 'Sunscreen',              ko: '선크림',              category: 'Health',      isRequired: false },
+  { en: 'Hand Sanitizer',         ko: '손 소독제',           category: 'Health',      isRequired: false },
+  { en: 'First Aid Kit',          ko: '구급 키트',           category: 'Health',      isRequired: false },
+  { en: 'Hangover Remedy',        ko: '숙취 해소제',         category: 'Health',      isRequired: false },
+  { en: 'Underwear (×3)',         ko: '속옷 (×3)',           category: 'Clothing',    isRequired: false },
+  { en: 'Socks (×3)',             ko: '양말 (×3)',           category: 'Clothing',    isRequired: false },
+  { en: 'Comfortable Shoes',      ko: '편한 신발',           category: 'Clothing',    isRequired: false },
+  { en: 'Neck Pillow',            ko: '목베개',              category: 'Comfort',     isRequired: false },
+  { en: 'Eye Mask',               ko: '안대',                category: 'Comfort',     isRequired: false },
+  { en: 'Earplugs',               ko: '귀마개',              category: 'Comfort',     isRequired: false },
+  { en: 'Water Bottle',           ko: '물병',                category: 'Comfort',     isRequired: false },
+  { en: 'Reusable Bag',           ko: '에코백',              category: 'Comfort',     isRequired: false },
+  { en: 'Snacks',                 ko: '간식',                category: 'Food',        isRequired: false },
+  { en: 'Instant Noodles',        ko: '라면',                category: 'Food',        isRequired: false },
 ];
 
 function _travelerLabels() {
@@ -226,7 +222,14 @@ export async function render(container, ctx) {
     if (!_seedAttempted && items.length === 0) {
       _seedAttempted = true;
       try {
-        await Promise.all(DEFAULTS.map(d => addPackingItem(ctx.userId, ctx.tripId, { ...d, isPacked: false, assignee: '' })));
+        const lang = getLang();
+        await Promise.all(DEFAULTS.map(d => addPackingItem(ctx.userId, ctx.tripId, {
+          title: lang === 'ko' ? d.ko : d.en,
+          category: d.category,
+          isPacked: false,
+          isRequired: d.isRequired,
+          assignee: '',
+        })));
       } catch (e) {
         renderList();
       }
