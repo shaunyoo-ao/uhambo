@@ -4,7 +4,7 @@ import { setCurrency, getCurrency, CURRENCIES, getCountryCurrency } from './curr
 import { getTrips, createTrip, getTrip, updateTrip, deleteTrip, getGuestCode, setGuestCode, removeGuestCode, lookupGuestCode, getItinerary, getBookings, getActivities, getExpenses } from './db.js';
 import { resizeImageToBlob, uploadToImgBB } from './imgbb.js';
 
-const APP_VERSION = '1.2.47';
+const APP_VERSION = '1.2.48';
 
 // Populate login footer version from this single source of truth.
 // Runs as soon as this module loads (before login screen is shown).
@@ -263,7 +263,23 @@ export async function navigate(route) {
   localStorage.setItem('lastRoute', route);
 
   // Already rendered for current trip → instant (live subscription still active)
-  if (_renderedPages.has(route)) return;
+  if (_renderedPages.has(route)) {
+    if (route === 'archive') {
+      const uid = isGuest ? _guestOwnerUid : currentUser?.uid;
+      if (uid && sessionStorage.getItem('arch_dirty_' + uid)) {
+        _renderedPages.delete('archive');
+        const mod = _pageModules.get('archive');
+        if (mod?.destroy) mod.destroy();
+        _pageModules.delete('archive');
+        document.getElementById('page-archive').innerHTML = '';
+        // fall through to re-render
+      } else {
+        return;
+      }
+    } else {
+      return;
+    }
+  }
 
   // First render for this trip
   const container = document.getElementById(`page-${route}`);

@@ -25,6 +25,10 @@ function sortByDateTime(items) {
   });
 }
 
+function _touchArchive(uid) {
+  try { sessionStorage.setItem('arch_dirty_' + uid, '1'); } catch (_) {}
+}
+
 // ── Trips ────────────────────────────────────────────────────────
 export async function getTrips(uid) {
   const q = query(tripsRef(uid), orderBy('createdAt', 'desc'));
@@ -33,6 +37,7 @@ export async function getTrips(uid) {
 }
 
 export async function createTrip(uid, data) {
+  _touchArchive(uid);
   const ref = await addDoc(tripsRef(uid), {
     ...data,
     createdAt: serverTimestamp(),
@@ -47,12 +52,14 @@ export async function getTrip(uid, tid) {
 }
 
 export async function updateTrip(uid, tid, data) {
+  _touchArchive(uid);
   return updateDoc(tripRef(uid, tid), { ...data, updatedAt: serverTimestamp() });
 }
 
 const SUBCOLLECTIONS = ['itinerary', 'accommodation', 'activities', 'expenses', 'packing'];
 
 export async function deleteTrip(uid, tid) {
+  _touchArchive(uid);
   // Clean up guest code if one exists
   const tripSnap = await getDoc(tripRef(uid, tid));
   const existingCode = tripSnap.exists() ? tripSnap.data().guestCode : null;
@@ -85,14 +92,17 @@ export function subscribeItinerary(uid, tid, cb) {
 }
 
 export async function addItineraryItem(uid, tid, data) {
+  _touchArchive(uid);
   return addDoc(subRef(uid, tid, 'itinerary'), { ...data, createdAt: serverTimestamp() });
 }
 
 export async function updateItineraryItem(uid, tid, id, data) {
+  _touchArchive(uid);
   return updateDoc(subDocRef(uid, tid, 'itinerary', id), data);
 }
 
 export async function deleteItineraryItem(uid, tid, id) {
+  _touchArchive(uid);
   return deleteDoc(subDocRef(uid, tid, 'itinerary', id));
 }
 
@@ -107,14 +117,17 @@ export function subscribeBookings(uid, tid, cb) {
 }
 
 export async function addBooking(uid, tid, data) {
+  _touchArchive(uid);
   return addDoc(subRef(uid, tid, 'accommodation'), { ...data, createdAt: serverTimestamp() });
 }
 
 export async function updateBooking(uid, tid, id, data) {
+  _touchArchive(uid);
   return updateDoc(subDocRef(uid, tid, 'accommodation', id), data);
 }
 
 export async function deleteBooking(uid, tid, id) {
+  _touchArchive(uid);
   return deleteDoc(subDocRef(uid, tid, 'accommodation', id));
 }
 
@@ -131,6 +144,7 @@ export function subscribeActivities(uid, tid, cb) {
 }
 
 export async function addActivity(uid, tid, data) {
+  _touchArchive(uid);
   return addDoc(subRef(uid, tid, 'activities'), {
     ...data,
     completed: false,
@@ -139,14 +153,17 @@ export async function addActivity(uid, tid, data) {
 }
 
 export async function updateActivity(uid, tid, id, data) {
+  _touchArchive(uid);
   return updateDoc(subDocRef(uid, tid, 'activities', id), data);
 }
 
 export async function deleteActivity(uid, tid, id) {
+  _touchArchive(uid);
   return deleteDoc(subDocRef(uid, tid, 'activities', id));
 }
 
 export async function toggleActivity(uid, tid, id, completed) {
+  _touchArchive(uid);
   return updateDoc(subDocRef(uid, tid, 'activities', id), { completed });
 }
 
@@ -180,14 +197,17 @@ export function subscribeExpenses(uid, tid, cb) {
 }
 
 export async function addExpense(uid, tid, data) {
+  _touchArchive(uid);
   return addDoc(subRef(uid, tid, 'expenses'), { ...data, createdAt: serverTimestamp() });
 }
 
 export async function updateExpense(uid, tid, id, data) {
+  _touchArchive(uid);
   return updateDoc(subDocRef(uid, tid, 'expenses', id), data);
 }
 
 export async function deleteExpense(uid, tid, id) {
+  _touchArchive(uid);
   return deleteDoc(subDocRef(uid, tid, 'expenses', id));
 }
 
