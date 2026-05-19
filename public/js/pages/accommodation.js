@@ -69,8 +69,8 @@ export async function render(container, ctx) {
   if (_unsub) _unsub();
   _unsub = subscribeBookings(userId, tripId, items => {
     _items = items.sort((a, b) => {
-      const da = a.checkIn || a.departureDate || a.pickupDate || '';
-      const db2 = b.checkIn || b.departureDate || b.pickupDate || '';
+      const da = (a.checkIn || a.departureDate || a.pickupDate || '') + 'T' + (a.checkInTime || a.departureTime || a.pickupTime || '');
+      const db2 = (b.checkIn || b.departureDate || b.pickupDate || '') + 'T' + (b.checkInTime || b.departureTime || b.pickupTime || '');
       return da.localeCompare(db2);
     });
     renderList(_items);
@@ -699,6 +699,7 @@ function openItemModal(item) {
             time: data.departureTime,
             location: data.departureAirport || '',
             type: 'travel',
+            _isFlight: true,
             links: data.links || [],
             ...(depGeo ? { lat: depGeo.lat, lng: depGeo.lng } : (data.depLat ? { lat: data.depLat, lng: data.depLng } : {})),
           });
@@ -713,6 +714,7 @@ function openItemModal(item) {
             time: data.arrivalTime,
             location: data.arrivalAirport || '',
             type: 'travel',
+            _isFlight: true,
             links: data.links || [],
             ...(arrGeo ? { lat: arrGeo.lat, lng: arrGeo.lng } : (data.arrLat ? { lat: data.arrLat, lng: data.arrLng } : {})),
           });
@@ -779,6 +781,7 @@ function openItemModal(item) {
             time: data.pickupTime,
             location: data.pickupLocation || '',
             type: 'travel',
+            _isFlight: false,
             links: data.links || [],
             ...(pickupGeo ? { lat: pickupGeo.lat, lng: pickupGeo.lng } : (data.pickupLat ? { lat: data.pickupLat, lng: data.pickupLng } : {})),
           });
@@ -793,6 +796,7 @@ function openItemModal(item) {
             time: data.dropoffTime,
             location: data.dropoffLocation || '',
             type: 'travel',
+            _isFlight: false,
             links: data.links || [],
             ...(dropoffGeo ? { lat: dropoffGeo.lat, lng: dropoffGeo.lng } : (data.dropoffLat ? { lat: data.dropoffLat, lng: data.dropoffLng } : {})),
           });
