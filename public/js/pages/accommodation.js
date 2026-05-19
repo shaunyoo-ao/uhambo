@@ -1,4 +1,4 @@
-import { t } from '../i18n.js';
+import { t, getLang } from '../i18n.js';
 import {
   subscribeBookings, addBooking, updateBooking, deleteBooking,
   upsertLinkedExpense, deleteLinkedExpense, upsertLinkedItinItem, deleteLinkedItinItems, deleteLinkedItinItem,
@@ -239,7 +239,7 @@ function accommodationFormHTML(item, today) {
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">${t('accom.check_in')}</label>
-        <input class="form-input" name="checkIn" type="date" value="${item?.checkIn || today}">
+        <input class="form-input" name="checkIn" type="date" lang="${getLang()}" value="${item?.checkIn || today}">
       </div>
       <div class="form-group">
         <label class="form-label">${t('accom.check_in_time')}</label>
@@ -249,7 +249,7 @@ function accommodationFormHTML(item, today) {
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">${t('accom.check_out')}</label>
-        <input class="form-input" name="checkOut" type="date" value="${item?.checkOut || ''}">
+        <input class="form-input" name="checkOut" type="date" lang="${getLang()}" value="${item?.checkOut || ''}">
       </div>
       <div class="form-group">
         <label class="form-label">${t('accom.check_out_time')}</label>
@@ -310,7 +310,7 @@ function travelFormHTML(item, today) {
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">${t('book.dep_date')}</label>
-        <input class="form-input" name="departureDate" type="date" value="${item?.departureDate || today}">
+        <input class="form-input" name="departureDate" type="date" lang="${getLang()}" value="${item?.departureDate || today}">
       </div>
       <div class="form-group">
         <label class="form-label">${t('book.dep_time')}</label>
@@ -325,7 +325,7 @@ function travelFormHTML(item, today) {
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">${t('book.arr_date')}</label>
-        <input class="form-input" name="arrivalDate" type="date" value="${item?.arrivalDate || ''}">
+        <input class="form-input" name="arrivalDate" type="date" lang="${getLang()}" value="${item?.arrivalDate || ''}">
       </div>
       <div class="form-group">
         <label class="form-label">${t('book.arr_time')}</label>
@@ -375,7 +375,7 @@ function rentFormHTML(item, today) {
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">${t('book.pickup_date')}</label>
-        <input class="form-input" name="pickupDate" type="date" value="${item?.pickupDate || today}">
+        <input class="form-input" name="pickupDate" type="date" lang="${getLang()}" value="${item?.pickupDate || today}">
       </div>
       <div class="form-group">
         <label class="form-label">${t('book.pickup_time')}</label>
@@ -390,7 +390,7 @@ function rentFormHTML(item, today) {
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">${t('book.dropoff_date')}</label>
-        <input class="form-input" name="dropoffDate" type="date" value="${item?.dropoffDate || ''}">
+        <input class="form-input" name="dropoffDate" type="date" lang="${getLang()}" value="${item?.dropoffDate || ''}">
       </div>
       <div class="form-group">
         <label class="form-label">${t('book.dropoff_time')}</label>
@@ -445,7 +445,7 @@ function openItemModal(item) {
           </select>
         </div>
         <div class="form-group" id="book-name-group" style="${cat === 'accommodation' ? 'display:none' : ''}">
-          <label class="form-label" id="book-name-label">${cat === 'travel' ? '항공 이름' : '렌트 이름'} <span class="text-muted" style="font-weight:400">(선택)</span></label>
+          <label class="form-label" id="book-name-label">${cat === 'travel' ? (getLang() === 'ko' ? '항공 이름' : 'Airline Name') : (getLang() === 'ko' ? '렌트 이름' : 'Rental Name')} <span class="text-muted" style="font-weight:400">${getLang() === 'ko' ? '(선택)' : '(optional)'}</span></label>
           <input class="form-input" name="name" id="book-name-input" value="${item?.name || ''}" placeholder="${cat === 'travel' ? 'e.g. Outbound KE001' : 'e.g. Hertz Compact'}">
         </div>
         <div id="book-cat-fields">${catFields}</div>
@@ -504,7 +504,7 @@ function openItemModal(item) {
     const nameLabel = document.getElementById('book-name-label');
     if (nameGroup) {
       nameGroup.style.display = newCat === 'accommodation' ? 'none' : '';
-      if (nameLabel) nameLabel.innerHTML = (newCat === 'travel' ? '항공 이름' : '렌트 이름') + ' <span class="text-muted" style="font-weight:400">(선택)</span>';
+      if (nameLabel) { const _ko = getLang() === 'ko'; nameLabel.innerHTML = (newCat === 'travel' ? (_ko ? '항공 이름' : 'Airline Name') : (_ko ? '렌트 이름' : 'Rental Name')) + ` <span class="text-muted" style="font-weight:400">${_ko ? '(선택)' : '(optional)'}</span>`; }
     }
   };
 

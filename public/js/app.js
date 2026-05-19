@@ -4,7 +4,7 @@ import { setCurrency, getCurrency, CURRENCIES, getCountryCurrency } from './curr
 import { getTrips, createTrip, getTrip, updateTrip, deleteTrip, getGuestCode, setGuestCode, removeGuestCode, lookupGuestCode, getItinerary, getBookings, getActivities, getExpenses } from './db.js';
 import { resizeImageToBlob, uploadToImgBB } from './imgbb.js';
 
-const APP_VERSION = '1.2.46';
+const APP_VERSION = '1.2.47';
 
 // Populate login footer version from this single source of truth.
 // Runs as soon as this module loads (before login screen is shown).
@@ -40,6 +40,19 @@ function tripImageSlotHTML(slot) {
 
 const RELATION_OPTIONS = ['Self', 'Spouse', 'Child', 'Relative', 'Friend', 'Acquaintance'];
 const RELATION_KO = { Self: '본인', Spouse: '배우자', Child: '자녀', Relative: '친척', Friend: '친구', Acquaintance: '지인' };
+
+function _availableRelations() {
+  const taken = new Set(_tripTravelers.map(t => t.relation));
+  return RELATION_OPTIONS.filter(r => !(r === 'Self' && taken.has('Self')) && !(r === 'Spouse' && taken.has('Spouse')));
+}
+
+function _refreshRelationSelect() {
+  const el = document.getElementById('tr-relation');
+  if (!el) return;
+  const isKo = getLang() === 'ko';
+  const available = _availableRelations();
+  el.innerHTML = available.map(r => `<option value="${r}">${isKo ? RELATION_KO[r] : r}</option>`).join('');
+}
 const PREFERENCE_OPTIONS = ['Adventure', 'Relaxation', 'Culture', 'Food & Dining', 'Shopping', 'Nature', 'Photography'];
 const PREFERENCE_KO = { 'Adventure': '모험', 'Relaxation': '휴식', 'Culture': '문화', 'Food & Dining': '음식', 'Shopping': '쇼핑', 'Nature': '자연', 'Photography': '사진' };
 
@@ -52,13 +65,13 @@ function _travelersFormSection(isKo) {
         <div class="form-row">
           <div class="form-group" style="margin-bottom:8px">
             <select class="form-select" id="tr-relation" style="font-size:13px">
-              ${RELATION_OPTIONS.map(r => `<option value="${r}">${isKo ? RELATION_KO[r] : r}</option>`).join('')}
+              ${_availableRelations().map(r => `<option value="${r}">${isKo ? RELATION_KO[r] : r}</option>`).join('')}
             </select>
           </div>
           <div class="form-group" style="margin-bottom:8px">
             <select class="form-select" id="tr-nationality" style="font-size:13px">
               <option value="">— ${isKo ? '국적' : 'Nationality'} —</option>
-              ${COUNTRIES.map(c => `<option value="${c}">${c}</option>`).join('')}
+              ${COUNTRIES.map(c => `<option value="${c}"${c === 'South Korea' ? ' selected' : ''}>${c}</option>`).join('')}
             </select>
           </div>
         </div>
@@ -91,7 +104,7 @@ function _renderTravelersList() {
   const el = document.getElementById('travelers-list');
   if (!el) return;
   const isKo = getLang() === 'ko';
-  if (_tripTravelers.length === 0) { el.innerHTML = ''; return; }
+  if (_tripTravelers.length === 0) { el.innerHTML = ''; _refreshRelationSelect(); return; }
   el.innerHTML = _tripTravelers.map((t, i) => `
     <div class="traveler-card">
       <div class="traveler-card-info">
@@ -104,6 +117,7 @@ function _renderTravelersList() {
       <button type="button" class="traveler-remove" onclick="window.__removeTraveler(${i})">×</button>
     </div>
   `).join('');
+  _refreshRelationSelect();
 }
 
 window.__addTraveler = () => {
@@ -118,6 +132,8 @@ window.__addTraveler = () => {
   if (ageEl) ageEl.value = '';
   const prefEl = document.getElementById('tr-preference');
   if (prefEl) prefEl.value = '';
+  const natEl = document.getElementById('tr-nationality');
+  if (natEl) natEl.value = 'South Korea';
 };
 
 window.__removeTraveler = (i) => {
