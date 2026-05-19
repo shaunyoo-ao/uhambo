@@ -151,8 +151,8 @@ export async function toggleActivity(uid, tid, id, completed) {
 }
 
 // ── Packing ───────────────────────────────────────────────────────
-export function subscribePacking(uid, tid, cb) {
-  return onSnapshot(subRef(uid, tid, 'packing'), s => cb(snap(s)));
+export function subscribePacking(uid, tid, cb, onErr) {
+  return onSnapshot(subRef(uid, tid, 'packing'), s => cb(snap(s)), onErr);
 }
 export async function addPackingItem(uid, tid, data) {
   return addDoc(subRef(uid, tid, 'packing'), { ...data, createdAt: serverTimestamp() });
