@@ -49,13 +49,15 @@ export async function render(container, { userId, tripId, isGuest }) {
 
     const today = new Date().toISOString().slice(0, 10);
 
-    // Compute total expenses
-    let totalKRW = 0;
+    // Compute total expenses converted to trip base currency
+    const baseCurrency = trip.baseCurrency || 'KRW';
+    const { convert } = await import('../currency.js');
+    let totalBase = 0;
     for (const e of expenses) {
-      const { convert } = await import('../currency.js');
-      totalKRW += await convert(e.amount || 0, e.currency || 'KRW', 'KRW');
+      const amt = parseFloat(e.amount) || 0;
+      totalBase += await convert(amt, e.currency || baseCurrency, baseCurrency);
     }
-    const totalFormatted = await formatConverted(Math.round(totalKRW), 'KRW');
+    const totalFormatted = await formatConverted(totalBase, baseCurrency);
 
     // Trip duration
     let daysLeft = '';
