@@ -35,6 +35,7 @@ export async function render(container, ctx) {
   try {
     await ensureRates();
     _tripsData = await getAllTripsData(userId);
+    try { sessionStorage.removeItem('arch_dirty_' + userId); } catch (_) {}
 
     if (_tripsData.length === 0) {
       container.innerHTML = noTripHTML();
