@@ -11,40 +11,23 @@ Mobile-first PWA for planning and tracking family trips. Single-page app with va
 
 ## Version Naming Rule
 
-The service worker version (`sw.js` `VERSION`) maps to the in-app display version:
+Every commit bumps **both** together:
+- `sw.js` `VERSION`: vN → vN+1
+- `public/js/app.js` `APP_VERSION`: patch +1, matching sw.js number
 
 ```
-sw.js VERSION = 'vN'  →  display "Version 1.X.Y"
-  X = floor(N / 10)
-  Y = N % 10
-
-Examples:
-  v7  → Version 1.0.7
-  v10 → Version 1.1.0
-  v11 → Version 1.1.1
-  v20 → Version 1.2.0
-  v21 → Version 1.2.1
-  v23 → Version 1.2.12 (bug-fix suffix; no longer mapped 1:1)
+sw.js v44 → APP_VERSION '1.2.44'
+sw.js v45 → APP_VERSION '1.2.45'
 ```
 
-**Always bump sw.js VERSION and update `public/js/app.js` `APP_VERSION` together on every commit, even without an explicit version request.**
+All commit types (feature, fix, UI) increment by 1. No suffix rules.
 
-**Single source of truth for the displayed version: `public/js/app.js` `APP_VERSION` constant.**
-- Settings popup reads `APP_VERSION` directly.
-- Login footer is a placeholder `<span id="login-version">` in `index.html`, populated at runtime by `app.js` from the same `APP_VERSION` constant.
-- **Never hardcode a version string in `index.html`** — that historically caused mismatch between the login footer and Settings popup whenever one was bumped and the other wasn't, or when the service worker precached stale `index.html` while loading fresh `app.js`.
+**Always bump both on every commit.**
 
-### Bug-fix / UI-fix Version Rule
-
-When a commit is **only** `<BUG_FIX>` or `<UI_FIX>` (no new feature), append a digit to the previous display version instead of incrementing the patch number:
-
-```
-1.2.1  → 1.2.11   (first bug fix on top of 1.2.1)
-1.2.11 → 1.2.12   (second bug fix)
-1.2.12 → 1.2.13   (third bug fix)
-```
-
-Feature commits resume normal patch increment (the suffix digits are dropped). The `sw.js` `VERSION` still increments by 1 on every commit as a cache-buster; once a bug-fix suffix is in use, it no longer maps deterministically to the display version.
+**Single source of truth: `public/js/app.js` `APP_VERSION`.**
+- Settings popup reads it directly.
+- Login footer `<span id="login-version">` in `index.html` populated at runtime from `APP_VERSION`.
+- **Never hardcode a version string in `index.html`.**
 
 ## Tech Stack
 - **Frontend:** Vanilla HTML5, CSS3, ES Modules (no bundler)
