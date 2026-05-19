@@ -4,7 +4,7 @@ import { setCurrency, getCurrency, CURRENCIES, getCountryCurrency } from './curr
 import { getTrips, createTrip, getTrip, updateTrip, deleteTrip, getGuestCode, setGuestCode, removeGuestCode, lookupGuestCode, getItinerary, getBookings, getActivities, getExpenses } from './db.js';
 import { resizeImageToBlob, uploadToImgBB } from './imgbb.js';
 
-const APP_VERSION = '1.2.32';
+const APP_VERSION = '1.2.4';
 
 // Populate login footer version from this single source of truth.
 // Runs as soon as this module loads (before login screen is shown).
@@ -28,6 +28,7 @@ let _guestTripId = null;
 let _pendingGuestCode = null;
 let _appInitialized = false;
 let _savingTrip = false;
+let _packingDestroy = null;
 let _trips = [];
 let _tripImageSlot = { type: 'empty', value: null, preview: null };
 let _tripTravelers = [];
@@ -137,6 +138,10 @@ function _clearAllPages() {
   _renderedPages.clear();
   _pageModules.clear();
   document.querySelectorAll('.fab').forEach(f => f.remove());
+  const packingPanel = document.getElementById('packing-panel');
+  if (packingPanel) packingPanel.style.display = 'none';
+  _packingDestroy?.();
+  _packingDestroy = null;
 }
 
 // ── Page registry ────────────────────────────────────────────────
@@ -864,12 +869,27 @@ async function initApp(user) {
     btn.addEventListener('click', () => navigate(btn.dataset.route));
   });
 
+  // Show packing icon for non-guests only
+  const packingBtn = document.getElementById('packing-btn');
+  if (packingBtn) packingBtn.style.display = isGuest ? 'none' : '';
+
   // Bind header buttons
   document.getElementById('settings-btn').addEventListener('click', isGuest ? openGuestSettings : openSettings);
   document.getElementById('refresh-btn').addEventListener('click', () => {
     _clearAllPages();
     navigate(localStorage.getItem('lastRoute') || 'dashboard');
   });
+  if (!isGuest) {
+    document.getElementById('packing-btn').addEventListener('click', async () => {
+      if (!currentTripId) { showToast('No trip selected'); return; }
+      const panel = document.getElementById('packing-panel');
+      const { render: renderPacking, destroy: destroyPacking } = await import('./pages/packing.js');
+      _packingDestroy = destroyPacking;
+      const renderUid = currentUser.uid;
+      panel.style.display = '';
+      await renderPacking(panel, { userId: renderUid, tripId: currentTripId, isGuest: false });
+    });
+  }
 
   // Bind modal close
   document.getElementById('modal-close').addEventListener('click', closeModal);

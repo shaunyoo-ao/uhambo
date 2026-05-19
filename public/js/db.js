@@ -50,7 +50,7 @@ export async function updateTrip(uid, tid, data) {
   return updateDoc(tripRef(uid, tid), { ...data, updatedAt: serverTimestamp() });
 }
 
-const SUBCOLLECTIONS = ['itinerary', 'accommodation', 'activities', 'expenses'];
+const SUBCOLLECTIONS = ['itinerary', 'accommodation', 'activities', 'expenses', 'packing'];
 
 export async function deleteTrip(uid, tid) {
   // Clean up guest code if one exists
@@ -148,6 +148,23 @@ export async function deleteActivity(uid, tid, id) {
 
 export async function toggleActivity(uid, tid, id, completed) {
   return updateDoc(subDocRef(uid, tid, 'activities', id), { completed });
+}
+
+// ── Packing ───────────────────────────────────────────────────────
+export function subscribePacking(uid, tid, cb) {
+  return onSnapshot(subRef(uid, tid, 'packing'), s => cb(snap(s)));
+}
+export async function addPackingItem(uid, tid, data) {
+  return addDoc(subRef(uid, tid, 'packing'), { ...data, createdAt: serverTimestamp() });
+}
+export async function updatePackingItem(uid, tid, id, data) {
+  return setDoc(subDocRef(uid, tid, 'packing', id), data, { merge: true });
+}
+export async function deletePackingItem(uid, tid, id) {
+  return deleteDoc(subDocRef(uid, tid, 'packing', id));
+}
+export async function togglePackingItem(uid, tid, id, isPacked) {
+  return setDoc(subDocRef(uid, tid, 'packing', id), { isPacked }, { merge: true });
 }
 
 // ── Expenses ─────────────────────────────────────────────────────

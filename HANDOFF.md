@@ -1,14 +1,42 @@
 # Uhambo — Project Handoff
 
 Read CLAUDE.md
- 
-**Current Version:** 1.2.32 (sw.js v39)  
+
+**Current Version:** 1.2.4 (sw.js v40)
 
 ---
 
 ## Version History & What Was Built
 
-### v1.2.32 — Dashboard Travelers card, Currency default fix, Headcount field *(current)*
+### v1.2.4 — Packing Todo feature *(current)*
+
+New full-screen panel accessible from a checklist icon in the header (left of refresh button).
+Hidden in Guest Mode. Panel covers the whole viewport at z-index 200.
+
+**Header icon:** `#packing-btn` inserted in `index.html` before `#refresh-btn`. Hidden by
+default (`display:none`), shown after auth when `!isGuest` in `app.js:initApp()`.
+
+**Packing panel:** `<div id="packing-panel">` inside `#app`. Opened/closed by a packing button
+click handler in `app.js`. Lifecycle: `render(container, ctx)` + `destroy()` in
+`public/js/pages/packing.js`.
+
+**Data:** New `packing` Firestore subcollection under `trips/{tripId}/packing/{itemId}`.
+Schema: `{ title, category, isPacked(bool), isRequired(bool), assignee(string) }`.
+Added to `SUBCOLLECTIONS` in `db.js` so it's cleaned up on trip deletion.
+Five new db.js exports: `subscribePacking`, `addPackingItem`, `updatePackingItem`,
+`deletePackingItem`, `togglePackingItem`.
+
+**Seed data:** 28 default items across 6 categories (Critical/Electronics/Health/Clothing/Comfort/
+Food). Seeded automatically on first open when collection is empty. Critical items have
+`isRequired: true` (cannot be deleted, pinned to top of section).
+
+**UI:** Progress bar (packed/total), category sections with emoji, checkbox toggle,
+assignee tag (from `trip.travelers`), delete button on non-required items, + FAB to add new
+items with category + assignee select.
+
+**i18n:** 9 new `packing.*` keys added in both EN and KO in `i18n.js`.
+
+### v1.2.32 — Dashboard Travelers card, Currency default fix, Headcount field
 
 Three UI fixes:
 
