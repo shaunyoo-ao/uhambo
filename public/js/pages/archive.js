@@ -8,6 +8,7 @@ let _ctx = null;
 let _tripsData = [];
 let _selectedYear = 'all';
 let _years = [];
+let _contentCache = {}; // { [year]: { html, countryCounts } }
 
 const CAT_COLORS = {
   transport: '#6ea6e8', food: '#e8c87c', accom: '#5fb88c',
@@ -35,6 +36,7 @@ export async function render(container, ctx) {
   try {
     await ensureRates();
     _tripsData = await getAllTripsData(userId);
+    _contentCache = {};
     try { sessionStorage.removeItem('arch_dirty_' + userId); } catch (_) {}
 
     if (_tripsData.length === 0) {
@@ -81,9 +83,34 @@ async function renderFull(container) {
   await renderContent();
 }
 
+function _bindShowTrips(countryCounts) {
+  window.__archShowTrips = () => {
+    const rows = Object.entries(countryCounts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([c, n]) => `
+        <div class="row-between" style="padding:10px 0;border-bottom:1px solid var(--line)">
+          <span class="text-sm">🌍 ${c}</span>
+          <span class="mono text-sm text-accent">×${n}</span>
+        </div>`).join('');
+    openModal({
+      title: t('arch.trips'),
+      body: rows || `<div class="text-sm text-muted" style="padding:8px 0">No country info available</div>`,
+      footer: `<button class="btn btn-ghost btn-full" onclick="window.__closeModal()">${t('common.done')}</button>`
+    });
+  };
+}
+
 async function renderContent() {
   const el = document.getElementById('arch-content');
   if (!el) return;
+
+  if (_contentCache[_selectedYear]) {
+    const { html, countryCounts } = _contentCache[_selectedYear];
+    el.innerHTML = html;
+    _bindShowTrips(countryCounts);
+    return;
+  }
+
   el.innerHTML = `<div class="loading-center" style="padding:40px"><div class="spinner"></div></div>`;
 
   const currency = getCurrency();
@@ -165,7 +192,7 @@ async function renderContent() {
 
   allActivities.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
-  el.innerHTML = `
+  const html = `
     <div style="padding:0 16px 32px">
       <div class="stat-grid" style="margin-bottom:16px">
         <div class="stat-card" style="grid-column:1/-1">
@@ -253,20 +280,9 @@ async function renderContent() {
       </div>` : ''}
     </div>`;
 
-  window.__archShowTrips = () => {
-    const rows = Object.entries(countryCounts)
-      .sort((a, b) => b[1] - a[1])
-      .map(([c, n]) => `
-        <div class="row-between" style="padding:10px 0;border-bottom:1px solid var(--line)">
-          <span class="text-sm">🌍 ${c}</span>
-          <span class="mono text-sm text-accent">×${n}</span>
-        </div>`).join('');
-    openModal({
-      title: t('arch.trips'),
-      body: rows || `<div class="text-sm text-muted" style="padding:8px 0">No country info available</div>`,
-      footer: `<button class="btn btn-ghost btn-full" onclick="window.__closeModal()">${t('common.done')}</button>`
-    });
-  };
+  el.innerHTML = html;
+  _contentCache[_selectedYear] = { html, countryCounts };
+  _bindShowTrips(countryCounts);
 }
 
 function noTripHTML() {
