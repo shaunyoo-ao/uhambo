@@ -11,6 +11,7 @@ let _tripsDataKey = '';
 let _selectedYear = 'all';
 let _years = [];
 let _contentCache = {};
+let _renderGen = 0;
 
 const CAT_COLORS = {
   transport: '#6ea6e8', food: '#e8c87c', accom: '#5fb88c',
@@ -44,11 +45,21 @@ function _resetSelectedYear(tripId) {
   _selectedYear = (currentTripYear && _years.includes(currentTripYear)) ? currentTripYear : (_years[0] || 'all');
 }
 
-export function destroy() {}
+export function destroy() {
+  _renderGen++; // abort any in-flight render or background refresh
+}
+
+// Called by the refresh button to force a cold load on next render
+export function invalidateCache() {
+  _tripsDataUserId = null;
+  _contentCache = {};
+  _renderGen++;
+}
 
 export async function render(container, ctx) {
   _ctx = ctx;
   const { userId, tripId } = ctx;
+  const gen = ++_renderGen;
 
   const hasCachedData = _tripsDataUserId === userId && _tripsData.length > 0;
 
@@ -58,38 +69,26 @@ export async function render(container, ctx) {
 
   try {
     await ensureRates();
+    if (gen !== _renderGen) return;
 
     if (hasCachedData) {
-      // Render immediately from cache — no Firestore wait
       _updateYears();
-      // Only reset year tab if the selected year no longer exists (e.g., different user)
       if (_selectedYear !== 'all' && !_years.includes(_selectedYear)) {
         _resetSelectedYear(tripId);
       }
       await renderFull(container);
+      if (gen !== _renderGen) return;
 
-      // Background stale-while-revalidate: fetch fresh (fast via IDB) and re-render only if changed
-      const fresh = await getAllTripsData(userId);
-      const freshKey = _dataKey(fresh);
-      if (freshKey !== _tripsDataKey) {
-        _tripsData = fresh;
-        _tripsDataUserId = userId;
-        _tripsDataKey = freshKey;
-        _contentCache = {};
-        _updateYears();
-        if (_selectedYear !== 'all' && !_years.includes(_selectedYear)) {
-          _resetSelectedYear(tripId);
-        }
-        // Only update content region to avoid resetting year tab UI
-        if (document.getElementById('arch-content')) {
-          await renderContent();
-        }
-      }
+      // Fire background refresh WITHOUT await so render() returns immediately.
+      // This ensures navigate() calls _renderedPages.add('archive') right away,
+      // preventing the stale-add race that caused blank screens.
+      _bgRefresh(userId, gen);
       return;
     }
 
-    // Cold load (first visit or different user)
+    // Cold load (first visit, different user, or invalidateCache() was called)
     _tripsData = await getAllTripsData(userId);
+    if (gen !== _renderGen) return;
     _tripsDataUserId = userId;
     _tripsDataKey = _dataKey(_tripsData);
     _contentCache = {};
@@ -102,9 +101,30 @@ export async function render(container, ctx) {
     _resetSelectedYear(tripId);
     await renderFull(container);
   } catch (e) {
+    if (gen !== _renderGen) return;
     console.error('Archive render:', e);
     container.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Error loading archive</div><div class="empty-sub">${e.message}</div></div>`;
   }
+}
+
+async function _bgRefresh(userId, gen) {
+  try {
+    const fresh = await getAllTripsData(userId);
+    if (gen !== _renderGen) return; // superseded by newer render or destroy
+    const freshKey = _dataKey(fresh);
+    if (freshKey === _tripsDataKey) return; // no structural change
+    _tripsData = fresh;
+    _tripsDataUserId = userId;
+    _tripsDataKey = freshKey;
+    _contentCache = {};
+    _updateYears();
+    if (_selectedYear !== 'all' && !_years.includes(_selectedYear)) {
+      _selectedYear = _years[0] || 'all';
+    }
+    if (document.getElementById('arch-content')) {
+      await renderContent();
+    }
+  } catch (_) {}
 }
 
 async function renderFull(container) {
