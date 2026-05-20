@@ -4,7 +4,7 @@ import { setCurrency, getCurrency, CURRENCIES, getCountryCurrency } from './curr
 import { getTrips, createTrip, getTrip, updateTrip, deleteTrip, getGuestCode, setGuestCode, removeGuestCode, lookupGuestCode, getItinerary, getBookings, getActivities, getExpenses } from './db.js';
 import { resizeImageToBlob, uploadToImgBB } from './imgbb.js';
 
-const APP_VERSION = '1.2.52';
+const APP_VERSION = '1.2.53';
 
 // Populate login footer version from this single source of truth.
 // Runs as soon as this module loads (before login screen is shown).
@@ -925,6 +925,7 @@ async function initApp(user) {
   // Bind header buttons
   document.getElementById('settings-btn').addEventListener('click', isGuest ? openGuestSettings : openSettings);
   document.getElementById('refresh-btn').addEventListener('click', () => {
+    _pageModules.get('archive')?.invalidateCache?.();
     _clearAllPages();
     navigate(localStorage.getItem('lastRoute') || 'dashboard');
   });
