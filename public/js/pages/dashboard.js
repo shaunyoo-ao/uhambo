@@ -11,9 +11,15 @@ import { navigate, openModal, closeModal } from '../app.js';
 
 let _unsubItinerary = null;
 let _mileageDetail = { total: 0, segments: [] };
+let _mileageKey = '';
 
 export function destroy() {
   if (_unsubItinerary) { _unsubItinerary(); _unsubItinerary = null; }
+  _mileageKey = '';
+}
+
+function _itin2key(items) {
+  return items.map(i => `${i.id}|${i.location || ''}`).join(',');
 }
 
 export async function render(container, { userId, tripId, isGuest }) {
@@ -103,6 +109,7 @@ export async function render(container, { userId, tripId, isGuest }) {
           </div>`;
 
     // Mileage
+    _mileageKey = _itin2key(itinerary);
     _mileageDetail = await calcMileageDetail(itinerary);
     const mileageKm = _mileageDetail.total;
     const mileageTravelKm = _mileageDetail.travelTotal || 0;
@@ -214,7 +221,11 @@ export async function render(container, { userId, tripId, isGuest }) {
         const upcoming = items.filter(i => i.date >= today).slice(0, 5);
         upcomingEl.innerHTML = renderUpcoming(upcoming);
       }
-      _mileageDetail = await calcMileageDetail(items);
+      const newKey = _itin2key(items);
+      if (newKey !== _mileageKey) {
+        _mileageKey = newKey;
+        _mileageDetail = await calcMileageDetail(items);
+      }
       const mileageEl = document.getElementById('mileage-stat-value');
       if (mileageEl) mileageEl.textContent = `${_mileageDetail.total} km`;
       const mileageSubEl = document.getElementById('mileage-stat-sub');

@@ -4,7 +4,7 @@ import { setCurrency, getCurrency, CURRENCIES, getCountryCurrency } from './curr
 import { getTrips, createTrip, getTrip, updateTrip, deleteTrip, getGuestCode, setGuestCode, removeGuestCode, lookupGuestCode, getItinerary, getBookings, getActivities, getExpenses } from './db.js';
 import { resizeImageToBlob, uploadToImgBB } from './imgbb.js';
 
-const APP_VERSION = '1.2.50';
+const APP_VERSION = '1.2.51';
 
 // Populate login footer version from this single source of truth.
 // Runs as soon as this module loads (before login screen is shown).
@@ -187,22 +187,39 @@ function hideLoading() {
 }
 
 // ── Trip selector ────────────────────────────────────────────────
+function _applyActiveTrip(btn) {
+  if (_trips.length === 0) {
+    if (btn) btn.textContent = '— No trips —';
+    currentTripId = null;
+    return;
+  }
+  const saved = localStorage.getItem('lastTripId');
+  const match = saved && _trips.find(tr => tr.id === saved);
+  const active = match || _trips[0];
+  currentTripId = active.id;
+  if (btn) btn.textContent = active.name;
+  setCurrency(getCountryCurrency(active.country));
+}
+
 async function loadTrips(userId) {
   const btn = document.getElementById('trip-selector-btn');
+  const cacheKey = '_trips_' + userId;
+
+  // Paint immediately from localStorage so selector isn't blank while awaiting Firestore
   try {
-    _trips = await getTrips(userId);
-    _trips.sort((a, b) => new Date(b.startDate || 0) - new Date(a.startDate || 0));
-    if (_trips.length === 0) {
-      if (btn) btn.textContent = '— No trips —';
-      currentTripId = null;
-    } else {
-      const saved = localStorage.getItem('lastTripId');
-      const match = saved && _trips.find(tr => tr.id === saved);
-      const active = match || _trips[0];
-      currentTripId = active.id;
-      if (btn) btn.textContent = active.name;
-      setCurrency(getCountryCurrency(active.country));
+    const raw = localStorage.getItem(cacheKey);
+    if (raw) {
+      _trips = JSON.parse(raw);
+      _applyActiveTrip(btn);
     }
+  } catch (_) {}
+
+  try {
+    const fresh = await getTrips(userId);
+    fresh.sort((a, b) => new Date(b.startDate || 0) - new Date(a.startDate || 0));
+    _trips = fresh;
+    try { localStorage.setItem(cacheKey, JSON.stringify(fresh)); } catch (_) {}
+    _applyActiveTrip(btn);
   } catch (e) {
     console.error('loadTrips:', e);
   }
@@ -937,6 +954,13 @@ async function initApp(user) {
   // Navigate to last route
   const route = localStorage.getItem('lastRoute') || 'dashboard';
   navigate(route);
+
+  // Prefetch other page modules during idle time so tab switches feel instant
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(() => {
+      Object.keys(routes).filter(r => r !== route).forEach(r => routes[r]().catch(() => {}));
+    });
+  }
 }
 
 // ── Auth debug logger ────────────────────────────────────────────
@@ -1021,9 +1045,16 @@ document.getElementById('guest-enter-btn').addEventListener('click', async () =>
 // before the redirect result is processed, which triggers showLogin() even
 // after a successful redirect sign-in. The async IIFE makes this sequential.
 (async () => {
-  _alog('page load — awaiting handleRedirectResult()');
-  const redirectUser = await handleRedirectResult();
-  _alog('handleRedirectResult() done — user: ' + (redirectUser ? redirectUser.email : 'null'));
+  const pendingRedirect = sessionStorage.getItem('_auth_redirect_pending');
+  sessionStorage.removeItem('_auth_redirect_pending');
+  let redirectUser = null;
+  if (pendingRedirect) {
+    _alog('page load — redirect pending, awaiting handleRedirectResult()');
+    redirectUser = await handleRedirectResult();
+    _alog('handleRedirectResult() done — user: ' + (redirectUser ? redirectUser.email : 'null'));
+  } else {
+    _alog('page load — no redirect pending, skipping handleRedirectResult()');
+  }
   if (window._authRedirectError) {
     setTimeout(() => showToast('Sign-in error: ' + window._authRedirectError), 800);
     window._authRedirectError = null;
