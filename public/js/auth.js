@@ -37,6 +37,7 @@ export async function signInWithGoogle() {
   log('signInWithGoogle() — useRedirect=' + useRedirect + ' userAgent=' + navigator.userAgent.slice(0, 80));
   if (useRedirect) {
     log('mobile/PWA detected → signInWithRedirect');
+    try { sessionStorage.setItem('_auth_redirect_pending', '1'); } catch (_) {}
     return signInWithRedirect(auth, provider);
   }
   log('attempting signInWithPopup...');
