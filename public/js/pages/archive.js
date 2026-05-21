@@ -12,6 +12,7 @@ let _selectedYear = 'all';
 let _years = [];
 let _contentCache = {};
 let _renderGen = 0;
+let _contentGen = 0;
 
 const CAT_COLORS = {
   transport: '#6ea6e8', food: '#e8c87c', accom: '#5fb88c',
@@ -54,6 +55,7 @@ export function invalidateCache() {
   _tripsDataUserId = null;
   _contentCache = {};
   _renderGen++;
+  _contentGen++;
 }
 
 export async function render(container, ctx) {
@@ -170,11 +172,15 @@ function _bindShowTrips(countryCounts) {
 }
 
 async function renderContent() {
+  // Capture year and gen BEFORE any await — _selectedYear can change mid-flight
+  // if the user taps another tab, which would corrupt cache keys without this capture.
+  const year = _selectedYear;
+  const gen = ++_contentGen;
   const el = document.getElementById('arch-content');
   if (!el) return;
 
-  if (_contentCache[_selectedYear]) {
-    const { html, countryCounts } = _contentCache[_selectedYear];
+  if (_contentCache[year]) {
+    const { html, countryCounts } = _contentCache[year];
     el.innerHTML = html;
     _bindShowTrips(countryCounts);
     return;
@@ -184,12 +190,13 @@ async function renderContent() {
 
   const currency = getCurrency();
 
-  const filtered = _selectedYear === 'all'
+  const filtered = year === 'all'
     ? _tripsData
-    : _tripsData.filter(d => d.trip.startDate?.startsWith(_selectedYear));
+    : _tripsData.filter(d => d.trip.startDate?.startsWith(year));
 
   if (filtered.length === 0) {
-    el.innerHTML = `<div class="empty-state" style="padding:40px"><div class="empty-sub">No trips in ${_selectedYear}</div></div>`;
+    if (gen !== _contentGen) return;
+    el.innerHTML = `<div class="empty-state" style="padding:40px"><div class="empty-sub">No trips in ${year}</div></div>`;
     return;
   }
 
@@ -349,8 +356,9 @@ async function renderContent() {
       </div>` : ''}
     </div>`;
 
+  if (gen !== _contentGen) return; // superseded by a newer tab click — discard result
   el.innerHTML = html;
-  _contentCache[_selectedYear] = { html, countryCounts };
+  _contentCache[year] = { html, countryCounts };
   _bindShowTrips(countryCounts);
 }
 
