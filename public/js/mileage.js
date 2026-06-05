@@ -19,7 +19,7 @@ export async function calcMileageDetail(itineraryItems) {
   const coords = [];
   for (const p of unique) {
     if (p.lat && p.lng) {
-      coords.push({ lat: p.lat, lng: p.lng });
+      coords.push({ lat: p.lat, lng: p.lng, _manual: true });
     } else {
       const cached = geoCache(p.location);
       if (cached) {
@@ -31,15 +31,14 @@ export async function calcMileageDetail(itineraryItems) {
     }
   }
 
-  // Outlier detection: if a coordinate is geocoded to the wrong country it will be
-  // thousands of km from the rest of the trip cluster. Flag it as geocodeFailed and
-  // clear its stale localStorage cache so the next re-save triggers fresh geocoding.
+  // Outlier detection: skip manually-entered coordinates — they are known-correct.
+  // Only remove geocoded results that landed far from the trip cluster (wrong-country hit).
   const validCoords = coords.filter(c => c !== null);
   if (validCoords.length >= 3) {
     const medLat = _median(validCoords.map(c => c.lat));
     const medLng = _median(validCoords.map(c => c.lng));
     for (let i = 0; i < coords.length; i++) {
-      if (coords[i] && haversine(coords[i].lat, coords[i].lng, medLat, medLng) > 2000) {
+      if (coords[i] && !coords[i]._manual && haversine(coords[i].lat, coords[i].lng, medLat, medLng) > 2000) {
         try { localStorage.removeItem(`geo_${unique[i].location.toLowerCase().trim().replace(/\s+/g, '_')}`); } catch(_) {}
         coords[i] = null;
       }
