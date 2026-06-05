@@ -129,7 +129,8 @@ async function renderList(items) {
           ${nights !== null ? `<div style="margin-left:auto"><div class="eyebrow" style="margin-bottom:2px">${t('accom.nights')}</div><div class="mono text-sm">${nights}</div></div>` : ''}
         </div>
         ${portCount > 0 ? `<div class="text-xs text-muted" style="margin-top:8px">⚓ ${portCount} ${t('book.port_calls')}${portNames ? ': ' + portNames : ''}</div>` : ''}
-        ${item.bookingRef ? `<div class="text-xs text-muted" style="margin-top:4px">Ref: ${item.bookingRef}</div>` : ''}`;
+        ${item.bookingRef ? `<div class="text-xs text-muted" style="margin-top:4px">Ref: ${item.bookingRef}</div>` : ''}
+        ${(item.images || []).length > 0 ? `<div style="margin-top:10px;display:grid;grid-template-columns:${(item.images || []).length > 1 ? '1fr 1fr' : '1fr'};gap:6px;border-radius:8px;overflow:hidden">${(item.images || []).slice(0, 4).map(u => `<img src="${u}" style="width:100%;aspect-ratio:4/3;object-fit:cover;display:block">`).join('')}</div>` : ''}`;
     } else if (cat === 'travel') {
       const from = item.departureAirport || item.from || '';
       const to = item.arrivalAirport || item.to || '';
@@ -451,7 +452,9 @@ function portCallsHTML() {
   if (_portCalls.length === 0) {
     return `<div class="text-xs text-muted" style="padding:2px 0 8px">${getLang() === 'ko' ? '기항지를 추가하세요' : 'Add port calls below'}</div>`;
   }
-  return _portCalls.map((pc, i) => `
+  return _portCalls.map((pc, i) => {
+    const coordsVal = pc.coords !== undefined ? pc.coords : (pc.lat && pc.lng ? `${pc.lat}, ${pc.lng}` : '');
+    return `
     <div style="background:var(--surface-3,#232730);border-radius:8px;padding:10px 12px;margin-bottom:8px">
       <div class="row-between" style="margin-bottom:8px">
         <span class="eyebrow">${t('book.port_n')} ${i + 1}</span>
@@ -460,7 +463,7 @@ function portCallsHTML() {
       <input class="form-input" style="margin-bottom:6px" placeholder="${getLang() === 'ko' ? '항구명 (예: Kusadasi, Turkiye)' : 'Port name (e.g. Kusadasi, Turkiye)'}"
         value="${pc.port || ''}"
         oninput="window.__portCallUpdate(${i},'port',this.value)">
-      <div class="form-row" style="margin-bottom:0">
+      <div class="form-row" style="margin-bottom:4px">
         <div class="form-group" style="flex:3">
           <label class="form-label">${getLang() === 'ko' ? '날짜' : 'Date'}</label>
           <input class="form-input" type="date" lang="${getLang()}" value="${pc.date || ''}"
@@ -477,7 +480,11 @@ function portCallsHTML() {
             oninput="window.__portCallUpdate(${i},'depTime',this.value)">
         </div>
       </div>
-    </div>`).join('');
+      <input class="form-input" style="font-size:0.78rem" placeholder="${getLang() === 'ko' ? '좌표 (선택) 예: 37.857, 27.258' : 'Coords (optional) e.g. 37.857, 27.258'}"
+        value="${coordsVal}"
+        oninput="window.__portCallUpdate(${i},'coords',this.value)">
+    </div>`;
+  }).join('');
 }
 
 function cruiseFormHTML(item, today) {
@@ -571,6 +578,11 @@ function cruiseFormHTML(item, today) {
           ${CURRENCIES.map(c => `<option value="${c.code}" ${(item?.currency || getCurrency()) === c.code ? 'selected' : ''}>${c.code}</option>`).join('')}
         </select>
       </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Photos</label>
+      <div class="img-upload-grid" id="book-img-grid">${accomImgGridHTML()}</div>
+      <input type="file" id="book-file-input" accept="image/*" style="display:none" onchange="window.__bookFileChange(this)">
     </div>`;
 }
 
@@ -580,7 +592,7 @@ function openItemModal(item) {
   const defaultCat = item?.category || 'accommodation';
   _links = item?.links ? [...item.links] : [];
   _portCalls = defaultCat === 'cruise' ? (item?.portCalls || []).map(p => ({ ...p })) : [];
-  if (defaultCat === 'accommodation') {
+  if (defaultCat === 'accommodation' || defaultCat === 'cruise') {
     _imageSlots = (item?.images || []).slice(0, 4).map(url => ({ type: 'url', value: url, preview: url }));
     while (_imageSlots.length < 4) _imageSlots.push({ type: 'empty', value: null, preview: null });
   } else {
@@ -651,6 +663,8 @@ function openItemModal(item) {
       while (_imageSlots.length < 4) _imageSlots.push({ type: 'empty', value: null, preview: null });
     } else if (newCat === 'cruise') {
       _portCalls = [];
+      _imageSlots = [];
+      while (_imageSlots.length < 4) _imageSlots.push({ type: 'empty', value: null, preview: null });
     }
 
     let newCatFields = '';
@@ -670,7 +684,7 @@ function openItemModal(item) {
   };
 
   window.__addPortCall = () => {
-    _portCalls.push({ port: '', date: '', arrTime: '', depTime: '' });
+    _portCalls.push({ port: '', date: '', arrTime: '', depTime: '', coords: '' });
     const el = document.getElementById('cruise-port-list');
     if (el) el.innerHTML = portCallsHTML();
   };
@@ -980,13 +994,29 @@ function openItemModal(item) {
         }
 
       } else if (cat === 'cruise') {
-        // Collect port calls from module variable (updated via oninput handlers)
-        data.portCalls = _portCalls.filter(p => p.port?.trim()).map(p => ({
-          port: p.port.trim(),
-          date: p.date || '',
-          arrTime: p.arrTime || '',
-          depTime: p.depTime || '',
-        }));
+        // Handle photos (same as accommodation)
+        const cruiseImages = [];
+        for (const slot of _imageSlots) {
+          if (slot.type === 'file') {
+            const blob = await resizeImageToBlob(slot.value);
+            cruiseImages.push(await uploadToImgBB(blob));
+          } else if (slot.type === 'url') {
+            cruiseImages.push(slot.value);
+          }
+        }
+        data.images = cruiseImages;
+
+        // Collect port calls — parse optional coords
+        data.portCalls = _portCalls.filter(p => p.port?.trim()).map(p => {
+          const geo = parseCoords(p.coords);
+          return {
+            port: p.port.trim(),
+            date: p.date || '',
+            arrTime: p.arrTime || '',
+            depTime: p.depTime || '',
+            ...(geo ? { lat: geo.lat, lng: geo.lng } : {}),
+          };
+        });
         // name is derived — store ship + line for display/expense label
         if (!data.name) data.name = [data.cruiseLine, data.shipName].filter(Boolean).join(' — ') || null;
 
@@ -1040,6 +1070,7 @@ function openItemModal(item) {
               location: pc.port,
               type: 'activity',
               links: [],
+              ...(pc.lat && pc.lng ? { lat: pc.lat, lng: pc.lng } : {}),
             });
           } else {
             await deleteLinkedItinItem(userId, tripId, savedId, 'booking', `port-${pi}`);
