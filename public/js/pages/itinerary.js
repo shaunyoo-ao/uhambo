@@ -443,7 +443,7 @@ function openItemModal(item) {
     setModalSaving(true);
     try {
       if (rawCoords) {
-        const parts = rawCoords.replace(/(\d),(\d)/g, '$1.$2').split(',').map(s => parseFloat(s.trim()));
+        const parts = rawCoords.split(',').map(s => parseFloat(s.trim()));
         if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
           data.lat = parts[0];
           data.lng = parts[1];
