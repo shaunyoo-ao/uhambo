@@ -978,7 +978,6 @@ function openItemModal(item) {
         } else {
           await deleteLinkedItinItem(userId, tripId, savedId, 'booking', 'dropoff');
         }
-      }
 
       } else if (cat === 'cruise') {
         // Collect port calls from module variable (updated via oninput handlers)
