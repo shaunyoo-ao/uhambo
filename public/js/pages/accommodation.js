@@ -10,8 +10,8 @@ import { openCalc } from '../calculator.js';
 import { geocodeCity } from '../weather.js';
 import { resizeImageToBlob, uploadToImgBB } from '../imgbb.js';
 
-const BOOK_CATS = ['accommodation', 'travel', 'rent'];
-const BOOK_CAT_ICONS = { accommodation: '🏨', travel: '✈️', rent: '🚗' };
+const BOOK_CATS = ['accommodation', 'travel', 'rent', 'cruise'];
+const BOOK_CAT_ICONS = { accommodation: '🏨', travel: '✈️', rent: '🚗', cruise: '⛴️' };
 
 let _unsub = null;
 let _ctx = null;
@@ -19,6 +19,7 @@ let _tripStartDate = null;
 let _items = [];
 let _links = [];
 let _imageSlots = [];
+let _portCalls = [];
 let _tripCountry = '';
 let _filter = 'all';
 let _adding = false;
@@ -69,8 +70,8 @@ export async function render(container, ctx) {
   if (_unsub) _unsub();
   _unsub = subscribeBookings(userId, tripId, items => {
     _items = items.sort((a, b) => {
-      const da = (a.checkIn || a.departureDate || a.pickupDate || '') + 'T' + (a.checkInTime || a.departureTime || a.pickupTime || '');
-      const db2 = (b.checkIn || b.departureDate || b.pickupDate || '') + 'T' + (b.checkInTime || b.departureTime || b.pickupTime || '');
+      const da = (a.checkIn || a.departureDate || a.pickupDate || a.embarkDate || '') + 'T' + (a.checkInTime || a.departureTime || a.pickupTime || a.embarkTime || '');
+      const db2 = (b.checkIn || b.departureDate || b.pickupDate || b.embarkDate || '') + 'T' + (b.checkInTime || b.departureTime || b.pickupTime || b.embarkTime || '');
       return da.localeCompare(db2);
     });
     renderList(_items);
@@ -101,7 +102,35 @@ async function renderList(items) {
     const cursorStyle = _ctx?.isGuest ? '' : 'cursor:pointer';
 
     let cardContent = '';
-    if (cat === 'travel') {
+    if (cat === 'cruise') {
+      const nights = item.embarkDate && item.disembarkDate
+        ? Math.round((new Date(item.disembarkDate) - new Date(item.embarkDate)) / 86400000)
+        : null;
+      const portCount = (item.portCalls || []).length;
+      const portNames = (item.portCalls || []).map(p => p.port).filter(Boolean).join(' · ');
+      cardContent = `
+        <div class="row-between" style="margin-bottom:8px">
+          <div class="row gap-8">
+            <span style="font-size:20px">⛴️</span>
+            <div>
+              <div class="font-medium">${item.shipName || item.name || '—'}${item.cruiseLine ? `<span class="text-xs text-muted" style="margin-left:6px">${item.cruiseLine}</span>` : ''}</div>
+              ${item.cabinNo || item.cabinType ? `<div class="text-xs text-muted">🛏 ${[item.cabinNo, item.cabinType].filter(Boolean).join(' · ')}</div>` : ''}
+            </div>
+          </div>
+          <div class="row gap-8">
+            ${priceStr ? `<div class="mono text-sm text-accent">${priceStr}</div>` : ''}
+            ${statusBadge}
+          </div>
+        </div>
+        <div class="dotrow"></div>
+        <div class="row gap-16" style="flex-wrap:wrap">
+          ${item.embarkDate ? `<div><div class="eyebrow" style="margin-bottom:2px">${t('book.embark_port')}</div><div class="text-sm">${item.embarkDate}${item.embarkTime ? ' ' + item.embarkTime : ''}<br><span class="text-xs text-muted">${item.embarkPort || ''}</span></div></div>` : ''}
+          ${item.disembarkDate ? `<div><div class="eyebrow" style="margin-bottom:2px">${t('book.disembark_port')}</div><div class="text-sm">${item.disembarkDate}${item.disembarkTime ? ' ' + item.disembarkTime : ''}<br><span class="text-xs text-muted">${item.disembarkPort || ''}</span></div></div>` : ''}
+          ${nights !== null ? `<div style="margin-left:auto"><div class="eyebrow" style="margin-bottom:2px">${t('accom.nights')}</div><div class="mono text-sm">${nights}</div></div>` : ''}
+        </div>
+        ${portCount > 0 ? `<div class="text-xs text-muted" style="margin-top:8px">⚓ ${portCount} ${t('book.port_calls')}${portNames ? ': ' + portNames : ''}</div>` : ''}
+        ${item.bookingRef ? `<div class="text-xs text-muted" style="margin-top:4px">Ref: ${item.bookingRef}</div>` : ''}`;
+    } else if (cat === 'travel') {
       const from = item.departureAirport || item.from || '';
       const to = item.arrivalAirport || item.to || '';
       const airline = item.airline || '';
@@ -205,7 +234,7 @@ function coordsField(lat, lng, name = 'coords') {
 
 function parseCoords(raw) {
   if (!raw?.trim()) return null;
-  const parts = raw.trim().replace(/(\d),(\d)/g, '$1.$2').split(',').map(s => parseFloat(s.trim()));
+  const parts = raw.trim().split(',').map(s => parseFloat(s.trim()));
   if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) return { lat: parts[0], lng: parts[1] };
   return null;
 }
@@ -418,11 +447,139 @@ function rentFormHTML(item, today) {
     </div>`;
 }
 
+function portCallsHTML() {
+  if (_portCalls.length === 0) {
+    return `<div class="text-xs text-muted" style="padding:2px 0 8px">${getLang() === 'ko' ? '기항지를 추가하세요' : 'Add port calls below'}</div>`;
+  }
+  return _portCalls.map((pc, i) => `
+    <div style="background:var(--surface-3,#232730);border-radius:8px;padding:10px 12px;margin-bottom:8px">
+      <div class="row-between" style="margin-bottom:8px">
+        <span class="eyebrow">${t('book.port_n')} ${i + 1}</span>
+        <button type="button" class="link-item-del" onclick="window.__removePortCall(${i})">×</button>
+      </div>
+      <input class="form-input" style="margin-bottom:6px" placeholder="${getLang() === 'ko' ? '항구명 (예: Kusadasi, Turkiye)' : 'Port name (e.g. Kusadasi, Turkiye)'}"
+        value="${pc.port || ''}"
+        oninput="window.__portCallUpdate(${i},'port',this.value)">
+      <div class="form-row" style="margin-bottom:0">
+        <div class="form-group" style="flex:3">
+          <label class="form-label">${getLang() === 'ko' ? '날짜' : 'Date'}</label>
+          <input class="form-input" type="date" lang="${getLang()}" value="${pc.date || ''}"
+            oninput="window.__portCallUpdate(${i},'date',this.value)">
+        </div>
+        <div class="form-group" style="flex:2">
+          <label class="form-label">${t('book.arr_time')}</label>
+          <input class="form-input" type="time" value="${pc.arrTime || ''}"
+            oninput="window.__portCallUpdate(${i},'arrTime',this.value)">
+        </div>
+        <div class="form-group" style="flex:2">
+          <label class="form-label">${t('book.dep_time')}</label>
+          <input class="form-input" type="time" value="${pc.depTime || ''}"
+            oninput="window.__portCallUpdate(${i},'depTime',this.value)">
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function cruiseFormHTML(item, today) {
+  _portCalls = (item?.portCalls || []).map(p => ({ ...p }));
+  const calcSvg = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:block"><rect x="4" y="2" width="16" height="20" rx="2"/><rect x="8" y="6" width="8" height="3" rx="0.5" fill="currentColor" stroke="none"/><circle cx="9" cy="13" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="13" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="13" r="1" fill="currentColor" stroke="none"/><circle cx="9" cy="17" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="17" r="1" fill="currentColor" stroke="none"/></svg>`;
+  return `
+    <div class="form-row">
+      <div class="form-group" style="flex:3">
+        <label class="form-label">${t('book.ship')} *</label>
+        <input class="form-input" name="shipName" value="${item?.shipName || ''}" placeholder="e.g. MSC FANTASIA" required>
+      </div>
+      <div class="form-group" style="flex:2">
+        <label class="form-label">${t('book.cabin_no')}</label>
+        <input class="form-input" name="cabinNo" value="${item?.cabinNo || ''}" placeholder="e.g. 10020">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2">
+        <label class="form-label">${t('book.cruise_line')}</label>
+        <input class="form-input" name="cruiseLine" value="${item?.cruiseLine || ''}" placeholder="e.g. MSC Cruises">
+      </div>
+      <div class="form-group" style="flex:3">
+        <label class="form-label">${t('book.cabin_type')}</label>
+        <input class="form-input" name="cabinType" value="${item?.cabinType || ''}" placeholder="e.g. BL2 - Balcony Cabin">
+      </div>
+    </div>
+
+    <div style="margin:8px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--line)">
+      <span class="eyebrow">⚓ ${t('book.embark_port')}</span>
+    </div>
+    <div class="form-group">
+      <label class="form-label">${t('book.embark_port')} *</label>
+      <input class="form-input" name="embarkPort" value="${item?.embarkPort || ''}" placeholder="e.g. Piraeus, Greece" required>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">${getLang() === 'ko' ? '날짜' : 'Date'} *</label>
+        <input class="form-input" name="embarkDate" type="date" lang="${getLang()}" value="${item?.embarkDate || today}" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">${t('book.embark_time')}</label>
+        <input class="form-input" name="embarkTime" type="time" value="${item?.embarkTime || ''}">
+      </div>
+    </div>
+
+    <div style="margin:8px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--line)">
+      <span class="eyebrow">🗺️ ${t('book.port_calls')}</span>
+    </div>
+    <div id="cruise-port-list">${portCallsHTML()}</div>
+    <button type="button" class="btn btn-secondary btn-sm" style="width:100%;margin-bottom:14px" onclick="window.__addPortCall()">
+      ${t('book.add_port')}
+    </button>
+
+    <div style="margin:8px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--line)">
+      <span class="eyebrow">🏁 ${t('book.disembark_port')}</span>
+    </div>
+    <div class="form-group">
+      <label class="form-label">${t('book.disembark_port')} *</label>
+      <input class="form-input" name="disembarkPort" value="${item?.disembarkPort || ''}" placeholder="e.g. Piraeus, Greece" required>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">${getLang() === 'ko' ? '날짜' : 'Date'} *</label>
+        <input class="form-input" name="disembarkDate" type="date" lang="${getLang()}" value="${item?.disembarkDate || ''}" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">${t('book.disembark_time')}</label>
+        <input class="form-input" name="disembarkTime" type="time" value="${item?.disembarkTime || ''}">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">${t('book.booking_ref')}</label>
+      <input class="form-input" name="bookingRef" value="${item?.bookingRef || ''}" placeholder="e.g. 72662893">
+    </div>
+    <div class="form-group">
+      <label class="form-label">${t('book.headcount')}</label>
+      <input class="form-input" name="headcount" type="number" min="1" value="${item?.headcount || ''}" placeholder="4">
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2">
+        <label class="form-label">${t('accom.cost')}</label>
+        <div style="display:flex;gap:6px">
+          <input id="book-cost-input" class="form-input" name="cost" type="number" min="0" step="any" value="${item?.cost || ''}" placeholder="0" style="flex:1">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="window.__openCalc('book-cost-input')" style="flex-shrink:0;padding:0 10px">${calcSvg}</button>
+        </div>
+      </div>
+      <div class="form-group" style="flex:1">
+        <label class="form-label">${t('accom.currency')}</label>
+        <select class="form-select" name="currency">
+          ${CURRENCIES.map(c => `<option value="${c.code}" ${(item?.currency || getCurrency()) === c.code ? 'selected' : ''}>${c.code}</option>`).join('')}
+        </select>
+      </div>
+    </div>`;
+}
+
 function openItemModal(item) {
   const isEdit = !!item;
   const today = _tripStartDate || new Date().toISOString().slice(0, 10);
   const defaultCat = item?.category || 'accommodation';
   _links = item?.links ? [...item.links] : [];
+  _portCalls = defaultCat === 'cruise' ? (item?.portCalls || []).map(p => ({ ...p })) : [];
   if (defaultCat === 'accommodation') {
     _imageSlots = (item?.images || []).slice(0, 4).map(url => ({ type: 'url', value: url, preview: url }));
     while (_imageSlots.length < 4) _imageSlots.push({ type: 'empty', value: null, preview: null });
@@ -434,6 +591,7 @@ function openItemModal(item) {
     let catFields = '';
     if (cat === 'travel') catFields = travelFormHTML(item, today);
     else if (cat === 'rent') catFields = rentFormHTML(item, today);
+    else if (cat === 'cruise') catFields = cruiseFormHTML(item, today);
     else { catFields = accommodationFormHTML(item, today); }
 
     return `
@@ -444,7 +602,7 @@ function openItemModal(item) {
             ${BOOK_CATS.map(c => `<option value="${c}" ${cat === c ? 'selected' : ''}>${BOOK_CAT_ICONS[c]} ${t('book.cats.' + c)}</option>`).join('')}
           </select>
         </div>
-        <div class="form-group" id="book-name-group" style="${cat === 'accommodation' ? 'display:none' : ''}">
+        <div class="form-group" id="book-name-group" style="${cat === 'accommodation' || cat === 'cruise' ? 'display:none' : ''}">
           <label class="form-label" id="book-name-label">${cat === 'travel' ? (getLang() === 'ko' ? '항공 이름' : 'Airline Name') : (getLang() === 'ko' ? '렌트 이름' : 'Rental Name')} <span class="text-muted" style="font-weight:400">${getLang() === 'ko' ? '(선택)' : '(optional)'}</span></label>
           <input class="form-input" name="name" id="book-name-input" value="${item?.name || ''}" placeholder="${cat === 'travel' ? 'e.g. Outbound KE001' : 'e.g. Hertz Compact'}">
         </div>
@@ -487,25 +645,42 @@ function openItemModal(item) {
     const catFieldsEl = document.getElementById('book-cat-fields');
     if (!catFieldsEl) return;
 
-    // Re-init image slots for accommodation
+    // Re-init image slots for accommodation; port calls for cruise
     if (newCat === 'accommodation') {
       _imageSlots = [];
       while (_imageSlots.length < 4) _imageSlots.push({ type: 'empty', value: null, preview: null });
+    } else if (newCat === 'cruise') {
+      _portCalls = [];
     }
 
     let newCatFields = '';
     if (newCat === 'travel') newCatFields = travelFormHTML(null, today);
     else if (newCat === 'rent') newCatFields = rentFormHTML(null, today);
+    else if (newCat === 'cruise') newCatFields = cruiseFormHTML(null, today);
     else newCatFields = accommodationFormHTML(null, today);
     catFieldsEl.innerHTML = newCatFields;
 
-    // Show/hide the optional name field (not needed for accommodation — it has its own required name)
+    // Show/hide the optional name field (not for accommodation or cruise — those have their own name fields)
     const nameGroup = document.getElementById('book-name-group');
     const nameLabel = document.getElementById('book-name-label');
     if (nameGroup) {
-      nameGroup.style.display = newCat === 'accommodation' ? 'none' : '';
+      nameGroup.style.display = (newCat === 'accommodation' || newCat === 'cruise') ? 'none' : '';
       if (nameLabel) { const _ko = getLang() === 'ko'; nameLabel.innerHTML = (newCat === 'travel' ? (_ko ? '항공 이름' : 'Airline Name') : (_ko ? '렌트 이름' : 'Rental Name')) + ` <span class="text-muted" style="font-weight:400">${_ko ? '(선택)' : '(optional)'}</span>`; }
     }
+  };
+
+  window.__addPortCall = () => {
+    _portCalls.push({ port: '', date: '', arrTime: '', depTime: '' });
+    const el = document.getElementById('cruise-port-list');
+    if (el) el.innerHTML = portCallsHTML();
+  };
+  window.__removePortCall = (i) => {
+    _portCalls.splice(i, 1);
+    const el = document.getElementById('cruise-port-list');
+    if (el) el.innerHTML = portCallsHTML();
+  };
+  window.__portCallUpdate = (i, field, value) => {
+    if (_portCalls[i]) _portCalls[i][field] = value;
   };
 
   window.__bookAddLink = () => {
@@ -805,6 +980,89 @@ function openItemModal(item) {
         }
       }
 
+      } else if (cat === 'cruise') {
+        // Collect port calls from module variable (updated via oninput handlers)
+        data.portCalls = _portCalls.filter(p => p.port?.trim()).map(p => ({
+          port: p.port.trim(),
+          date: p.date || '',
+          arrTime: p.arrTime || '',
+          depTime: p.depTime || '',
+        }));
+        // name is derived — store ship + line for display/expense label
+        if (!data.name) data.name = [data.cruiseLine, data.shipName].filter(Boolean).join(' — ') || null;
+
+        let savedId = id;
+        if (id) {
+          await updateBooking(userId, tripId, id, data);
+          showToast(t('toast.booking_updated'));
+        } else {
+          const ref = await addBooking(userId, tripId, data);
+          savedId = ref.id;
+          showToast(t('toast.booking_added'));
+        }
+
+        // Expense sync
+        if (data.cost) {
+          await upsertLinkedExpense(userId, tripId, savedId, 'booking-cruise', {
+            title: data.name || data.shipName || 'Cruise',
+            amount: parseFloat(data.cost),
+            currency: data.currency || 'KRW',
+            date: data.embarkDate,
+            category: 'accom',
+            notes: '',
+          });
+        } else {
+          await deleteLinkedExpense(userId, tripId, savedId, 'booking-cruise');
+        }
+
+        // Itinerary — embarkation
+        if (data.embarkTime) {
+          await upsertLinkedItinItem(userId, tripId, savedId, 'booking', 'embark', {
+            title: `Embark: ${data.shipName || 'Cruise'}`,
+            date: data.embarkDate,
+            time: data.embarkTime,
+            location: data.embarkPort || '',
+            type: 'travel',
+            _isFlight: false,
+            links: data.links || [],
+          });
+        } else {
+          await deleteLinkedItinItem(userId, tripId, savedId, 'booking', 'embark');
+        }
+
+        // Itinerary — port calls (arrival time used for itin; up to 20 slots)
+        for (let pi = 0; pi < 20; pi++) {
+          const pc = data.portCalls?.[pi];
+          if (pc && pc.port && pc.date && pc.arrTime) {
+            await upsertLinkedItinItem(userId, tripId, savedId, 'booking', `port-${pi}`, {
+              title: pc.port,
+              date: pc.date,
+              time: pc.arrTime,
+              location: pc.port,
+              type: 'activity',
+              links: [],
+            });
+          } else {
+            await deleteLinkedItinItem(userId, tripId, savedId, 'booking', `port-${pi}`);
+          }
+        }
+
+        // Itinerary — disembarkation
+        if (data.disembarkTime) {
+          await upsertLinkedItinItem(userId, tripId, savedId, 'booking', 'disembark', {
+            title: `Disembark: ${data.shipName || 'Cruise'}`,
+            date: data.disembarkDate,
+            time: data.disembarkTime,
+            location: data.disembarkPort || '',
+            type: 'travel',
+            _isFlight: false,
+            links: data.links || [],
+          });
+        } else {
+          await deleteLinkedItinItem(userId, tripId, savedId, 'booking', 'disembark');
+        }
+      }
+
       closeModal();
     } catch (e) {
       setModalSaving(false);
@@ -823,6 +1081,7 @@ function openItemModal(item) {
         deleteLinkedExpense(userId, tripId, id, 'booking-accom'),
         deleteLinkedExpense(userId, tripId, id, 'booking-travel'),
         deleteLinkedExpense(userId, tripId, id, 'booking-rent'),
+        deleteLinkedExpense(userId, tripId, id, 'booking-cruise'),
         deleteLinkedItinItems(userId, tripId, id, 'booking'),
       ]);
       showToast(t('toast.booking_deleted'));

@@ -102,13 +102,18 @@ users/{userId}/
   trips/{tripId}/accommodation/{bookingId}
     # Collection name kept as `accommodation` for backward compatibility with pre-v1.2.1 data.
     # Holds ALL booking categories — distinguished by the `category` field.
-    category (accommodation|travel|rent)
+    category (accommodation|travel|rent|cruise)
     name, cost (number), currency, notes, links[], status (booked|candidate)
     -- Accommodation: checkIn, checkOut (YYYY-MM-DD), checkInTime, checkOutTime, address, lat, lng, images[]
     -- Travel: airline, flightNo, cabinClass, departureAirport, departureDate, departureTime,
                arrivalAirport, arrivalDate, arrivalTime, pnr, depLat, depLng, arrLat, arrLng
     -- Rent: rentalCompany, vehicleType, pickupLocation, pickupDate, pickupTime,
              dropoffLocation, dropoffDate, dropoffTime, bookingRef, pickupLat, pickupLng, dropoffLat, dropoffLng
+    -- Cruise: shipName, cruiseLine, cabinType (inside|ocean_view|balcony|suite), cabinNo,
+               embarkPort, embarkDate, embarkTime, disembarkPort, disembarkDate, disembarkTime,
+               bookingRef, headcount,
+               portCalls: [{port, date, arrTime, depTime}]
+               (nights = disembarkDate - embarkDate, computed at display time)
 
   trips/{tripId}/activities/{activityId}
     name, date, time, location, category
