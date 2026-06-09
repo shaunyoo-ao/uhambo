@@ -1,4 +1,4 @@
-const VERSION = 'v59';
+const VERSION = 'v60';
 const APP_SHELL = 'app-shell-' + VERSION;
 const MAP_CACHE  = 'map-tiles-' + VERSION;
 const API_CACHE  = 'api-' + VERSION;
