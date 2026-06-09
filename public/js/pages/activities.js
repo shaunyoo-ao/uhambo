@@ -142,6 +142,7 @@ async function renderItem(item) {
         ${priceStr ? `<div class="mono text-sm text-accent">${priceStr}</div>` : ''}
         <div class="badge badge-muted" style="margin-top:4px">${item.category || 'other'}</div>
         ${item.status === 'candidate' ? `<div class="badge" style="margin-top:4px;background:var(--sun-dim,rgba(232,200,124,0.15));color:var(--sun)">🔖</div>` : ''}
+        ${item.status === 'booked' ? `<div class="badge" style="margin-top:4px;background:rgba(95,184,140,0.15);color:var(--mint)">✅</div>` : ''}
       </div>
     </div>`;
 }

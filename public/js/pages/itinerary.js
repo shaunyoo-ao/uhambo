@@ -1,4 +1,4 @@
-import { t } from '../i18n.js';
+import { t, getLang } from '../i18n.js';
 import { subscribeItinerary, addItineraryItem, updateItineraryItem, deleteItineraryItem, getTrip, getBookings, getActivities } from '../db.js';
 import { openModal, closeModal, showToast, showConfirm, setModalSaving } from '../app.js';
 import { geocodeCity } from '../weather.js';
@@ -15,12 +15,20 @@ let _activeTab = 'schedule';
 let _geoCache = {};
 let _accomItems = null;
 let _actItems = null;
+let _tripEndDate = null;
+let _calBookings = [];
+let _calItems = [];
+let _calMonth = null;       // 'YYYY-MM' currently displayed
+let _calCollapsed = false;
 
 export function destroy() {
   if (_unsub) { _unsub(); _unsub = null; }
   if (_map) { destroyMap(_map); _map = null; }
   _accomItems = null;
   _actItems = null;
+  _calBookings = [];
+  _calItems = [];
+  _calMonth = null;
 }
 
 const TYPE_ICONS = { home: '🏠', travel: '✈️', rest: '🏨', meal: '🍽️', activity: '⚡', shopping: '🛍️', other: '📌' };
@@ -37,8 +45,12 @@ const TYPE_COLORS_HEX = {
 export async function render(container, ctx) {
   _ctx = ctx;
   _tripStartDate = ctx.tripStartDate || null;
+  _tripEndDate = ctx.tripEndDate || null;
   _activeTab = 'schedule';
   _geoCache = {};
+  _calBookings = [];
+  _calItems = [];
+  _calMonth = null;
   const { userId, tripId, isGuest } = ctx;
   getTrip(userId, tripId).then(tr => { _tripCountry = tr?.country || ''; }).catch(() => {});
 
@@ -59,6 +71,7 @@ export async function render(container, ctx) {
       <button class="itin-tab" data-tab="map">🗺️ ${t('itin.tab_map')}</button>
     </div>
     <div id="itin-schedule">
+      <div id="itin-calendar"></div>
       <div id="itin-list"><div class="loading-center"><div class="spinner"></div></div></div>
       <div style="height:80px"></div>
     </div>
@@ -79,15 +92,29 @@ export async function render(container, ctx) {
 
   if (!isGuest) addFAB(container, () => openItemModal(null));
 
+  getBookings(userId, tripId).then(b => { _calBookings = b || []; renderCalendar(); }).catch(() => {});
+
+  window.__calToggle = () => { _calCollapsed = !_calCollapsed; renderCalendar(); };
+  window.__calNav = (delta) => {
+    const { months } = calRange();
+    const next = months.indexOf(_calMonth) + delta;
+    if (next < 0 || next >= months.length) return;
+    _calMonth = months[next];
+    renderCalendar();
+  };
+  window.__calDay = (ds) => openCalDayModal(ds);
+
   if (_unsub) _unsub();
   _unsub = subscribeItinerary(userId, tripId, items => {
     _mapItems = items;
+    _calItems = items;
     window.__editItinItem = (id) => {
       if (_ctx.isGuest) return;
       const item = _mapItems.find(i => i.id === id);
       if (item) openItemModal(item);
     };
     renderList(items);
+    renderCalendar();
     if (_activeTab === 'map') renderMap(items);
   });
 }
@@ -143,6 +170,156 @@ function renderList(items) {
           </div>
         </div>`).join('')}`;
   }).join('');
+}
+
+// ── Monthly Calendar ─────────────────────────────────────────────
+function addMonth(ym, delta) {
+  let [y, m] = ym.split('-').map(Number);
+  m += delta;
+  while (m < 1) { m += 12; y--; }
+  while (m > 12) { m -= 12; y++; }
+  return `${y}-${String(m).padStart(2, '0')}`;
+}
+
+function bookingRange(b) {
+  const cat = b.category || 'accommodation';
+  let start, end, color;
+  if (cat === 'accommodation') { start = b.checkIn;       end = b.checkOut || b.checkIn;        color = 'var(--mint)'; }
+  else if (cat === 'travel')   { start = b.departureDate; end = b.arrivalDate || b.departureDate; color = 'var(--sky)'; }
+  else if (cat === 'rent')     { start = b.pickupDate;    end = b.dropoffDate || b.pickupDate;   color = 'var(--sun)'; }
+  else if (cat === 'cruise')   { start = b.embarkDate;    end = b.disembarkDate || b.embarkDate; color = 'var(--accent)'; }
+  else return null;
+  if (!start) return null;
+  return { start, end: end || start, color, cat, label: b.name || b.shipName || cat };
+}
+
+function calBookingRanges() {
+  return (_calBookings || []).map(bookingRange).filter(Boolean);
+}
+
+function calRange() {
+  const dates = [];
+  if (_tripStartDate) dates.push(_tripStartDate);
+  if (_tripEndDate) dates.push(_tripEndDate);
+  if (dates.length < 2) {
+    _calItems.forEach(i => { if (i.date) dates.push(i.date); });
+    calBookingRanges().forEach(r => { dates.push(r.start); if (r.end) dates.push(r.end); });
+  }
+  if (dates.length === 0) dates.push(new Date().toISOString().slice(0, 10));
+  dates.sort();
+  const startYM = dates[0].slice(0, 7);
+  const endYM = dates[dates.length - 1].slice(0, 7);
+  const months = [];
+  let cur = startYM;
+  for (let i = 0; i < 120 && cur <= endYM; i++) { months.push(cur); cur = addMonth(cur, 1); }
+  return { startYM, endYM, months };
+}
+
+function renderCalendar() {
+  const host = document.getElementById('itin-calendar');
+  if (!host) return;
+  const { months } = calRange();
+  if (months.length === 0) { host.innerHTML = ''; return; }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const todayYM = today.slice(0, 7);
+  if (!_calMonth || !months.includes(_calMonth)) {
+    _calMonth = months.includes(todayYM) ? todayYM : months[0];
+  }
+
+  const idx = months.indexOf(_calMonth);
+  const [year, month] = _calMonth.split('-').map(Number); // month 1-12
+  const monthNames = t('cal.months');
+  const weekdays = t('cal.weekdays');
+  const monthLabel = `${monthNames[month - 1]} ${year}`;
+  const chevron = _calCollapsed ? '▸' : '▾';
+
+  let html = `
+    <div class="cal-wrap">
+      <div class="cal-head" onclick="window.__calToggle()">
+        <span class="eyebrow">📅 ${t('cal.title')}</span>
+        <span class="cal-chevron">${chevron}</span>
+      </div>`;
+
+  if (!_calCollapsed) {
+    const startWeekday = new Date(year, month - 1, 1).getDay(); // 0=Sun
+    const daysInMonth = new Date(year, month, 0).getDate();
+
+    const itemsByDay = {};
+    _calItems.forEach(it => {
+      if (it.date && it.date.slice(0, 7) === _calMonth) {
+        (itemsByDay[it.date] = itemsByDay[it.date] || []).push(it);
+      }
+    });
+    const ranges = calBookingRanges();
+
+    let cells = '';
+    for (let i = 0; i < startWeekday; i++) cells += `<div class="cal-cell out"></div>`;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const ds = `${_calMonth}-${String(d).padStart(2, '0')}`;
+      const dayItems = itemsByDay[ds] || [];
+      const dayRanges = ranges.filter(r => ds >= r.start && ds <= r.end);
+      const isToday = ds === today;
+      const iconSet = [...new Set(dayItems.map(i => TYPE_ICONS[i.type] || '📌'))].slice(0, 3).join('');
+      const bars = dayRanges.slice(0, 3).map(r => `<div class="cal-bar" style="background:${r.color}"></div>`).join('');
+      const tappable = dayItems.length > 0 || dayRanges.length > 0;
+      cells += `
+        <div class="cal-cell${isToday ? ' today' : ''}${tappable ? ' has' : ''}" ${tappable ? `onclick="window.__calDay('${ds}')"` : ''}>
+          <div class="cal-num">${d}</div>
+          ${iconSet ? `<div class="cal-icons">${iconSet}</div>` : ''}
+          ${bars ? `<div class="cal-bars">${bars}</div>` : ''}
+        </div>`;
+    }
+
+    html += `
+      <div class="cal-nav">
+        <button class="cal-arrow" ${idx <= 0 ? 'disabled' : ''} onclick="window.__calNav(-1)">‹</button>
+        <span class="cal-month">${monthLabel}</span>
+        <button class="cal-arrow" ${idx >= months.length - 1 ? 'disabled' : ''} onclick="window.__calNav(1)">›</button>
+      </div>
+      <div class="cal-grid">
+        ${weekdays.map((w, i) => `<div class="cal-weekday${i === 0 ? ' sun' : ''}">${w}</div>`).join('')}
+      </div>
+      <div class="cal-grid">${cells}</div>`;
+  }
+
+  html += `</div>`;
+  host.innerHTML = html;
+}
+
+function openCalDayModal(ds) {
+  const dayItems = _calItems.filter(i => i.date === ds)
+    .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+  const dayRanges = calBookingRanges().filter(r => ds >= r.start && ds <= r.end);
+  let body = '';
+  if (dayRanges.length > 0) {
+    body += `<div class="eyebrow" style="margin-bottom:6px">${t('cal.bookings')}</div>`;
+    body += dayRanges.map(r => `
+      <div class="row gap-8" style="margin-bottom:8px;align-items:center">
+        <span style="background:${r.color};width:14px;height:14px;border-radius:4px;flex-shrink:0"></span>
+        <span class="text-sm font-medium">${r.label}</span>
+        <span class="badge badge-muted" style="margin-left:auto;font-size:10px">${r.cat}</span>
+      </div>`).join('');
+  }
+  if (dayItems.length > 0) {
+    body += `<div class="eyebrow" style="margin:12px 0 6px">${t('cal.events')}</div>`;
+    body += dayItems.map(it => `
+      <div style="padding:8px 0;border-bottom:1px solid var(--line-soft)">
+        <div class="row gap-8" style="align-items:center">
+          <span>${TYPE_ICONS[it.type] || '📌'}</span>
+          <span class="text-sm font-medium">${it.title || '—'}</span>
+          ${it.time ? `<span class="text-xs text-muted" style="margin-left:auto">${it.time}</span>` : ''}
+        </div>
+        ${it.location ? `<div class="text-xs text-muted" style="margin-top:2px">📍 ${it.location}</div>` : ''}
+        ${it.description ? `<div class="text-sm" style="color:var(--cream-dim);margin-top:2px">${it.description}</div>` : ''}
+      </div>`).join('');
+  }
+  if (!body) body = `<div class="text-sm text-muted">${t('cal.no_items')}</div>`;
+  openModal({
+    title: formatDate(ds),
+    body,
+    footer: `<button class="btn btn-ghost btn-full" onclick="window.__closeModal()">${t('common.done')}</button>`,
+  });
 }
 
 async function renderMap(itinItems) {

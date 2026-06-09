@@ -4,7 +4,7 @@ import { setCurrency, getCurrency, CURRENCIES, getCountryCurrency } from './curr
 import { getTrips, createTrip, getTrip, updateTrip, deleteTrip, getGuestCode, setGuestCode, removeGuestCode, lookupGuestCode, getItinerary, getBookings, getActivities, getExpenses } from './db.js';
 import { resizeImageToBlob, uploadToImgBB } from './imgbb.js';
 
-const APP_VERSION = '1.2.58';
+const APP_VERSION = '1.2.60';
 
 // Populate login footer version from this single source of truth.
 // Runs as soon as this module loads (before login screen is shown).
@@ -306,7 +306,7 @@ export async function navigate(route) {
     _pageModules.set(route, mod);
     const renderUid = isGuest ? _guestOwnerUid : currentUser.uid;
     const currentTrip = _trips.find(tr => tr.id === currentTripId);
-    await mod.render(container, { userId: renderUid, tripId: currentTripId, isGuest, tripStartDate: currentTrip?.startDate || null });
+    await mod.render(container, { userId: renderUid, tripId: currentTripId, isGuest, tripStartDate: currentTrip?.startDate || null, tripEndDate: currentTrip?.endDate || null });
     _renderedPages.add(route);
   } catch (e) {
     console.error('navigate:', e);

@@ -97,7 +97,9 @@ async function renderList(items) {
     const cat = item.category || 'accommodation';
     const priceStr = item.cost ? await formatConverted(item.cost, item.currency || 'KRW') : null;
     const statusBadge = item.status === 'candidate'
-      ? `<div class="badge" style="background:rgba(232,200,124,0.15);color:var(--sun)">🔖 ${t('common.candidate')}</div>` : '';
+      ? `<div class="badge" style="background:rgba(232,200,124,0.15);color:var(--sun)">🔖 ${t('common.candidate')}</div>`
+      : item.status === 'booked'
+      ? `<div class="badge" style="background:rgba(95,184,140,0.15);color:var(--mint)">✅ ${t('common.booked')}</div>` : '';
     const clickAttr = _ctx?.isGuest ? '' : `onclick="window.__editBookItem('${item.id}')"`;
     const cursorStyle = _ctx?.isGuest ? '' : 'cursor:pointer';
 
