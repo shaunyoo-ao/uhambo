@@ -885,7 +885,8 @@ function openItemModal(item) {
         // Itinerary sync – departure (only if time provided)
         if (data.departureTime) {
           await upsertLinkedItinItem(userId, tripId, savedId, 'booking', 'departure', {
-            title: `Departure: ${data.name || [data.airline, data.flightNo].filter(Boolean).join(' ') || data.departureAirport}`,
+            title: `Departure: ${data.departureAirport || ''}`,
+            description: data.pnr ? `${t('book.pnr')}: ${data.pnr}` : '',
             date: data.departureDate,
             time: data.departureTime,
             location: data.departureAirport || '',
@@ -900,7 +901,8 @@ function openItemModal(item) {
         // Itinerary sync – arrival (only if time provided)
         if (data.arrivalTime) {
           await upsertLinkedItinItem(userId, tripId, savedId, 'booking', 'arrival', {
-            title: `Arrival: ${data.name || [data.airline, data.flightNo].filter(Boolean).join(' ') || data.arrivalAirport}`,
+            title: `Arrival: ${data.arrivalAirport || ''}`,
+            description: data.pnr ? `${t('book.pnr')}: ${data.pnr}` : '',
             date: data.arrivalDate,
             time: data.arrivalTime,
             location: data.arrivalAirport || '',
