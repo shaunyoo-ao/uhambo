@@ -4,7 +4,7 @@ import {
   upsertLinkedExpense, deleteLinkedExpense, upsertLinkedItinItem, deleteLinkedItinItems, deleteLinkedItinItem,
   getTrip,
 } from '../db.js';
-import { openModal, closeModal, showToast, showConfirm, setModalSaving, escapeHtml } from '../app.js';
+import { openModal, closeModal, showToast, showConfirm, setModalSaving, escapeHtml, skeletonHTML } from '../app.js';
 import { formatConverted, getCurrency, CURRENCIES } from '../currency.js';
 import { openCalc } from '../calculator.js';
 import { geocodeCity } from '../weather.js';
@@ -52,7 +52,7 @@ export async function render(container, ctx) {
       <div class="chip ${_filter === 'all' ? 'chip-active' : ''}" onclick="window.__bookFilter('all')">All</div>
       ${BOOK_CATS.map(c => `<div class="chip ${_filter === c ? 'chip-active' : ''}" onclick="window.__bookFilter('${c}')">${BOOK_CAT_ICONS[c]} ${t('book.cats.' + c)}</div>`).join('')}
     </div>
-    <div id="booking-list"><div class="loading-center"><div class="spinner"></div></div></div>
+    <div id="booking-list">${skeletonHTML()}</div>
     <div style="height:80px"></div>`;
 
   window.__bookFilter = (cat) => {

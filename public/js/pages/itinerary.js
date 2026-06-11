@@ -1,6 +1,6 @@
 import { t, getLang } from '../i18n.js';
 import { subscribeItinerary, addItineraryItem, updateItineraryItem, deleteItineraryItem, getTrip, getBookings, getActivities } from '../db.js';
-import { openModal, closeModal, showToast, showConfirm, setModalSaving, escapeHtml } from '../app.js';
+import { openModal, closeModal, showToast, showConfirm, setModalSaving, escapeHtml, skeletonHTML } from '../app.js';
 import { geocodeCity } from '../weather.js';
 import { initMap, destroyMap } from '../map.js';
 
@@ -72,7 +72,7 @@ export async function render(container, ctx) {
     </div>
     <div id="itin-schedule">
       <div id="itin-calendar"></div>
-      <div id="itin-list"><div class="loading-center"><div class="spinner"></div></div></div>
+      <div id="itin-list">${skeletonHTML()}</div>
       <div style="height:80px"></div>
     </div>
     <div id="itin-map-view" style="display:none;position:relative">

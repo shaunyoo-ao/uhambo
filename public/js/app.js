@@ -4,7 +4,7 @@ import { setCurrency, getCurrency, CURRENCIES, getCountryCurrency } from './curr
 import { getTrips, createTrip, getTrip, updateTrip, deleteTrip, getGuestCode, setGuestCode, removeGuestCode, lookupGuestCode, getItinerary, getBookings, getActivities, getExpenses } from './db.js';
 import { resizeImageToBlob, uploadToImgBB } from './imgbb.js';
 
-const APP_VERSION = '1.2.64';
+const APP_VERSION = '1.2.65';
 
 // Populate login footer version from this single source of truth.
 // Runs as soon as this module loads (before login screen is shown).
@@ -22,6 +22,37 @@ export function escapeHtml(s) {
   return String(s ?? '').replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
+
+// Render `count` shimmering placeholder cards while content loads.
+export function skeletonHTML(count = 4) {
+  return Array.from({ length: count }, () => `
+    <div class="skel-card">
+      <div class="skel-line" style="width:60%"></div>
+      <div class="skel-line" style="width:90%"></div>
+    </div>`).join('');
+}
+
+// ── Offline banner ───────────────────────────────────────────────
+function setOffline(offline) {
+  document.body.classList.toggle('is-offline', offline);
+  const banner = document.getElementById('offline-banner');
+  if (banner) banner.textContent = offline ? t('common.offline') : '';
+}
+window.addEventListener('online', () => setOffline(false));
+window.addEventListener('offline', () => setOffline(true));
+if (document.readyState !== 'loading') {
+  setOffline(!navigator.onLine);
+} else {
+  document.addEventListener('DOMContentLoaded', () => setOffline(!navigator.onLine));
+}
+
+// ── ESC closes modal (unless a higher-priority overlay is open) ──
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (document.getElementById('confirm-overlay')?.classList.contains('visible')) return;
+  if (document.getElementById('calc-root')?.classList.contains('visible')) return;
+  if (document.getElementById('modal-root')?.classList.contains('visible')) closeModal();
+});
 
 const COUNTRIES = ['Australia','Austria','Belgium','Brazil','Canada','China','Croatia','Czech Republic','Denmark','Egypt','Finland','France','Germany','Greece','Hong Kong','Hungary','Iceland','India','Indonesia','Ireland','Israel','Italy','Japan','Malaysia','Mexico','Morocco','Netherlands','New Zealand','Norway','Philippines','Poland','Portugal','Romania','Russia','Singapore','South Africa','South Korea','Spain','Sweden','Switzerland','Taiwan','Thailand','Turkey','United Arab Emirates','United Kingdom','United States','Vietnam'];
 

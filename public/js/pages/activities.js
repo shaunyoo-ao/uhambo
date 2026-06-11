@@ -4,7 +4,7 @@ import {
   upsertLinkedExpense, deleteLinkedExpense, upsertLinkedItinItem, deleteLinkedItinItems,
   getTrip,
 } from '../db.js';
-import { openModal, closeModal, showToast, showConfirm, setModalSaving, escapeHtml } from '../app.js';
+import { openModal, closeModal, showToast, showConfirm, setModalSaving, escapeHtml, skeletonHTML } from '../app.js';
 import { formatConverted, getCurrency, CURRENCIES } from '../currency.js';
 import { openCalc } from '../calculator.js';
 import { geocodeCity } from '../weather.js';
@@ -51,7 +51,7 @@ export async function render(container, ctx) {
       <div class="chip active" data-cat="all" onclick="window.__actFilter('all')">All</div>
       ${CATS.map(c => `<div class="chip" data-cat="${c}" onclick="window.__actFilter('${c}')">${CAT_ICONS[c]} ${t('act.cats.' + c)}</div>`).join('')}
     </div>
-    <div id="act-list"><div class="loading-center"><div class="spinner"></div></div></div>
+    <div id="act-list">${skeletonHTML()}</div>
     <div style="height:80px"></div>`;
 
   if (!isGuest) addFAB(() => {

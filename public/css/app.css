@@ -128,7 +128,7 @@ a { color: var(--accent); text-decoration: none; }
   text-align: center;
 }
 .icon-btn {
-  width: 32px; height: 32px;
+  width: 40px; height: 40px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
@@ -397,7 +397,7 @@ a { color: var(--accent); text-decoration: none; }
   flex: 1;
 }
 .modal-close {
-  width: 28px; height: 28px;
+  width: 36px; height: 36px;
   background: var(--surface-2);
   border: none;
   border-radius: 50%;
@@ -539,7 +539,7 @@ a { color: var(--accent); text-decoration: none; }
 .chip-row::-webkit-scrollbar { display: none; }
 .chip {
   display: inline-flex; align-items: center; gap: 4px;
-  padding: 5px 12px;
+  padding: 7px 12px;
   border-radius: 100px;
   font-size: 12px;
   font-family: var(--font-mono);
@@ -981,8 +981,43 @@ a { color: var(--accent); text-decoration: none; }
   100% { transform: translateX(400%); }
 }
 
+/* ── Loading skeletons ─────────────────────────────────────────── */
+.skel-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin: 0 16px 10px;
+}
+.skel-line {
+  height: 12px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
+  background-size: 200% 100%;
+  animation: skel-shimmer 1.4s ease-in-out infinite;
+}
+.skel-line:last-child { margin-bottom: 0; }
+@keyframes skel-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Offline banner ─────────────────────────────────────────────── */
+#offline-banner {
+  display: none;
+  font-size: 12px;
+  text-align: center;
+  padding: 6px 12px;
+  background: var(--sun-soft);
+  color: var(--sun);
+  border-bottom: 1px solid var(--line);
+}
+body.is-offline #offline-banner { display: block; }
+
 /* ── Completion checkbox ───────────────────────────────────────── */
 .check-box {
+  position: relative;
   width: 20px; height: 20px;
   border-radius: 6px;
   border: 1.5px solid var(--line);
@@ -991,6 +1026,11 @@ a { color: var(--accent); text-decoration: none; }
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
   transition: background 0.15s, border-color 0.15s;
+}
+.check-box::before {
+  content: '';
+  position: absolute;
+  inset: -10px;
 }
 .check-box.checked { background: var(--mint-soft); border-color: var(--mint); }
 .check-box.checked::after {
@@ -1104,7 +1144,7 @@ a { color: var(--accent); text-decoration: none; }
 .link-list { display:flex; flex-direction:column; gap:6px; margin-bottom:6px; }
 .link-item { display:flex; align-items:center; gap:6px; }
 .link-item a { flex:1; font-size:13px; color:var(--sky); text-overflow:ellipsis; overflow:hidden; white-space:nowrap; }
-.link-item-del { flex-shrink:0; background:none; border:none; color:var(--muted); cursor:pointer; font-size:16px; padding:2px 4px; }
+.link-item-del { flex-shrink:0; background:none; border:none; color:var(--muted); cursor:pointer; font-size:16px; padding:8px; }
 .link-add-row { display:flex; gap:6px; }
 .link-add-row input { flex:1; }
 .link-add-btn { flex-shrink:0; }
@@ -1250,7 +1290,8 @@ a { color: var(--accent); text-decoration: none; }
   background: none;
   border: none;
   cursor: pointer;
-  padding: 0;
+  padding: 8px;
+  margin: -8px;
   color: var(--accent);
   flex-shrink: 0;
   line-height: 1;
@@ -1277,7 +1318,8 @@ a { color: var(--accent); text-decoration: none; }
   cursor: pointer;
   font-size: 18px;
   line-height: 1;
-  padding: 0 4px;
+  padding: 8px;
+  margin: -8px;
   flex-shrink: 0;
 }
 .pack-delete:active { color: var(--rose); }

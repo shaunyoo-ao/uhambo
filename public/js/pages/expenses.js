@@ -1,6 +1,6 @@
 import { t } from '../i18n.js';
 import { subscribeExpenses, addExpense, updateExpense, deleteExpense } from '../db.js';
-import { openModal, closeModal, showToast, showConfirm, setModalSaving, escapeHtml } from '../app.js';
+import { openModal, closeModal, showToast, showConfirm, setModalSaving, escapeHtml, skeletonHTML } from '../app.js';
 import { openCalc } from '../calculator.js';
 import { formatConverted, convert, getCurrency, getCurrencyMeta, formatCurrency, ensureRates, CURRENCIES } from '../currency.js';
 
@@ -49,7 +49,7 @@ export async function render(container, ctx) {
       <div class="chip active" data-cat="all" onclick="window.__expFilter('all')">All</div>
       ${CATS.map(c => `<div class="chip" data-cat="${c}" onclick="window.__expFilter('${c}')">${CAT_ICONS[c]} ${t('exp.cats.' + c)}</div>`).join('')}
     </div>
-    <div id="exp-list"><div class="loading-center"><div class="spinner"></div></div></div>
+    <div id="exp-list">${skeletonHTML()}</div>
     <div style="height:80px"></div>`;
 
   if (!isGuest) addFAB(() => {
