@@ -152,7 +152,7 @@ async function renderList(items) {
           ${nights !== null ? `<div style="margin-left:auto"><div class="eyebrow" style="margin-bottom:2px">${t('accom.nights')}</div><div class="mono text-sm">${nights}</div></div>` : ''}
         </div>
         ${portCount > 0 ? `<div class="text-xs text-muted" style="margin-top:8px">⚓ ${portCount} ${t('book.port_calls')}${portNames ? ': ' + escapeHtml(portNames) : ''}</div>` : ''}
-        ${item.bookingRef ? `<div class="text-xs text-muted" style="margin-top:4px">Ref: ${escapeHtml(item.bookingRef)}</div>` : ''}
+        ${item.bookingRef && !_ctx?.isGuest ? `<div class="text-xs text-muted" style="margin-top:4px">Ref: ${escapeHtml(item.bookingRef)}</div>` : ''}
         ${(item.images || []).length > 0 ? `<div style="margin-top:10px;display:grid;grid-template-columns:${(item.images || []).length > 1 ? '1fr 1fr' : '1fr'};gap:6px;border-radius:8px;overflow:hidden">${(item.images || []).slice(0, 4).map(u => `<img src="${u}" style="width:100%;aspect-ratio:4/3;object-fit:cover;display:block">`).join('')}</div>` : ''}`;
     } else if (cat === 'travel') {
       const from = item.departureAirport || item.from || '';
@@ -178,7 +178,7 @@ async function renderList(items) {
           ${item.departureDate ? `<div><div class="eyebrow" style="margin-bottom:2px">${t('book.dep_date')}</div><div class="text-sm">${item.departureDate}${item.departureTime ? ' ' + item.departureTime : ''}</div></div>` : ''}
           ${item.arrivalDate ? `<div><div class="eyebrow" style="margin-bottom:2px">${t('book.arr_date')}</div><div class="text-sm">${item.arrivalDate}${item.arrivalTime ? ' ' + item.arrivalTime : ''}</div></div>` : ''}
         </div>
-        ${item.pnr ? `<div class="text-xs text-muted" style="margin-top:6px">PNR: ${escapeHtml(item.pnr)}</div>` : ''}`;
+        ${item.pnr && !_ctx?.isGuest ? `<div class="text-xs text-muted" style="margin-top:6px">PNR: ${escapeHtml(item.pnr)}</div>` : ''}`;
     } else if (cat === 'rent') {
       const pickup = item.pickupLocation || '';
       const dropoff = item.dropoffLocation || '';
@@ -201,7 +201,7 @@ async function renderList(items) {
           ${item.pickupDate ? `<div><div class="eyebrow" style="margin-bottom:2px">${t('book.pickup_date')}</div><div class="text-sm">${item.pickupDate}${item.pickupTime ? ' ' + item.pickupTime : ''}</div></div>` : ''}
           ${item.dropoffDate ? `<div><div class="eyebrow" style="margin-bottom:2px">${t('book.dropoff_date')}</div><div class="text-sm">${item.dropoffDate}${item.dropoffTime ? ' ' + item.dropoffTime : ''}</div></div>` : ''}
         </div>
-        ${item.bookingRef ? `<div class="text-xs text-muted" style="margin-top:6px">Ref: ${escapeHtml(item.bookingRef)}</div>` : ''}`;
+        ${item.bookingRef && !_ctx?.isGuest ? `<div class="text-xs text-muted" style="margin-top:6px">Ref: ${escapeHtml(item.bookingRef)}</div>` : ''}`;
     } else {
       // Accommodation
       const nights = item.checkIn && item.checkOut
@@ -907,7 +907,7 @@ function openItemModal(item) {
         if (data.departureTime) {
           await upsertLinkedItinItem(userId, tripId, savedId, 'booking', 'departure', {
             title: `Departure: ${data.departureAirport || ''}`,
-            description: data.pnr ? `${t('book.pnr')}: ${data.pnr}` : '',
+            description: '',
             date: data.departureDate,
             time: data.departureTime,
             location: data.departureAirport || '',
@@ -923,7 +923,7 @@ function openItemModal(item) {
         if (data.arrivalTime) {
           await upsertLinkedItinItem(userId, tripId, savedId, 'booking', 'arrival', {
             title: `Arrival: ${data.arrivalAirport || ''}`,
-            description: data.pnr ? `${t('book.pnr')}: ${data.pnr}` : '',
+            description: '',
             date: data.arrivalDate,
             time: data.arrivalTime,
             location: data.arrivalAirport || '',
@@ -1078,6 +1078,7 @@ function openItemModal(item) {
             location: data.embarkPort || '',
             type: 'travel',
             _isFlight: false,
+            _isCruise: true,
             links: data.links || [],
           });
         } else {
@@ -1111,6 +1112,7 @@ function openItemModal(item) {
             location: data.disembarkPort || '',
             type: 'travel',
             _isFlight: false,
+            _isCruise: true,
             links: data.links || [],
           });
         } else {

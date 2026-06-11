@@ -32,6 +32,11 @@ export function destroy() {
 }
 
 const TYPE_ICONS = { home: '🏠', travel: '✈️', rest: '🏨', meal: '🍽️', activity: '⚡', shopping: '🛍️', other: '📌' };
+
+function itemIcon(item) {
+  if (item._isCruise) return '⛴️';
+  return TYPE_ICONS[item.type] || '📌';
+}
 const TYPE_COLORS = { home: 'var(--muted)', travel: 'var(--sky)', rest: 'var(--mint)', meal: 'var(--sun)', activity: 'var(--accent)', shopping: 'var(--sky)', other: 'var(--muted)' };
 const TYPE_COLORS_HEX = {
   travel:   '#1565C0',
@@ -162,7 +167,7 @@ function renderList(items) {
           <div style="flex:1;padding-bottom:10px">
             <div class="timeline-card" ${_ctx?.isGuest ? '' : `onclick="window.__editItinItem('${item.id}')"`}>
               <div class="row gap-8" style="margin-bottom:4px">
-                <span>${TYPE_ICONS[item.type] || '📌'}</span>
+                <span>${itemIcon(item)}</span>
                 <span class="text-sm font-medium">${escapeHtml(item.title) || '—'}</span>
                 <span class="badge badge-muted" style="margin-left:auto;font-size:10px">${item.type === 'rest' ? 'accommodation' : (item.type || 'other')}</span>
               </div>
@@ -381,6 +386,7 @@ async function renderMap(itinItems) {
       lat: i.lat ? parseFloat(i.lat) : 0,
       lng: i.lng ? parseFloat(i.lng) : 0,
       date: i.date, time: i.time, description: i.description,
+      _isCruise: i._isCruise,
     })),
     ..._accomItems.filter(a => a.address && (!a.category || a.category === 'accommodation') && !linkedBookingIds.has(a.id)).map(a => ({
       id: a.id, source: 'accom', type: 'rest',
@@ -510,7 +516,7 @@ async function renderMap(itinItems) {
       <div class="itin-map-popup-inner">
         <button class="itin-map-popup-close" onclick="document.getElementById('itin-map-popup').style.display='none'">×</button>
         <div class="row gap-8" style="margin-bottom:6px">
-          <span>${TYPE_ICONS[item.type] || '📌'}</span>
+          <span>${itemIcon(item)}</span>
           <span class="text-sm font-medium">${escapeHtml(item.title) || '—'}</span>
           ${badge}
         </div>
