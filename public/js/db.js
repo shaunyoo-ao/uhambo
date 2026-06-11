@@ -2,7 +2,7 @@ import { db } from './firebase-init.js';
 import {
   collection, doc,
   addDoc, setDoc, updateDoc, deleteDoc,
-  getDocs, getDoc, query, orderBy, onSnapshot,
+  getDocs, getDoc, query, orderBy, where, onSnapshot,
   serverTimestamp, Timestamp
 } from 'firebase/firestore';
 
@@ -86,9 +86,9 @@ export async function getItinerary(uid, tid) {
   return sortByDateTime(snap(s));
 }
 
-export function subscribeItinerary(uid, tid, cb) {
+export function subscribeItinerary(uid, tid, cb, onErr) {
   const q = query(subRef(uid, tid, 'itinerary'), orderBy('date'));
-  return onSnapshot(q, s => cb(sortByDateTime(snap(s))));
+  return onSnapshot(q, s => cb(sortByDateTime(snap(s))), onErr);
 }
 
 export async function addItineraryItem(uid, tid, data) {
@@ -112,8 +112,8 @@ export async function getBookings(uid, tid) {
   return snap(s);
 }
 
-export function subscribeBookings(uid, tid, cb) {
-  return onSnapshot(subRef(uid, tid, 'accommodation'), s => cb(snap(s)));
+export function subscribeBookings(uid, tid, cb, onErr) {
+  return onSnapshot(subRef(uid, tid, 'accommodation'), s => cb(snap(s)), onErr);
 }
 
 export async function addBooking(uid, tid, data) {
@@ -138,9 +138,9 @@ export async function getActivities(uid, tid) {
   return sortByDateTime(snap(s));
 }
 
-export function subscribeActivities(uid, tid, cb) {
+export function subscribeActivities(uid, tid, cb, onErr) {
   const q = query(subRef(uid, tid, 'activities'), orderBy('date'));
-  return onSnapshot(q, s => cb(sortByDateTime(snap(s))));
+  return onSnapshot(q, s => cb(sortByDateTime(snap(s))), onErr);
 }
 
 export async function addActivity(uid, tid, data) {
@@ -191,9 +191,9 @@ export async function getExpenses(uid, tid) {
   return snap(s);
 }
 
-export function subscribeExpenses(uid, tid, cb) {
+export function subscribeExpenses(uid, tid, cb, onErr) {
   const q = query(subRef(uid, tid, 'expenses'), orderBy('date', 'desc'));
-  return onSnapshot(q, s => cb(snap(s)));
+  return onSnapshot(q, s => cb(snap(s)), onErr);
 }
 
 export async function addExpense(uid, tid, data) {
@@ -213,8 +213,9 @@ export async function deleteExpense(uid, tid, id) {
 
 // ── Linked expense helpers ────────────────────────────────────────
 export async function upsertLinkedExpense(uid, tid, sourceId, sourceType, data) {
-  const all = await getDocs(subRef(uid, tid, 'expenses'));
-  const existing = all.docs.find(d => d.data().sourceId === sourceId && d.data().sourceType === sourceType);
+  const q = query(subRef(uid, tid, 'expenses'), where('sourceId', '==', sourceId));
+  const all = await getDocs(q);
+  const existing = all.docs.find(d => d.data().sourceType === sourceType);
   if (existing) {
     await updateDoc(existing.ref, data);
     return existing.id;
@@ -224,18 +225,17 @@ export async function upsertLinkedExpense(uid, tid, sourceId, sourceType, data) 
 }
 
 export async function deleteLinkedExpense(uid, tid, sourceId, sourceType) {
-  const all = await getDocs(subRef(uid, tid, 'expenses'));
-  const match = all.docs.find(d => d.data().sourceId === sourceId && d.data().sourceType === sourceType);
+  const q = query(subRef(uid, tid, 'expenses'), where('sourceId', '==', sourceId));
+  const all = await getDocs(q);
+  const match = all.docs.find(d => d.data().sourceType === sourceType);
   if (match) await deleteDoc(match.ref);
 }
 
 // ── Linked itinerary helpers ──────────────────────────────────────
 export async function upsertLinkedItinItem(uid, tid, sourceId, sourceType, sourceSubType, data) {
-  const all = await getDocs(subRef(uid, tid, 'itinerary'));
-  const existing = all.docs.find(d => {
-    const dd = d.data();
-    return dd.sourceId === sourceId && dd.sourceSubType === sourceSubType;
-  });
+  const q = query(subRef(uid, tid, 'itinerary'), where('sourceId', '==', sourceId));
+  const all = await getDocs(q);
+  const existing = all.docs.find(d => d.data().sourceSubType === sourceSubType);
   if (existing) {
     await updateDoc(existing.ref, { ...data, sourceType });
     return existing.id;
@@ -256,16 +256,18 @@ export async function getAllTripsData(uid) {
 }
 
 export async function deleteLinkedItinItems(uid, tid, sourceId, sourceType) {
-  const all = await getDocs(subRef(uid, tid, 'itinerary'));
-  const matches = all.docs.filter(d => d.data().sourceId === sourceId && d.data().sourceType === sourceType);
+  const q = query(subRef(uid, tid, 'itinerary'), where('sourceId', '==', sourceId));
+  const all = await getDocs(q);
+  const matches = all.docs.filter(d => d.data().sourceType === sourceType);
   await Promise.all(matches.map(d => deleteDoc(d.ref)));
 }
 
 export async function deleteLinkedItinItem(uid, tid, sourceId, sourceType, sourceSubType) {
-  const all = await getDocs(subRef(uid, tid, 'itinerary'));
+  const q = query(subRef(uid, tid, 'itinerary'), where('sourceId', '==', sourceId));
+  const all = await getDocs(q);
   const match = all.docs.find(d => {
     const dd = d.data();
-    return dd.sourceId === sourceId && dd.sourceType === sourceType && dd.sourceSubType === sourceSubType;
+    return dd.sourceType === sourceType && dd.sourceSubType === sourceSubType;
   });
   if (match) await deleteDoc(match.ref);
 }

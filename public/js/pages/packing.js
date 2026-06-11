@@ -1,6 +1,6 @@
 import { t, getLang } from '../i18n.js';
 import { subscribePacking, addPackingItem, deletePackingItem, togglePackingItem, updatePackingItem, getTrip } from '../db.js';
-import { openModal, closeModal, showToast, showConfirm, setModalSaving } from '../app.js';
+import { openModal, closeModal, showToast, showConfirm, setModalSaving, escapeHtml } from '../app.js';
 
 let _ctx = null;
 let _unsub = null;
@@ -103,14 +103,14 @@ function renderList() {
       <div class="pack-category-label">${CAT_EMOJI[cat]} ${_catLabel(cat)}</div>
     </div>`;
     for (const item of ordered) {
-      const esc = item.title.replace(/'/g, '&#39;');
+      const esc = escapeHtml(item.title);
       html += `<div class="pack-item${item.isPacked ? ' pack-item--packed' : ''}" data-id="${item.id}" data-cat="${item.category}">
         <button class="pack-check" onclick="window.__togglePackItem('${item.id}', ${item.isPacked})"
           aria-label="${item.isPacked ? 'Unpack' : 'Pack'} ${esc}">
           ${_checkboxSVG(item.isPacked)}
         </button>
-        <span class="pack-item-title">${item.title}</span>
-        ${item.assignee ? `<span class="pack-assignee">${item.assignee}</span>` : ''}
+        <span class="pack-item-title">${esc}</span>
+        ${item.assignee ? `<span class="pack-assignee">${escapeHtml(item.assignee)}</span>` : ''}
         ${!isGuest ? `<button class="pack-delete" onclick="window.__deletePackItem('${item.id}')" aria-label="Delete">&#10005;</button>` : ''}
         ${!isGuest ? `<button class="pack-drag-handle" aria-label="Reorder">⠿</button>` : ''}
       </div>`;
@@ -196,6 +196,7 @@ function _bindDrag() {
 // ── Render & Export ───────────────────────────────────────────────
 
 export async function render(container, ctx) {
+  destroy();
   _ctx = ctx;
   _seedAttempted = false;
   _trip = null;

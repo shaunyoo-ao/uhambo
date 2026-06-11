@@ -1,6 +1,6 @@
 import { t } from '../i18n.js';
 import { subscribeExpenses, addExpense, updateExpense, deleteExpense } from '../db.js';
-import { openModal, closeModal, showToast, showConfirm, setModalSaving } from '../app.js';
+import { openModal, closeModal, showToast, showConfirm, setModalSaving, escapeHtml, skeletonHTML } from '../app.js';
 import { openCalc } from '../calculator.js';
 import { formatConverted, convert, getCurrency, getCurrencyMeta, formatCurrency, ensureRates, CURRENCIES } from '../currency.js';
 
@@ -49,7 +49,7 @@ export async function render(container, ctx) {
       <div class="chip active" data-cat="all" onclick="window.__expFilter('all')">All</div>
       ${CATS.map(c => `<div class="chip" data-cat="${c}" onclick="window.__expFilter('${c}')">${CAT_ICONS[c]} ${t('exp.cats.' + c)}</div>`).join('')}
     </div>
-    <div id="exp-list"><div class="loading-center"><div class="spinner"></div></div></div>
+    <div id="exp-list">${skeletonHTML()}</div>
     <div style="height:80px"></div>`;
 
   if (!isGuest) addFAB(() => {
@@ -69,6 +69,9 @@ export async function render(container, ctx) {
     _items = items;
     await renderSummary(items);
     renderList(items);
+  }, (err) => {
+    const el = document.getElementById('exp-list');
+    if (el) el.innerHTML = `<div class="empty-state" style="margin-top:40px"><div class="empty-icon">⚠️</div><div class="empty-sub">${err.message}</div></div>`;
   });
 }
 
@@ -158,7 +161,7 @@ async function renderList(items) {
       <div class="list-item" ${_ctx?.isGuest ? '' : `onclick="window.__editExpItem('${e.id}')"`}>
         <div class="list-icon" style="background:var(--surface-2)">${CAT_ICONS[e.category] || '💳'}</div>
         <div class="list-content">
-          <div class="list-title">${e.title || '—'}</div>
+          <div class="list-title">${escapeHtml(e.title) || '—'}</div>
           <div class="list-sub">${e.date || ''} ${e.category ? '· ' + t('exp.cats.' + e.category) : ''}</div>
         </div>
         <div class="list-meta">
@@ -180,7 +183,7 @@ async function renderList(items) {
 function linkListHTML(links) {
   return (links || []).map((url, i) => `
     <div class="link-item">
-      <a href="${url}" target="_blank" rel="noopener">${url}</a>
+      <a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(url)}</a>
       <button type="button" class="link-item-del" onclick="window.__expRmLink(${i})">×</button>
     </div>`).join('');
 }
@@ -196,7 +199,7 @@ function openItemModal(item) {
       <form id="exp-form">
         <div class="form-group">
           <label class="form-label">${t('exp.name')} *</label>
-          <input class="form-input" name="title" value="${item?.title || ''}" placeholder="e.g. Dinner at Sukiyabashi" required>
+          <input class="form-input" name="title" value="${escapeHtml(item?.title || '')}" placeholder="e.g. Dinner at Sukiyabashi" required>
         </div>
         <div class="form-row">
           <div class="form-group" style="flex:2">
@@ -233,7 +236,7 @@ function openItemModal(item) {
         </div>
         <div class="form-group">
           <label class="form-label">${t('exp.notes')}</label>
-          <textarea class="form-textarea" name="notes" placeholder="Optional notes…">${item?.notes || ''}</textarea>
+          <textarea class="form-textarea" name="notes" placeholder="Optional notes…">${escapeHtml(item?.notes || '')}</textarea>
         </div>
       </form>`,
     footer: `

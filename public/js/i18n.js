@@ -28,6 +28,7 @@ const translations = {
     'common.adding':    'Adding…',
     'common.completed': 'COMPLETED',
     'common.activity':  'ACTIVITY',
+    'common.offline':   'You are offline — changes will sync when reconnected',
     // Toast messages
     'toast.event_added':      'Event added',
     'toast.event_updated':    'Event updated',
@@ -249,6 +250,7 @@ const translations = {
     'common.adding':    '추가중…',
     'common.completed': '완료',
     'common.activity':  '활동',
+    'common.offline':   '오프라인 상태입니다 — 연결되면 동기화됩니다',
     // Toast messages
     'toast.event_added':      '일정 추가됨',
     'toast.event_updated':    '일정 수정됨',

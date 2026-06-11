@@ -7,7 +7,7 @@ import { getActivities } from '../db.js';
 import { getTripWeather, getWeather, geocodeCity } from '../weather.js';
 import { formatConverted, getCurrency, getCurrencyMeta, ensureRates } from '../currency.js';
 import { calcMileageDetail } from '../mileage.js';
-import { navigate, openModal, closeModal } from '../app.js';
+import { navigate, openModal, closeModal, showToast, escapeHtml } from '../app.js';
 
 let _unsubItinerary = null;
 let _mileageDetail = { total: 0, segments: [] };
@@ -121,12 +121,12 @@ export async function render(container, { userId, tripId, isGuest }) {
         <div style="margin-bottom:20px;padding-top:4px">
           ${isGuest ? `<div class="eyebrow" style="margin-bottom:4px;color:var(--muted)">👁 Guest View</div>` : ''}
           <div class="eyebrow" style="margin-bottom:4px">${daysLeft}</div>
-          <div class="page-title">${trip.name || 'My Trip'}</div>
-          ${trip.destination ? `<div class="text-sm text-muted" style="margin-top:2px">📍 ${trip.destination}</div>` : ''}
+          <div class="page-title">${escapeHtml(trip.name) || 'My Trip'}</div>
+          ${trip.destination ? `<div class="text-sm text-muted" style="margin-top:2px">📍 ${escapeHtml(trip.destination)}</div>` : ''}
           ${trip.startDate && trip.endDate ? `<div class="text-xs text-muted" style="margin-top:2px">${trip.startDate} → ${trip.endDate}</div>` : ''}
         </div>
 
-        ${trip.imageUrl ? `<div style="margin:0 0 16px;border-radius:12px;overflow:hidden"><img src="${trip.imageUrl}" alt="" style="width:100%;height:160px;object-fit:cover;display:block"></div>` : ''}
+        ${trip.imageUrl ? `<div style="margin:0 0 16px;border-radius:12px;overflow:hidden"><img src="${escapeHtml(trip.imageUrl)}" alt="" style="width:100%;height:160px;object-fit:cover;display:block"></div>` : ''}
 
         <!-- Quick stats -->
         <div class="stat-grid" style="margin-bottom:16px">
@@ -152,7 +152,7 @@ export async function render(container, { userId, tripId, isGuest }) {
           <div class="card">
             <div class="card-header">
               <span class="eyebrow">${t('dash.weather')}</span>
-              ${trip.destination ? `<span class="text-xs text-muted">${trip.destination}</span>` : ''}
+              ${trip.destination ? `<span class="text-xs text-muted">${escapeHtml(trip.destination)}</span>` : ''}
             </div>
             <div class="card-body" id="weather-body">
               <div class="spinner" style="width:20px;height:20px;border-width:2px"></div>
@@ -233,6 +233,8 @@ export async function render(container, { userId, tripId, isGuest }) {
         const tv = _mileageDetail.travelTotal || 0, dv = _mileageDetail.driveTotal || 0;
         mileageSubEl.textContent = `${tv > 0 ? `✈️ ${tv} · ` : ''}${dv > 0 ? `🚗 ${dv}` : ''}`;
       }
+    }, (err) => {
+      showToast('Error: ' + err.message);
     });
 
   } catch (e) {
@@ -329,8 +331,8 @@ function renderUpcoming(items) {
     <div class="list-item">
       <div class="list-icon" style="background:var(--surface-2)">${typeIcons[item.type] || '📌'}</div>
       <div class="list-content">
-        <div class="list-title">${item.title || '—'}</div>
-        <div class="list-sub">${item.date}${item.time ? ' · ' + item.time : ''}${item.location ? ' · ' + item.location : ''}</div>
+        <div class="list-title">${escapeHtml(item.title) || '—'}</div>
+        <div class="list-sub">${item.date}${item.time ? ' · ' + item.time : ''}${item.location ? ' · ' + escapeHtml(item.location) : ''}</div>
       </div>
     </div>`).join('');
 }

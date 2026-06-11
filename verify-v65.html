@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Uhambo v65 검증 가이드</title>
+<style>
+  :root{
+    --ink:#0c0d0f; --surface:#16181c; --surface2:#1d2026; --surface3:#232730;
+    --cream:#f3f0ea; --muted:#7c8089; --accent:#ee6c3a; --sky:#6ea6e8;
+    --mint:#5fb88c; --sun:#e8c87c; --rose:#d97a7a;
+  }
+  body{background:var(--ink);color:var(--cream);font-family:-apple-system,'Geist',sans-serif;
+       max-width:720px;margin:0 auto;padding:24px 16px 80px;line-height:1.6}
+  h1{font-family:'Instrument Serif',Georgia,serif;font-size:28px;margin-bottom:4px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:24px}
+  .case{background:var(--surface);border-radius:14px;padding:18px;margin-bottom:18px;border:1px solid var(--surface3)}
+  .case h2{font-size:16px;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+  .badge{font-size:11px;padding:2px 8px;border-radius:100px;font-family:monospace}
+  .badge-mint{background:rgba(95,184,140,0.15);color:var(--mint)}
+  .badge-sun{background:rgba(232,200,124,0.15);color:var(--sun)}
+  .badge-rose{background:rgba(217,122,122,0.15);color:var(--rose)}
+  .step{margin:10px 0;padding-left:14px;border-left:2px solid var(--surface3)}
+  .step b{color:var(--sky)}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0}
+  td,th{border:1px solid var(--surface3);padding:6px 8px;text-align:left;vertical-align:top}
+  th{background:var(--surface2);color:var(--muted);font-weight:500}
+  code{background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:12px;color:var(--sun)}
+  .expect{background:var(--surface2);border-radius:8px;padding:10px 12px;margin-top:8px;font-size:13px}
+  .expect b{color:var(--mint)}
+  .fail{color:var(--rose)}
+</style>
+</head>
+<body>
+
+<h1>Uhambo v65 검증 가이드</h1>
+<div class="sub">모달 ESC 닫기, 오프라인 배너, 스켈레톤 로딩, 터치 타겟 확대 — 실제 앱에서 아래 순서대로 조작하며 확인</div>
+
+<!-- Case 1 -->
+<div class="case">
+  <h2>1. 모달 ESC 키로 닫기 <span class="badge badge-mint">신규 동작</span></h2>
+
+  <div class="step"><b>조작 1</b> — 아무 화면(예: Activities)에서 + 버튼을 눌러 추가 모달을 연 뒤, 키보드 <code>Esc</code> 키를 누름</div>
+  <div class="expect">
+    <b>예상 결과</b> — 모달이 닫힘 (저장되지 않은 입력값은 사라짐, 정상 동작)
+  </div>
+
+  <div class="step"><b>조작 2 — 우선순위 확인 (Confirm)</b>
+    <ol>
+      <li>아무 항목이나 열어 모달의 <code>Delete</code> 버튼을 눌러 "삭제 확인" 다이얼로그를 띄움</li>
+      <li>이 상태에서 <code>Esc</code> 키를 누름</li>
+    </ol>
+  </div>
+  <div class="expect">
+    <b>예상 결과</b> — 확인 다이얼로그가 열려있는 동안에는 <code>Esc</code>가 무시됨 (다이얼로그도 모달도 닫히지 않음). "확인 다이얼로그를 닫으려면 Cancel/OK 버튼을 눌러야 함" — 의도된 동작
+  </div>
+
+  <div class="step"><b>조작 3 — 우선순위 확인 (계산기)</b>
+    <ol>
+      <li>Expense/Activity 추가 모달에서 비용 입력란 옆 계산기(🧮) 버튼을 눌러 계산기 오버레이를 엶</li>
+      <li>이 상태에서 <code>Esc</code> 키를 누름</li>
+    </ol>
+  </div>
+  <div class="expect">
+    <b>예상 결과</b> — 계산기가 열려있는 동안에는 <code>Esc</code>가 무시됨 (계산기도 뒤의 모달도 닫히지 않음)
+  </div>
+</div>
+
+<!-- Case 2 -->
+<div class="case">
+  <h2>2. 오프라인 배너 <span class="badge badge-sun">신규 동작</span></h2>
+
+  <div class="step"><b>조작</b>
+    <ol>
+      <li>앱이 정상 로드된 상태에서 개발자 도구(F12) → Network 탭 → "Offline" 체크</li>
+      <li>화면 상단 헤더 바로 아래를 확인</li>
+    </ol>
+  </div>
+  <div class="expect">
+    <b>예상 결과 1</b> — 헤더 아래에 노란색(amber) 띠 배너가 나타나고, 다음 텍스트가 표시됨:
+    <ul>
+      <li>EN: "You are offline — changes will sync when reconnected"</li>
+      <li>KO (설정에서 한국어로 전환 시): "오프라인 상태입니다 — 연결되면 동기화됩니다"</li>
+    </ul>
+  </div>
+
+  <div class="step"><b>조작</b> — Network 탭에서 "Offline" 체크 해제 (온라인 복귀)</div>
+  <div class="expect">
+    <b>예상 결과 2</b> — 배너가 즉시 사라짐
+  </div>
+</div>
+
+<!-- Case 3 -->
+<div class="case">
+  <h2>3. 스켈레톤 로딩 화면 <span class="badge badge-sun">Slow 3G 권장</span></h2>
+
+  <div class="step"><b>조작</b>
+    <ol>
+      <li>개발자 도구 → Network 탭 → 속도 제한을 "Slow 3G"로 설정</li>
+      <li>Expenses, Activities, Booking, Itinerary 탭을 차례로 전환</li>
+    </ol>
+  </div>
+  <div class="expect">
+    <b>예상 결과</b> — 데이터 로딩 중에는 회전 스피너(circle spinner) 대신, <b>카드 모양의 회색 음영(shimmer) 블록 4개</b>가 표시됨. 데이터가 도착하면 shimmer가 실제 목록으로 교체됨
+    <br><span class="fail">v64 이전: 화면 중앙에 작은 회전 스피너만 표시되었음</span>
+  </div>
+</div>
+
+<!-- Case 4 -->
+<div class="case">
+  <h2>4. 터치 타겟 확대 <span class="badge badge-mint">모바일 에뮬레이션 권장</span></h2>
+
+  <div class="step"><b>조작</b>
+    <ol>
+      <li>개발자 도구 → 모바일 기기 에뮬레이션 모드 (예: iPhone SE)</li>
+      <li>헤더의 새로고침/설정/패킹 아이콘 버튼을 손가락 크기로 탭</li>
+      <li>Activities 또는 Packing 탭에서 체크박스를 항목 가장자리 근처(테두리 살짝 바깥)를 탭</li>
+      <li>Expense/Activity 모달에서 링크 추가 후 ✕ 삭제 버튼을 탭</li>
+      <li>chip(필터 카테고리) 버튼들을 연속으로 탭</li>
+    </ol>
+  </div>
+  <div class="expect">
+    <b>예상 결과</b>
+    <ul>
+      <li>헤더 아이콘 버튼이 이전보다 더 커진 정사각형(40×40px)으로 보이고 탭이 잘 인식됨</li>
+      <li>체크박스는 시각적 크기는 동일하지만, 테두리 바로 바깥(약 10px)을 탭해도 토글됨</li>
+      <li>링크 삭제(✕), 모달 닫기(X), packing 체크/삭제 버튼이 이전보다 여유 있게 탭됨 (오탭 감소)</li>
+      <li>chip 버튼의 세로 폭이 약간 넓어져 연속 탭이 더 편해짐</li>
+    </ul>
+  </div>
+</div>
+
+<div class="sub" style="margin-top:24px">버전: sw.js v65 / app.js APP_VERSION 1.2.65 — Settings 팝업 또는 로그인 화면 하단에서 버전 확인 가능</div>
+
+</body>
+</html>

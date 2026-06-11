@@ -1,6 +1,6 @@
 import { t, getLang } from '../i18n.js';
 import { subscribeItinerary, addItineraryItem, updateItineraryItem, deleteItineraryItem, getTrip, getBookings, getActivities } from '../db.js';
-import { openModal, closeModal, showToast, showConfirm, setModalSaving } from '../app.js';
+import { openModal, closeModal, showToast, showConfirm, setModalSaving, escapeHtml, skeletonHTML } from '../app.js';
 import { geocodeCity } from '../weather.js';
 import { initMap, destroyMap } from '../map.js';
 
@@ -72,7 +72,7 @@ export async function render(container, ctx) {
     </div>
     <div id="itin-schedule">
       <div id="itin-calendar"></div>
-      <div id="itin-list"><div class="loading-center"><div class="spinner"></div></div></div>
+      <div id="itin-list">${skeletonHTML()}</div>
       <div style="height:80px"></div>
     </div>
     <div id="itin-map-view" style="display:none;position:relative">
@@ -116,6 +116,9 @@ export async function render(container, ctx) {
     renderList(items);
     renderCalendar();
     if (_activeTab === 'map') renderMap(items);
+  }, (err) => {
+    const el = document.getElementById('itin-list');
+    if (el) el.innerHTML = `<div class="empty-state" style="margin-top:40px"><div class="empty-icon">⚠️</div><div class="empty-sub">${err.message}</div></div>`;
   });
 }
 
@@ -160,11 +163,11 @@ function renderList(items) {
             <div class="timeline-card" ${_ctx?.isGuest ? '' : `onclick="window.__editItinItem('${item.id}')"`}>
               <div class="row gap-8" style="margin-bottom:4px">
                 <span>${TYPE_ICONS[item.type] || '📌'}</span>
-                <span class="text-sm font-medium">${item.title || '—'}</span>
+                <span class="text-sm font-medium">${escapeHtml(item.title) || '—'}</span>
                 <span class="badge badge-muted" style="margin-left:auto;font-size:10px">${item.type === 'rest' ? 'accommodation' : (item.type || 'other')}</span>
               </div>
-              ${item.location ? `<div class="text-xs text-muted">📍 ${item.location}</div>` : ''}
-              ${item.description ? `<div class="text-sm" style="color:var(--cream-dim);margin-top:4px">${item.description}</div>` : ''}
+              ${item.location ? `<div class="text-xs text-muted">📍 ${escapeHtml(item.location)}</div>` : ''}
+              ${item.description ? `<div class="text-sm" style="color:var(--cream-dim);margin-top:4px">${escapeHtml(item.description)}</div>` : ''}
               ${(item.links || []).length > 0 ? `<div class="row gap-6" style="margin-top:4px;flex-wrap:wrap">${item.links.map(u => `<a href="${u}" target="_blank" rel="noopener" class="text-xs" style="color:var(--sky)" onclick="event.stopPropagation()">🔗 Link</a>`).join('')}</div>` : ''}
             </div>
           </div>
@@ -307,11 +310,11 @@ function openCalDayModal(ds) {
       <div style="padding:8px 0;border-bottom:1px solid var(--line-soft)">
         <div class="row gap-8" style="align-items:center">
           <span>${TYPE_ICONS[it.type] || '📌'}</span>
-          <span class="text-sm font-medium">${it.title || '—'}</span>
+          <span class="text-sm font-medium">${escapeHtml(it.title) || '—'}</span>
           ${it.time ? `<span class="text-xs text-muted" style="margin-left:auto">${it.time}</span>` : ''}
         </div>
-        ${it.location ? `<div class="text-xs text-muted" style="margin-top:2px">📍 ${it.location}</div>` : ''}
-        ${it.description ? `<div class="text-sm" style="color:var(--cream-dim);margin-top:2px">${it.description}</div>` : ''}
+        ${it.location ? `<div class="text-xs text-muted" style="margin-top:2px">📍 ${escapeHtml(it.location)}</div>` : ''}
+        ${it.description ? `<div class="text-sm" style="color:var(--cream-dim);margin-top:2px">${escapeHtml(it.description)}</div>` : ''}
       </div>`).join('');
   }
   if (!body) body = `<div class="text-sm text-muted">${t('cal.no_items')}</div>`;
@@ -489,17 +492,17 @@ async function renderMap(itinItems) {
     if (item.source === 'accom') {
       badge = `<span class="badge badge-muted" style="margin-left:auto;font-size:10px">🏨 Stay</span>`;
       meta = `${item.date ? `<div class="text-xs text-muted" style="margin-bottom:3px">📅 ${item.date}${item.checkOut ? ' → ' + item.checkOut : ''}</div>` : ''}
-              ${item.location ? `<div class="text-xs text-muted" style="margin-bottom:3px">📍 ${item.location}</div>` : ''}`;
+              ${item.location ? `<div class="text-xs text-muted" style="margin-bottom:3px">📍 ${escapeHtml(item.location)}</div>` : ''}`;
     } else if (item.source === 'activity') {
       badge = `<span class="badge badge-muted" style="margin-left:auto;font-size:10px">⚡ Activity</span>`;
       meta = `${item.date ? `<div class="text-xs text-muted" style="margin-bottom:3px">📅 ${item.date}${item.time ? ' · ' + item.time : ''}</div>` : ''}
               ${item.category ? `<div class="text-xs text-muted" style="margin-bottom:3px">🏷️ ${item.category}</div>` : ''}
-              ${item.location ? `<div class="text-xs text-muted" style="margin-bottom:3px">📍 ${item.location}</div>` : ''}`;
+              ${item.location ? `<div class="text-xs text-muted" style="margin-bottom:3px">📍 ${escapeHtml(item.location)}</div>` : ''}`;
     } else {
       const typeLabel = item.type === 'rest' ? 'Accommodation' : (item.type ? item.type.charAt(0).toUpperCase() + item.type.slice(1) : 'Other');
       badge = `<span class="badge badge-muted" style="margin-left:auto;font-size:10px">${typeLabel}</span>`;
       meta = `${item.date ? `<div class="text-xs text-muted" style="margin-bottom:3px">📅 ${item.date}${item.time ? ' · ' + item.time : ''}</div>` : ''}
-              ${item.location ? `<div class="text-xs text-muted" style="margin-bottom:3px">📍 ${item.location}</div>` : ''}`;
+              ${item.location ? `<div class="text-xs text-muted" style="margin-bottom:3px">📍 ${escapeHtml(item.location)}</div>` : ''}`;
       if (!_ctx?.isGuest) actions = `<button class="btn btn-ghost btn-sm" style="margin-top:10px;width:100%" onclick="window.__editItinItem('${item.id}');document.getElementById('itin-map-popup').style.display='none'">✏️ Edit</button>`;
     }
 
@@ -508,11 +511,11 @@ async function renderMap(itinItems) {
         <button class="itin-map-popup-close" onclick="document.getElementById('itin-map-popup').style.display='none'">×</button>
         <div class="row gap-8" style="margin-bottom:6px">
           <span>${TYPE_ICONS[item.type] || '📌'}</span>
-          <span class="text-sm font-medium">${item.title || '—'}</span>
+          <span class="text-sm font-medium">${escapeHtml(item.title) || '—'}</span>
           ${badge}
         </div>
         ${meta}
-        ${item.description ? `<div class="text-sm" style="color:var(--cream-dim);margin-top:6px">${item.description}</div>` : ''}
+        ${item.description ? `<div class="text-sm" style="color:var(--cream-dim);margin-top:6px">${escapeHtml(item.description)}</div>` : ''}
         ${actions}
       </div>`;
     popupEl.style.display = 'block';
@@ -544,7 +547,7 @@ function openItemModal(item) {
       <form id="itin-form">
         <div class="form-group">
           <label class="form-label">${t('itin.event_title')} *</label>
-          <input class="form-input" name="title" value="${item?.title || ''}" placeholder="e.g. Airport transfer" required>
+          <input class="form-input" name="title" value="${escapeHtml(item?.title)}" placeholder="e.g. Airport transfer" required>
         </div>
         <div class="form-group">
           <label class="form-label">${t('itin.type')}</label>
@@ -568,7 +571,7 @@ function openItemModal(item) {
         </div>
         <div class="form-group">
           <label class="form-label">${t('itin.location')}</label>
-          <input class="form-input" name="location" value="${item?.location || ''}" placeholder="e.g. Narita Airport">
+          <input class="form-input" name="location" value="${escapeHtml(item?.location)}" placeholder="e.g. Narita Airport">
         </div>
         <div class="form-group" style="margin-top:-4px">
           <label class="form-label" style="font-size:0.7rem;color:var(--muted)">${t('book.coords')} <span style="font-weight:400">(${t('book.coords_hint')})</span></label>
@@ -584,7 +587,7 @@ function openItemModal(item) {
         </div>
         <div class="form-group">
           <label class="form-label">${t('itin.notes')}</label>
-          <textarea class="form-textarea" name="description" placeholder="Additional notes…">${item?.description || ''}</textarea>
+          <textarea class="form-textarea" name="description" placeholder="Additional notes…">${escapeHtml(item?.description)}</textarea>
         </div>
       </form>`,
     footer: `
