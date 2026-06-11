@@ -537,6 +537,40 @@ a { color: var(--accent); text-decoration: none; }
   scrollbar-width: none;
 }
 .chip-row::-webkit-scrollbar { display: none; }
+
+/* ── Search / sort row ─────────────────────────────────────────── */
+.search-row {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px 12px;
+}
+.search-input {
+  flex: 1;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--cream);
+  padding: 9px 12px;
+  font-size: 16px;
+}
+.search-input:focus { outline: none; border-color: var(--accent); }
+.search-input::placeholder { color: var(--muted-2); }
+.sort-select {
+  flex-shrink: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--cream);
+  padding: 9px 28px 9px 12px;
+  font-size: 13px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237c8089' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+.sort-select:focus { outline: none; border-color: var(--accent); }
 .chip {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 7px 12px;

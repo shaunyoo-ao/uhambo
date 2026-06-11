@@ -9,6 +9,8 @@ let _ctx = null;
 let _tripStartDate = null;
 let _items = [];
 let _filterCat = 'all';
+let _search = '';
+let _sort = 'date';
 let _adding = false;
 let _links = [];
 
@@ -31,6 +33,9 @@ export async function render(container, ctx) {
   _ctx = ctx;
   _tripStartDate = ctx.tripStartDate || null;
   const { userId, tripId, isGuest } = ctx;
+  _filterCat = 'all';
+  _search = '';
+  _sort = 'date';
 
   if (!tripId) {
     container.innerHTML = noTripHTML();
@@ -49,6 +54,13 @@ export async function render(container, ctx) {
       <div class="chip active" data-cat="all" onclick="window.__expFilter('all')">All</div>
       ${CATS.map(c => `<div class="chip" data-cat="${c}" onclick="window.__expFilter('${c}')">${CAT_ICONS[c]} ${t('exp.cats.' + c)}</div>`).join('')}
     </div>
+    <div class="search-row">
+      <input class="search-input" id="exp-search" type="search" placeholder="${t('common.search')}" value="${escapeHtml(_search)}">
+      <select class="sort-select" id="exp-sort">
+        <option value="date" ${_sort === 'date' ? 'selected' : ''}>${t('exp.date')}</option>
+        <option value="amount" ${_sort === 'amount' ? 'selected' : ''}>${t('exp.amount')}</option>
+      </select>
+    </div>
     <div id="exp-list">${skeletonHTML()}</div>
     <div style="height:80px"></div>`;
 
@@ -63,6 +75,20 @@ export async function render(container, ctx) {
       c.classList.toggle('active', c.dataset.cat === cat));
     renderList(_items);
   };
+
+  let _searchDebounce = null;
+  document.getElementById('exp-search').addEventListener('input', e => {
+    clearTimeout(_searchDebounce);
+    const val = e.target.value;
+    _searchDebounce = setTimeout(() => {
+      _search = val;
+      renderList(_items);
+    }, 150);
+  });
+  document.getElementById('exp-sort').addEventListener('change', e => {
+    _sort = e.target.value;
+    renderList(_items);
+  });
 
   if (_unsub) _unsub();
   _unsub = subscribeExpenses(userId, tripId, async items => {
@@ -136,18 +162,30 @@ async function renderList(items) {
   const el = document.getElementById('exp-list');
   if (!el) return;
 
-  const filtered = _filterCat === 'all' ? items : items.filter(i => i.category === _filterCat);
+  let filtered = _filterCat === 'all' ? items : items.filter(i => i.category === _filterCat);
+  const search = _search.trim().toLowerCase();
+  if (search) filtered = filtered.filter(i => (i.title || '').toLowerCase().includes(search));
 
   if (filtered.length === 0) {
     el.innerHTML = `<div class="empty-state" style="padding-top:40px">
       <div class="empty-icon">💳</div>
-      <div class="empty-title">${_filterCat === 'all' ? t('common.empty') : 'No ' + _filterCat + ' expenses'}</div>
-      ${_filterCat === 'all' ? `<div class="empty-sub">${t('exp.tap_add')}</div>` : ''}
+      <div class="empty-title">${search ? t('common.no_results') : (_filterCat === 'all' ? t('common.empty') : 'No ' + _filterCat + ' expenses')}</div>
+      ${_filterCat === 'all' && !search ? `<div class="empty-sub">${t('exp.tap_add')}</div>` : ''}
     </div>`;
     return;
   }
 
   const currency = getCurrency();
+
+  if (_sort === 'amount') {
+    await ensureRates();
+    const converted = await Promise.all(filtered.map(e => convert(e.amount || 0, e.currency || 'KRW', currency)));
+    filtered = filtered
+      .map((e, i) => ({ e, amt: converted[i] }))
+      .sort((a, b) => b.amt - a.amt)
+      .map(x => x.e);
+  }
+
   const rows = await Promise.all(filtered.map(async e => {
     const displayAmt = await formatConverted(e.amount || 0, e.currency || 'KRW');
     const meta = getCurrencyMeta(e.currency || 'KRW');
