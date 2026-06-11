@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Uhambo v66 검증 가이드</title>
+<style>
+  :root{
+    --ink:#0c0d0f; --surface:#16181c; --surface2:#1d2026; --surface3:#232730;
+    --cream:#f3f0ea; --muted:#7c8089; --accent:#ee6c3a; --sky:#6ea6e8;
+    --mint:#5fb88c; --sun:#e8c87c; --rose:#d97a7a;
+  }
+  body{background:var(--ink);color:var(--cream);font-family:-apple-system,'Geist',sans-serif;
+       max-width:720px;margin:0 auto;padding:24px 16px 80px;line-height:1.6}
+  h1{font-family:'Instrument Serif',Georgia,serif;font-size:28px;margin-bottom:4px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:24px}
+  .case{background:var(--surface);border-radius:14px;padding:18px;margin-bottom:18px;border:1px solid var(--surface3)}
+  .case h2{font-size:16px;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+  .badge{font-size:11px;padding:2px 8px;border-radius:100px;font-family:monospace}
+  .badge-mint{background:rgba(95,184,140,0.15);color:var(--mint)}
+  .badge-sun{background:rgba(232,200,124,0.15);color:var(--sun)}
+  .badge-rose{background:rgba(217,122,122,0.15);color:var(--rose)}
+  .step{margin:10px 0;padding-left:14px;border-left:2px solid var(--surface3)}
+  .step b{color:var(--sky)}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0}
+  td,th{border:1px solid var(--surface3);padding:6px 8px;text-align:left;vertical-align:top}
+  th{background:var(--surface2);color:var(--muted);font-weight:500}
+  code{background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:12px;color:var(--sun)}
+  .expect{background:var(--surface2);border-radius:8px;padding:10px 12px;margin-top:8px;font-size:13px}
+  .expect b{color:var(--mint)}
+  .fail{color:var(--rose)}
+</style>
+</head>
+<body>
+
+<h1>Uhambo v66 검증 가이드</h1>
+<div class="sub">Expenses/Activities/Booking 검색 + Expenses 정렬 — 실제 앱에서 아래 순서대로 입력/조작하며 확인</div>
+
+<!-- Case 1 -->
+<div class="case">
+  <h2>1. Expenses 검색 + 정렬 <span class="badge badge-mint">신규 동작</span></h2>
+
+  <div class="step"><b>사전 준비</b> — Expenses에 아래 3건을 추가:
+    <table>
+      <tr><th>Title</th><th>Amount</th><th>Currency</th><th>Date</th><th>Category</th></tr>
+      <tr><td>도쿄 스시</td><td>30000</td><td>JPY</td><td>2026-07-01</td><td>food</td></tr>
+      <tr><td>지하철 패스</td><td>3000</td><td>JPY</td><td>2026-07-02</td><td>transport</td></tr>
+      <tr><td>호텔 비용</td><td>200</td><td>USD</td><td>2026-07-03</td><td>accom</td></tr>
+    </table>
+  </div>
+
+  <div class="step"><b>조작 1 — 검색</b> — 검색창에 <code>스시</code> 입력</div>
+  <div class="expect">
+    <b>예상 결과</b> — 목록에 "도쿄 스시"만 남고 나머지 2건은 사라짐. 상단 요약 카드(총액/카테고리)는 그대로 유지됨 (필터링되지 않음)
+  </div>
+
+  <div class="step"><b>조작 2 — 검색 결과 없음</b> — 검색창에 <code>없는항목</code> 입력</div>
+  <div class="expect">
+    <b>예상 결과</b> — "검색 결과 없음" (또는 EN: "No matches") 빈 상태 메시지 표시
+  </div>
+
+  <div class="step"><b>조작 3 — 정렬 (금액)</b> — 검색창을 비우고, 정렬 셀렉트를 <code>Amount</code>로 변경</div>
+  <div class="expect">
+    <b>예상 결과</b> — 통화가 다른 항목들이 표시 통화(예: KRW)로 환산된 금액 기준 <b>내림차순</b>으로 정렬됨 (예: 호텔 비용(USD 200 ≈ 더 큰 금액)이 최상단에 오는 등 — 실제 환율에 따라 순서 확인)
+  </div>
+
+  <div class="step"><b>조작 4 — chip 전환에도 검색 유지</b> — 검색창에 <code>도쿄</code> 입력 후, 카테고리 칩을 "food" → "all"로 전환</div>
+  <div class="expect">
+    <b>예상 결과</b> — 칩을 전환해도 검색어 "도쿄"가 그대로 남아있고, 검색 필터가 계속 적용됨
+  </div>
+
+  <div class="step"><b>조작 5 — 트립 전환 시 검색 리셋</b> — 검색어를 입력한 상태에서 다른 트립으로 전환했다가 다시 Expenses로 돌아옴</div>
+  <div class="expect">
+    <b>예상 결과</b> — 검색창과 정렬, 카테고리 필터가 모두 초기 상태("all" / "date" / 빈 검색)로 리셋됨
+  </div>
+</div>
+
+<!-- Case 2 -->
+<div class="case">
+  <h2>2. Activities 검색 <span class="badge badge-sun">신규 동작</span></h2>
+
+  <div class="step"><b>사전 준비</b> — Activities에 "박물관 관람"(2026-07-02), "해변 산책"(2026-07-03) 2건 추가</div>
+
+  <div class="step"><b>조작 1</b> — 검색창에 <code>박물관</b> 입력</div>
+  <div class="expect">
+    <b>예상 결과</b> — "박물관 관람"이 속한 2026-07-02 날짜 그룹만 표시되고, "해변 산책"이 속한 2026-07-03 날짜 그룹 헤더는 <b>완전히 사라짐</b> (빈 헤더가 남지 않음)
+  </div>
+
+  <div class="step"><b>조작 2</b> — 검색창을 비움</div>
+  <div class="expect">
+    <b>예상 결과</b> — 두 날짜 그룹 모두 다시 표시됨
+  </div>
+</div>
+
+<!-- Case 3 -->
+<div class="case">
+  <h2>3. Booking 검색 <span class="badge badge-sun">신규 동작</span></h2>
+
+  <div class="step"><b>사전 준비</b> — Booking에 Accommodation "테스트 호텔"(name), Travel(airline="Korean Air"), Rent(rentalCompany="Hertz") 각 1건씩 추가</div>
+
+  <div class="step"><b>조작 1</b> — 검색창에 <code>Hertz</code> 입력</div>
+  <div class="expect">
+    <b>예상 결과</b> — Rent 카드만 표시됨 (Accommodation/Travel 카드는 사라짐)
+  </div>
+
+  <div class="step"><b>조작 2</b> — 검색창에 <code>Korean</code> 입력</div>
+  <div class="expect">
+    <b>예상 결과</b> — Travel 카드(airline="Korean Air")만 표시됨
+  </div>
+
+  <div class="step"><b>조작 3 — 게스트 모드</b> — 게스트 코드로 로그인하여 Booking 탭 확인</div>
+  <div class="expect">
+    <b>예상 결과</b> — 게스트 모드에서도 검색창이 보이고 정상 동작함 (읽기 전용 UI이므로 추가 가드 불필요)
+  </div>
+</div>
+
+<div class="sub" style="margin-top:24px">버전: sw.js v66 / app.js APP_VERSION 1.2.66 — Settings 팝업 또는 로그인 화면 하단에서 버전 확인 가능</div>
+
+</body>
+</html>
