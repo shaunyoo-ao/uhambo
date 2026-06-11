@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Uhambo v64 검증 가이드</title>
+<style>
+  :root{
+    --ink:#0c0d0f; --surface:#16181c; --surface2:#1d2026; --surface3:#232730;
+    --cream:#f3f0ea; --muted:#7c8089; --accent:#ee6c3a; --sky:#6ea6e8;
+    --mint:#5fb88c; --sun:#e8c87c; --rose:#d97a7a;
+  }
+  body{background:var(--ink);color:var(--cream);font-family:-apple-system,'Geist',sans-serif;
+       max-width:720px;margin:0 auto;padding:24px 16px 80px;line-height:1.6}
+  h1{font-family:'Instrument Serif',Georgia,serif;font-size:28px;margin-bottom:4px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:24px}
+  .case{background:var(--surface);border-radius:14px;padding:18px;margin-bottom:18px;border:1px solid var(--surface3)}
+  .case h2{font-size:16px;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+  .badge{font-size:11px;padding:2px 8px;border-radius:100px;font-family:monospace}
+  .badge-mint{background:rgba(95,184,140,0.15);color:var(--mint)}
+  .badge-sun{background:rgba(232,200,124,0.15);color:var(--sun)}
+  .badge-rose{background:rgba(217,122,122,0.15);color:var(--rose)}
+  .step{margin:10px 0;padding-left:14px;border-left:2px solid var(--surface3)}
+  .step b{color:var(--sky)}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0}
+  td,th{border:1px solid var(--surface3);padding:6px 8px;text-align:left;vertical-align:top}
+  th{background:var(--surface2);color:var(--muted);font-weight:500}
+  code{background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:12px;color:var(--sun)}
+  .expect{background:var(--surface2);border-radius:8px;padding:10px 12px;margin-top:8px;font-size:13px}
+  .expect b{color:var(--mint)}
+  .fail{color:var(--rose)}
+</style>
+</head>
+<body>
+
+<h1>Uhambo v64 검증 가이드</h1>
+<div class="sub">XSS escape 적용, packing 재구독 버그 수정, SW precache 보강 — 실제 앱에서 아래 순서대로 입력/조작하며 확인</div>
+
+<!-- Case 1 -->
+<div class="case">
+  <h2>1. XSS 스크립트 입력 시 리터럴 텍스트로만 표시 <span class="badge badge-mint">전 화면 공통</span></h2>
+
+  <div class="step"><b>입력값 (모든 케이스 공통)</b>
+    <table>
+      <tr><th>필드 종류</th><th>입력값</th></tr>
+      <tr><td>제목/이름류</td><td><code>&lt;img src=x onerror=alert(1)&gt;</code></td></tr>
+      <tr><td>메모/설명류</td><td><code>&lt;script&gt;alert('xss')&lt;/script&gt;</code></td></tr>
+    </table>
+  </div>
+
+  <div class="step"><b>조작 1 — Expenses</b> → 추가 → Title에 위 <code>&lt;img...&gt;</code> 입력, Amount=1000, 저장</div>
+  <div class="step"><b>조작 2 — Activities</b> → 추가 → Name에 위 <code>&lt;img...&gt;</code>, Notes에 위 <code>&lt;script&gt;</code> 입력, 저장</div>
+  <div class="step"><b>조작 3 — Booking → Accommodation</b> → 추가 → Name에 위 <code>&lt;img...&gt;</code>, Notes에 위 <code>&lt;script&gt;</code> 입력, 저장</div>
+  <div class="step"><b>조작 4 — Itinerary</b> → 추가 → Title/Location/Notes에 위 값들 입력, 저장</div>
+  <div class="step"><b>조작 5 — Packing</b> → 항목 추가 → 제목에 위 <code>&lt;img...&gt;</code> 입력</div>
+
+  <div class="expect">
+    <b>예상 결과</b> — 모든 화면(목록 카드, 모달 재오픈 시 입력값, Itinerary 캘린더 팝업, 지도 핀 팝업 포함)에서:
+    <ul>
+      <li><code>&lt;img src=x onerror=alert(1)&gt;</code> 텍스트가 <b>그대로 글자로 보임</b> (이미지 깨짐 아이콘이나 alert 팝업 없음)</li>
+      <li><code>&lt;script&gt;alert('xss')&lt;/script&gt;</code> 텍스트도 그대로 글자로 보임, alert 없음</li>
+    </ul>
+    <span class="fail">v63 이전: alert 팝업이 뜨거나 이미지 깨짐 아이콘이 표시되었음 (XSS 취약점)</span>
+  </div>
+
+  <div class="step"><b>조작 6 — 이중 escape 확인</b> — 위에서 저장한 항목들을 <b>다시 열어 수정 모달</b>을 띄운 뒤, 아무것도 바꾸지 않고 다시 저장 (총 2회 편집-저장)</div>
+
+  <div class="expect">
+    <b>예상 결과</b> — 2회 편집 후에도 화면에 <code>&amp;lt;</code>, <code>&amp;amp;lt;</code> 같은 <b>이스케이프 문자 누적(드리프트)이 없어야 함</b> — 처음과 동일하게 <code>&lt;img src=x onerror=alert(1)&gt;</code> 형태 그대로 표시
+  </div>
+</div>
+
+<!-- Case 2 -->
+<div class="case">
+  <h2>2. Packing 재구독/FAB 중복 버그 수정 <span class="badge badge-sun">신규 동작</span></h2>
+
+  <div class="step"><b>조작</b>
+    <ol>
+      <li>하단 탭에서 <b>Packing</b>으로 이동</li>
+      <li>다른 탭(예: Dashboard)으로 이동했다가 다시 <b>Packing</b>으로 3번 이상 왕복 이동</li>
+      <li>개발자 도구 → Elements 탭에서 <code>.fab</code> 클래스 버튼 개수 확인</li>
+    </ol>
+  </div>
+
+  <div class="expect">
+    <b>예상 결과 1</b> — 화면 우측 하단에 <b>+ FAB 버튼이 1개만</b> 보임 (DOM에 <code>.fab</code> 요소가 1개만 존재)
+    <br><span class="fail">v63 이전: Packing 탭을 재방문할 때마다 FAB가 중복 추가되어 여러 개 겹쳐 보였음</span>
+  </div>
+
+  <div class="step"><b>조작</b> — Packing 항목 하나의 체크박스를 <b>1번만</b> 클릭해 packed 상태로 토글. 개발자 도구 → Network 탭에서 Firestore 쓰기 요청 수 확인</div>
+
+  <div class="expect">
+    <b>예상 결과 2</b> — 체크박스 1번 클릭 시 Firestore 업데이트가 <b>1회만</b> 발생함
+    <br><span class="fail">v63 이전: 탭을 여러 번 재방문한 뒤에는 이전 구독이 살아있어 동일 클릭에도 중복 업데이트가 발생할 수 있었음</span>
+  </div>
+</div>
+
+<!-- Case 3 -->
+<div class="case">
+  <h2>3. Service Worker 캐시 — packing/calculator 오프라인 동작 <span class="badge badge-sun">개발자 도구 필요</span></h2>
+
+  <div class="step"><b>조작 1 — 캐시 확인</b>
+    <ol>
+      <li>앱을 새로고침하여 새 Service Worker(v64)가 활성화되도록 함 (Settings 또는 로그인 화면 하단 버전이 <code>1.2.64</code>인지 확인)</li>
+      <li>개발자 도구 → Application 탭 → Cache Storage → <code>app-shell-v64</code> 펼치기</li>
+    </ol>
+  </div>
+
+  <div class="expect">
+    <b>예상 결과</b> — <code>app-shell-v64</code> 캐시 목록에 다음 항목들이 모두 존재:
+    <ul>
+      <li><code>/js/pages/packing.js</code></li>
+      <li><code>/js/calculator.js</code></li>
+      <li><code>/icons/icon-maskable-192.png</code></li>
+      <li><code>/icons/icon-maskable-512.png</code></li>
+    </ul>
+    <span class="fail">v63 이전: 이 파일들이 precache 목록에 없어 오프라인 시 로드 실패 가능성 있었음</span>
+  </div>
+
+  <div class="step"><b>조작 2 — 오프라인 동작</b> — 개발자 도구 → Network 탭 → "Offline" 체크 → 앱 새로고침 → Packing 탭 이동, 비용 계산기(🧮) 버튼 클릭</div>
+
+  <div class="expect">
+    <b>예상 결과</b> — 오프라인 상태에서도 Packing 페이지가 정상 렌더링되고, 계산기 모달이 정상적으로 열림 (빈 화면이나 로드 에러 없음)
+  </div>
+</div>
+
+<div class="sub" style="margin-top:24px">버전: sw.js v64 / app.js APP_VERSION 1.2.64 — Settings 팝업 또는 로그인 화면 하단에서 버전 확인 가능</div>
+
+</body>
+</html>
