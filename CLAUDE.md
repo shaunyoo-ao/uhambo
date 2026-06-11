@@ -110,7 +110,8 @@ users/{userId}/
     -- Rent: rentalCompany, vehicleType, pickupLocation, pickupDate, pickupTime,
              dropoffLocation, dropoffDate, dropoffTime, bookingRef, pickupLat, pickupLng, dropoffLat, dropoffLng
     -- Cruise: shipName, cruiseLine, cabinType (inside|ocean_view|balcony|suite), cabinNo,
-               embarkPort, embarkDate, embarkTime, disembarkPort, disembarkDate, disembarkTime,
+               embarkPort, embarkDate, embarkTime, embarkLat, embarkLng,
+               disembarkPort, disembarkDate, disembarkTime, disembarkLat, disembarkLng,
                bookingRef, headcount,
                portCalls: [{port, date, arrTime, depTime}]
                (nights = disembarkDate - embarkDate, computed at display time)

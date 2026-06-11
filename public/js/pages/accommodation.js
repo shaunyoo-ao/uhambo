@@ -542,6 +542,7 @@ function cruiseFormHTML(item, today) {
       <label class="form-label">${t('book.embark_port')} *</label>
       <input class="form-input" name="embarkPort" value="${escapeHtml(item?.embarkPort || '')}" placeholder="e.g. Piraeus, Greece" required>
     </div>
+    ${coordsField(item?.embarkLat, item?.embarkLng, 'embarkCoords')}
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">${getLang() === 'ko' ? '날짜' : 'Date'} *</label>
@@ -568,6 +569,7 @@ function cruiseFormHTML(item, today) {
       <label class="form-label">${t('book.disembark_port')} *</label>
       <input class="form-input" name="disembarkPort" value="${escapeHtml(item?.disembarkPort || '')}" placeholder="e.g. Piraeus, Greece" required>
     </div>
+    ${coordsField(item?.disembarkLat, item?.disembarkLng, 'disembarkCoords')}
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">${getLang() === 'ko' ? '날짜' : 'Date'} *</label>
@@ -1019,6 +1021,31 @@ function openItemModal(item) {
         }
 
       } else if (cat === 'cruise') {
+        // Parse embark/disembark coords
+        const rawEmbark = data.embarkCoords?.trim();
+        delete data.embarkCoords;
+        const rawDisembark = data.disembarkCoords?.trim();
+        delete data.disembarkCoords;
+
+        let embarkGeo = null;
+        if (rawEmbark) {
+          embarkGeo = parseCoords(rawEmbark);
+          if (embarkGeo) { data.embarkLat = embarkGeo.lat; data.embarkLng = embarkGeo.lng; }
+        } else if (data.embarkPort) {
+          try { localStorage.removeItem(`geo_${data.embarkPort.toLowerCase().trim().replace(/\s+/g, '_')}`); } catch(_) {}
+          const geo = await geocodeCity(data.embarkPort, _tripCountry);
+          if (geo) { data.embarkLat = geo.lat; data.embarkLng = geo.lng; embarkGeo = geo; }
+        }
+        let disembarkGeo = null;
+        if (rawDisembark) {
+          disembarkGeo = parseCoords(rawDisembark);
+          if (disembarkGeo) { data.disembarkLat = disembarkGeo.lat; data.disembarkLng = disembarkGeo.lng; }
+        } else if (data.disembarkPort) {
+          try { localStorage.removeItem(`geo_${data.disembarkPort.toLowerCase().trim().replace(/\s+/g, '_')}`); } catch(_) {}
+          const geo = await geocodeCity(data.disembarkPort, _tripCountry);
+          if (geo) { data.disembarkLat = geo.lat; data.disembarkLng = geo.lng; disembarkGeo = geo; }
+        }
+
         // Handle photos (same as accommodation)
         const cruiseImages = [];
         for (const slot of _imageSlots) {
@@ -1080,6 +1107,7 @@ function openItemModal(item) {
             _isFlight: false,
             _isCruise: true,
             links: data.links || [],
+            ...(embarkGeo ? { lat: embarkGeo.lat, lng: embarkGeo.lng } : (data.embarkLat ? { lat: data.embarkLat, lng: data.embarkLng } : {})),
           });
         } else {
           await deleteLinkedItinItem(userId, tripId, savedId, 'booking', 'embark');
@@ -1114,6 +1142,7 @@ function openItemModal(item) {
             _isFlight: false,
             _isCruise: true,
             links: data.links || [],
+            ...(disembarkGeo ? { lat: disembarkGeo.lat, lng: disembarkGeo.lng } : (data.disembarkLat ? { lat: data.disembarkLat, lng: data.disembarkLng } : {})),
           });
         } else {
           await deleteLinkedItinItem(userId, tripId, savedId, 'booking', 'disembark');
