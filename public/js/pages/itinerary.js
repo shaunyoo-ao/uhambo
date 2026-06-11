@@ -268,7 +268,7 @@ function renderCalendar() {
       const dayItems = itemsByDay[ds] || [];
       const dayRanges = ranges.filter(r => ds >= r.start && ds <= r.end);
       const isToday = ds === today;
-      const iconSet = [...new Set(dayItems.map(i => TYPE_ICONS[i.type] || '📌'))].slice(0, 3).join('');
+      const iconSet = [...new Set(dayItems.map(i => itemIcon(i)))].slice(0, 3).join('');
       const bars = dayRanges.slice(0, 3).map(r => `<div class="cal-bar" style="background:${r.color}"></div>`).join('');
       const tappable = dayItems.length > 0 || dayRanges.length > 0;
       cells += `
@@ -314,7 +314,7 @@ function openCalDayModal(ds) {
     body += dayItems.map(it => `
       <div style="padding:8px 0;border-bottom:1px solid var(--line-soft)">
         <div class="row gap-8" style="align-items:center">
-          <span>${TYPE_ICONS[it.type] || '📌'}</span>
+          <span>${itemIcon(it)}</span>
           <span class="text-sm font-medium">${escapeHtml(it.title) || '—'}</span>
           ${it.time ? `<span class="text-xs text-muted" style="margin-left:auto">${it.time}</span>` : ''}
         </div>
@@ -454,7 +454,7 @@ async function renderMap(itinItems) {
 
   const features = resolved.map(item => {
     const color = TYPE_COLORS_HEX[item.type] || '#37474F';
-    const emoji = TYPE_ICONS[item.type] || '📌';
+    const emoji = itemIcon(item);
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="44" viewBox="0 0 36 44">
       <path fill="rgba(0,0,0,0.25)" d="M18 2C11.4 2 6 7.4 6 14c0 9 12 26 12 26S30 23 30 14C30 7.4 24.6 2 18 2z" transform="translate(2,3)"/>
       <path fill="${color}" stroke="#fff" stroke-width="1.5" d="M18 0C11.4 0 6 5.4 6 12c0 9 12 26 12 26S30 21 30 12C30 5.4 24.6 0 18 0z"/>
