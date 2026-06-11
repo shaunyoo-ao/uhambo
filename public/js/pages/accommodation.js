@@ -22,6 +22,7 @@ let _imageSlots = [];
 let _portCalls = [];
 let _tripCountry = '';
 let _filter = 'all';
+let _search = '';
 let _adding = false;
 
 export function destroy() {
@@ -33,6 +34,7 @@ export async function render(container, ctx) {
   _ctx = ctx;
   _tripStartDate = ctx.tripStartDate || null;
   _filter = 'all';
+  _search = '';
   const { userId, tripId, isGuest } = ctx;
   getTrip(userId, tripId).then(tr => { _tripCountry = tr?.country || ''; }).catch(() => {});
 
@@ -52,6 +54,9 @@ export async function render(container, ctx) {
       <div class="chip ${_filter === 'all' ? 'chip-active' : ''}" onclick="window.__bookFilter('all')">All</div>
       ${BOOK_CATS.map(c => `<div class="chip ${_filter === c ? 'chip-active' : ''}" onclick="window.__bookFilter('${c}')">${BOOK_CAT_ICONS[c]} ${t('book.cats.' + c)}</div>`).join('')}
     </div>
+    <div class="search-row">
+      <input class="search-input" id="book-search" type="search" placeholder="${t('common.search')}" value="${escapeHtml(_search)}">
+    </div>
     <div id="booking-list">${skeletonHTML()}</div>
     <div style="height:80px"></div>`;
 
@@ -64,6 +69,16 @@ export async function render(container, ctx) {
     `;
     renderList(_items);
   };
+
+  let _searchDebounce = null;
+  document.getElementById('book-search').addEventListener('input', e => {
+    clearTimeout(_searchDebounce);
+    const val = e.target.value;
+    _searchDebounce = setTimeout(() => {
+      _search = val;
+      renderList(_items);
+    }, 150);
+  });
 
   if (!isGuest) addFAB(() => openItemModal(null));
 
@@ -85,13 +100,16 @@ async function renderList(items) {
   const el = document.getElementById('booking-list');
   if (!el) return;
 
-  const filtered = _filter === 'all' ? items : items.filter(i => (i.category || 'accommodation') === _filter);
+  let filtered = _filter === 'all' ? items : items.filter(i => (i.category || 'accommodation') === _filter);
+  const search = _search.trim().toLowerCase();
+  if (search) filtered = filtered.filter(i =>
+    [i.name, i.shipName, i.airline, i.rentalCompany].some(v => (v || '').toLowerCase().includes(search)));
 
   if (filtered.length === 0) {
     el.innerHTML = `<div class="empty-state" style="padding-top:40px">
       <div class="empty-icon">${_filter === 'all' ? '📋' : BOOK_CAT_ICONS[_filter] || '📋'}</div>
-      <div class="empty-title">${t('common.empty')}</div>
-      <div class="empty-sub">${t('book.tap_add')}</div>
+      <div class="empty-title">${search ? t('common.no_results') : t('common.empty')}</div>
+      ${search ? '' : `<div class="empty-sub">${t('book.tap_add')}</div>`}
     </div>`;
     return;
   }

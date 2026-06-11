@@ -14,6 +14,7 @@ let _ctx = null;
 let _tripStartDate = null;
 let _items = [];
 let _filter = 'all';
+let _search = '';
 let _links = [];
 let _adding = false;
 let _tripCountry = '';
@@ -32,6 +33,8 @@ export async function render(container, ctx) {
   _ctx = ctx;
   _tripStartDate = ctx.tripStartDate || null;
   const { userId, tripId, isGuest } = ctx;
+  _filter = 'all';
+  _search = '';
   getTrip(userId, tripId).then(tr => { _tripCountry = tr?.country || ''; }).catch(() => {});
 
   if (!tripId) {
@@ -51,6 +54,9 @@ export async function render(container, ctx) {
       <div class="chip active" data-cat="all" onclick="window.__actFilter('all')">All</div>
       ${CATS.map(c => `<div class="chip" data-cat="${c}" onclick="window.__actFilter('${c}')">${CAT_ICONS[c]} ${t('act.cats.' + c)}</div>`).join('')}
     </div>
+    <div class="search-row">
+      <input class="search-input" id="act-search" type="search" placeholder="${t('common.search')}" value="${escapeHtml(_search)}">
+    </div>
     <div id="act-list">${skeletonHTML()}</div>
     <div style="height:80px"></div>`;
 
@@ -65,6 +71,16 @@ export async function render(container, ctx) {
       c.classList.toggle('active', c.dataset.cat === cat));
     renderList(_items);
   };
+
+  let _searchDebounce = null;
+  document.getElementById('act-search').addEventListener('input', e => {
+    clearTimeout(_searchDebounce);
+    const val = e.target.value;
+    _searchDebounce = setTimeout(() => {
+      _search = val;
+      renderList(_items);
+    }, 150);
+  });
 
   if (_unsub) _unsub();
   _unsub = subscribeActivities(userId, tripId, items => {
@@ -83,13 +99,15 @@ async function renderList(items) {
   const el = document.getElementById('act-list');
   if (!el) return;
 
-  const filtered = _filter === 'all' ? items : items.filter(i => i.category === _filter);
+  let filtered = _filter === 'all' ? items : items.filter(i => i.category === _filter);
+  const search = _search.trim().toLowerCase();
+  if (search) filtered = filtered.filter(i => (i.name || '').toLowerCase().includes(search));
 
   if (filtered.length === 0) {
     el.innerHTML = `<div class="empty-state" style="padding-top:40px">
       <div class="empty-icon">⚡</div>
-      <div class="empty-title">${t('common.empty')}</div>
-      <div class="empty-sub">${t('act.tap_add')}</div>
+      <div class="empty-title">${search ? t('common.no_results') : t('common.empty')}</div>
+      ${search ? '' : `<div class="empty-sub">${t('act.tap_add')}</div>`}
     </div>`;
     return;
   }
