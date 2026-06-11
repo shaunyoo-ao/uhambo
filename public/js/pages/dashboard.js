@@ -7,7 +7,7 @@ import { getActivities } from '../db.js';
 import { getTripWeather, getWeather, geocodeCity } from '../weather.js';
 import { formatConverted, getCurrency, getCurrencyMeta, ensureRates } from '../currency.js';
 import { calcMileageDetail } from '../mileage.js';
-import { navigate, openModal, closeModal } from '../app.js';
+import { navigate, openModal, closeModal, showToast } from '../app.js';
 
 let _unsubItinerary = null;
 let _mileageDetail = { total: 0, segments: [] };
@@ -233,6 +233,8 @@ export async function render(container, { userId, tripId, isGuest }) {
         const tv = _mileageDetail.travelTotal || 0, dv = _mileageDetail.driveTotal || 0;
         mileageSubEl.textContent = `${tv > 0 ? `✈️ ${tv} · ` : ''}${dv > 0 ? `🚗 ${dv}` : ''}`;
       }
+    }, (err) => {
+      showToast('Error: ' + err.message);
     });
 
   } catch (e) {

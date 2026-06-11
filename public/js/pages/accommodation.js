@@ -75,6 +75,9 @@ export async function render(container, ctx) {
       return da.localeCompare(db2);
     });
     renderList(_items);
+  }, (err) => {
+    const el = document.getElementById('booking-list');
+    if (el) el.innerHTML = `<div class="empty-state" style="margin-top:40px"><div class="empty-icon">⚠️</div><div class="empty-sub">${err.message}</div></div>`;
   });
 }
 
@@ -1111,13 +1114,13 @@ function openItemModal(item) {
     const { userId, tripId } = _ctx;
     try {
       await Promise.all([
-        deleteBooking(userId, tripId, id),
         deleteLinkedExpense(userId, tripId, id, 'booking-accom'),
         deleteLinkedExpense(userId, tripId, id, 'booking-travel'),
         deleteLinkedExpense(userId, tripId, id, 'booking-rent'),
         deleteLinkedExpense(userId, tripId, id, 'booking-cruise'),
         deleteLinkedItinItems(userId, tripId, id, 'booking'),
       ]);
+      await deleteBooking(userId, tripId, id);
       showToast(t('toast.booking_deleted'));
     } catch (e) { showToast('Error: ' + e.message); }
   };

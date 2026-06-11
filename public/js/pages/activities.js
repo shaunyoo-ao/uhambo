@@ -73,6 +73,9 @@ export async function render(container, ctx) {
     const stats = document.getElementById('act-stats');
     if (stats) stats.textContent = `${done}/${items.length} done`;
     renderList(items);
+  }, (err) => {
+    const el = document.getElementById('act-list');
+    if (el) el.innerHTML = `<div class="empty-state" style="margin-top:40px"><div class="empty-icon">⚠️</div><div class="empty-sub">${err.message}</div></div>`;
   });
 }
 
@@ -292,14 +295,19 @@ function openItemModal(item) {
         showToast(t('toast.activity_added'));
       }
       // Expense sync
-      await upsertLinkedExpense(userId, tripId, savedId, 'activity', {
-        title: data.name,
-        amount: parseFloat(data.cost) || 0,
-        currency: data.currency || getCurrency(),
-        date: data.date || '',
-        category: 'activity',
-        notes: '',
-      });
+      const costNum = parseFloat(data.cost) || 0;
+      if (costNum > 0) {
+        await upsertLinkedExpense(userId, tripId, savedId, 'activity', {
+          title: data.name,
+          amount: costNum,
+          currency: data.currency || getCurrency(),
+          date: data.date || '',
+          category: 'activity',
+          notes: '',
+        });
+      } else {
+        await deleteLinkedExpense(userId, tripId, savedId, 'activity');
+      }
       // Itinerary sync
       await upsertLinkedItinItem(userId, tripId, savedId, 'activity', 'event', {
         title: data.name,
@@ -324,10 +332,10 @@ function openItemModal(item) {
     const { userId, tripId } = _ctx;
     try {
       await Promise.all([
-        deleteActivity(userId, tripId, id),
         deleteLinkedExpense(userId, tripId, id, 'activity'),
         deleteLinkedItinItems(userId, tripId, id, 'activity'),
       ]);
+      await deleteActivity(userId, tripId, id);
       showToast(t('toast.activity_deleted'));
     } catch (e) { showToast('Error: ' + e.message); }
   };

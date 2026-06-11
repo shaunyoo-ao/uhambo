@@ -116,6 +116,9 @@ export async function render(container, ctx) {
     renderList(items);
     renderCalendar();
     if (_activeTab === 'map') renderMap(items);
+  }, (err) => {
+    const el = document.getElementById('itin-list');
+    if (el) el.innerHTML = `<div class="empty-state" style="margin-top:40px"><div class="empty-icon">⚠️</div><div class="empty-sub">${err.message}</div></div>`;
   });
 }
 

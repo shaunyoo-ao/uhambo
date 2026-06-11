@@ -69,6 +69,9 @@ export async function render(container, ctx) {
     _items = items;
     await renderSummary(items);
     renderList(items);
+  }, (err) => {
+    const el = document.getElementById('exp-list');
+    if (el) el.innerHTML = `<div class="empty-state" style="margin-top:40px"><div class="empty-icon">⚠️</div><div class="empty-sub">${err.message}</div></div>`;
   });
 }
 
