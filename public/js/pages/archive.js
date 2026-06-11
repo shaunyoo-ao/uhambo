@@ -2,7 +2,7 @@ import { t } from '../i18n.js';
 import { getAllTripsData } from '../db.js';
 import { convert, formatCurrency, getCurrency, ensureRates } from '../currency.js';
 import { calcMileageDetail } from '../mileage.js';
-import { openModal, closeModal } from '../app.js';
+import { openModal, closeModal, escapeHtml } from '../app.js';
 
 let _ctx = null;
 let _tripsData = [];
@@ -160,7 +160,7 @@ function _bindShowTrips(countryCounts) {
       .sort((a, b) => b[1] - a[1])
       .map(([c, n]) => `
         <div class="row-between" style="padding:10px 0;border-bottom:1px solid var(--line)">
-          <span class="text-sm">🌍 ${c}</span>
+          <span class="text-sm">🌍 ${escapeHtml(c)}</span>
           <span class="mono text-sm text-accent">×${n}</span>
         </div>`).join('');
     openModal({
@@ -333,7 +333,7 @@ async function renderContent() {
       <div class="card" style="margin-bottom:16px">
         <div class="card-header"><span class="eyebrow">${t('arch.places')}</span></div>
         <div class="card-body" style="padding:10px 14px;display:flex;flex-wrap:wrap;gap:8px">
-          ${uniquePlaces.map(p => `<div class="badge badge-sky">📍 ${p}</div>`).join('')}
+          ${uniquePlaces.map(p => `<div class="badge badge-sky">📍 ${escapeHtml(p)}</div>`).join('')}
         </div>
       </div>` : ''}
 
@@ -350,7 +350,7 @@ async function renderContent() {
           ${allActivities.map(a => `
             <div class="row gap-8" style="padding:5px 0;border-bottom:1px solid var(--line-soft)">
               <div class="check-box ${a.completed ? 'checked' : ''}" style="pointer-events:none"></div>
-              <span class="text-sm ${a.completed ? 'text-muted' : ''}" style="${a.completed ? 'text-decoration:line-through' : ''}">${a.name || '—'}</span>
+              <span class="text-sm ${a.completed ? 'text-muted' : ''}" style="${a.completed ? 'text-decoration:line-through' : ''}">${escapeHtml(a.name) || '—'}</span>
             </div>`).join('')}
         </div>
       </div>` : ''}

@@ -4,7 +4,7 @@ import {
   upsertLinkedExpense, deleteLinkedExpense, upsertLinkedItinItem, deleteLinkedItinItems, deleteLinkedItinItem,
   getTrip,
 } from '../db.js';
-import { openModal, closeModal, showToast, showConfirm, setModalSaving } from '../app.js';
+import { openModal, closeModal, showToast, showConfirm, setModalSaving, escapeHtml } from '../app.js';
 import { formatConverted, getCurrency, CURRENCIES } from '../currency.js';
 import { openCalc } from '../calculator.js';
 import { geocodeCity } from '../weather.js';
@@ -118,8 +118,8 @@ async function renderList(items) {
           <div class="row gap-8">
             <span style="font-size:20px">⛴️</span>
             <div>
-              <div class="font-medium">${item.shipName || item.name || '—'}${item.cruiseLine ? `<span class="text-xs text-muted" style="margin-left:6px">${item.cruiseLine}</span>` : ''}</div>
-              ${item.cabinNo || item.cabinType ? `<div class="text-xs text-muted">🛏 ${[item.cabinNo, item.cabinType].filter(Boolean).join(' · ')}</div>` : ''}
+              <div class="font-medium">${escapeHtml(item.shipName || item.name || '—')}${item.cruiseLine ? `<span class="text-xs text-muted" style="margin-left:6px">${escapeHtml(item.cruiseLine)}</span>` : ''}</div>
+              ${item.cabinNo || item.cabinType ? `<div class="text-xs text-muted">🛏 ${escapeHtml([item.cabinNo, item.cabinType].filter(Boolean).join(' · '))}</div>` : ''}
             </div>
           </div>
           <div class="row gap-8">
@@ -129,12 +129,12 @@ async function renderList(items) {
         </div>
         <div class="dotrow"></div>
         <div class="row gap-16" style="flex-wrap:wrap">
-          ${item.embarkDate ? `<div><div class="eyebrow" style="margin-bottom:2px">${t('book.embark_port')}</div><div class="text-sm">${item.embarkDate}${item.embarkTime ? ' ' + item.embarkTime : ''}<br><span class="text-xs text-muted">${item.embarkPort || ''}</span></div></div>` : ''}
-          ${item.disembarkDate ? `<div><div class="eyebrow" style="margin-bottom:2px">${t('book.disembark_port')}</div><div class="text-sm">${item.disembarkDate}${item.disembarkTime ? ' ' + item.disembarkTime : ''}<br><span class="text-xs text-muted">${item.disembarkPort || ''}</span></div></div>` : ''}
+          ${item.embarkDate ? `<div><div class="eyebrow" style="margin-bottom:2px">${t('book.embark_port')}</div><div class="text-sm">${item.embarkDate}${item.embarkTime ? ' ' + item.embarkTime : ''}<br><span class="text-xs text-muted">${escapeHtml(item.embarkPort || '')}</span></div></div>` : ''}
+          ${item.disembarkDate ? `<div><div class="eyebrow" style="margin-bottom:2px">${t('book.disembark_port')}</div><div class="text-sm">${item.disembarkDate}${item.disembarkTime ? ' ' + item.disembarkTime : ''}<br><span class="text-xs text-muted">${escapeHtml(item.disembarkPort || '')}</span></div></div>` : ''}
           ${nights !== null ? `<div style="margin-left:auto"><div class="eyebrow" style="margin-bottom:2px">${t('accom.nights')}</div><div class="mono text-sm">${nights}</div></div>` : ''}
         </div>
-        ${portCount > 0 ? `<div class="text-xs text-muted" style="margin-top:8px">⚓ ${portCount} ${t('book.port_calls')}${portNames ? ': ' + portNames : ''}</div>` : ''}
-        ${item.bookingRef ? `<div class="text-xs text-muted" style="margin-top:4px">Ref: ${item.bookingRef}</div>` : ''}
+        ${portCount > 0 ? `<div class="text-xs text-muted" style="margin-top:8px">⚓ ${portCount} ${t('book.port_calls')}${portNames ? ': ' + escapeHtml(portNames) : ''}</div>` : ''}
+        ${item.bookingRef ? `<div class="text-xs text-muted" style="margin-top:4px">Ref: ${escapeHtml(item.bookingRef)}</div>` : ''}
         ${(item.images || []).length > 0 ? `<div style="margin-top:10px;display:grid;grid-template-columns:${(item.images || []).length > 1 ? '1fr 1fr' : '1fr'};gap:6px;border-radius:8px;overflow:hidden">${(item.images || []).slice(0, 4).map(u => `<img src="${u}" style="width:100%;aspect-ratio:4/3;object-fit:cover;display:block">`).join('')}</div>` : ''}`;
     } else if (cat === 'travel') {
       const from = item.departureAirport || item.from || '';
@@ -146,8 +146,8 @@ async function renderList(items) {
           <div class="row gap-8">
             <span style="font-size:20px">✈️</span>
             <div>
-              <div class="font-medium">${item.name || (airline ? `${airline} ${flightNo}` : (from && to ? `${from} → ${to}` : '—'))}</div>
-              ${from && to ? `<div class="text-xs text-muted">${from} → ${to}</div>` : ''}
+              <div class="font-medium">${escapeHtml(item.name || (airline ? `${airline} ${flightNo}` : (from && to ? `${from} → ${to}` : '—')))}</div>
+              ${from && to ? `<div class="text-xs text-muted">${escapeHtml(from)} → ${escapeHtml(to)}</div>` : ''}
             </div>
           </div>
           <div class="row gap-8">
@@ -160,7 +160,7 @@ async function renderList(items) {
           ${item.departureDate ? `<div><div class="eyebrow" style="margin-bottom:2px">${t('book.dep_date')}</div><div class="text-sm">${item.departureDate}${item.departureTime ? ' ' + item.departureTime : ''}</div></div>` : ''}
           ${item.arrivalDate ? `<div><div class="eyebrow" style="margin-bottom:2px">${t('book.arr_date')}</div><div class="text-sm">${item.arrivalDate}${item.arrivalTime ? ' ' + item.arrivalTime : ''}</div></div>` : ''}
         </div>
-        ${item.pnr ? `<div class="text-xs text-muted" style="margin-top:6px">PNR: ${item.pnr}</div>` : ''}`;
+        ${item.pnr ? `<div class="text-xs text-muted" style="margin-top:6px">PNR: ${escapeHtml(item.pnr)}</div>` : ''}`;
     } else if (cat === 'rent') {
       const pickup = item.pickupLocation || '';
       const dropoff = item.dropoffLocation || '';
@@ -169,8 +169,8 @@ async function renderList(items) {
           <div class="row gap-8">
             <span style="font-size:20px">🚗</span>
             <div>
-              <div class="font-medium">${item.name || (item.rentalCompany ? `${item.rentalCompany}${item.vehicleType ? ' — ' + item.vehicleType : ''}` : '—')}</div>
-              ${pickup ? `<div class="text-xs text-muted">📍 ${pickup}</div>` : ''}
+              <div class="font-medium">${escapeHtml(item.name || (item.rentalCompany ? `${item.rentalCompany}${item.vehicleType ? ' — ' + item.vehicleType : ''}` : '—'))}</div>
+              ${pickup ? `<div class="text-xs text-muted">📍 ${escapeHtml(pickup)}</div>` : ''}
             </div>
           </div>
           <div class="row gap-8">
@@ -183,7 +183,7 @@ async function renderList(items) {
           ${item.pickupDate ? `<div><div class="eyebrow" style="margin-bottom:2px">${t('book.pickup_date')}</div><div class="text-sm">${item.pickupDate}${item.pickupTime ? ' ' + item.pickupTime : ''}</div></div>` : ''}
           ${item.dropoffDate ? `<div><div class="eyebrow" style="margin-bottom:2px">${t('book.dropoff_date')}</div><div class="text-sm">${item.dropoffDate}${item.dropoffTime ? ' ' + item.dropoffTime : ''}</div></div>` : ''}
         </div>
-        ${item.bookingRef ? `<div class="text-xs text-muted" style="margin-top:6px">Ref: ${item.bookingRef}</div>` : ''}`;
+        ${item.bookingRef ? `<div class="text-xs text-muted" style="margin-top:6px">Ref: ${escapeHtml(item.bookingRef)}</div>` : ''}`;
     } else {
       // Accommodation
       const nights = item.checkIn && item.checkOut
@@ -194,8 +194,8 @@ async function renderList(items) {
           <div class="row gap-8">
             <span style="font-size:20px">🏨</span>
             <div>
-              <div class="font-medium">${item.name || '—'}</div>
-              ${item.address ? `<div class="text-xs text-muted">📍 ${item.address}</div>` : ''}
+              <div class="font-medium">${escapeHtml(item.name || '—')}</div>
+              ${item.address ? `<div class="text-xs text-muted">📍 ${escapeHtml(item.address)}</div>` : ''}
             </div>
           </div>
           <div class="row gap-8">
@@ -217,7 +217,7 @@ async function renderList(items) {
         <div class="card-body" style="padding:14px">
           ${cardContent}
           ${(item.links || []).length > 0 ? `<div class="row gap-6" style="margin-top:8px;flex-wrap:wrap">${item.links.map(u => `<a href="${u}" target="_blank" rel="noopener" class="text-xs" style="color:var(--sky)" onclick="event.stopPropagation()">🔗 Link</a>`).join('')}</div>` : ''}
-          ${item.notes ? `<div class="text-xs text-muted" style="margin-top:8px;white-space:pre-wrap">${item.notes}</div>` : ''}
+          ${item.notes ? `<div class="text-xs text-muted" style="margin-top:8px;white-space:pre-wrap">${escapeHtml(item.notes)}</div>` : ''}
         </div>
       </div>`;
   }));
@@ -264,11 +264,11 @@ function accommodationFormHTML(item, today) {
   return `
     <div class="form-group">
       <label class="form-label">${t('accom.name')} *</label>
-      <input class="form-input" name="name" value="${item?.name || ''}" placeholder="e.g. Hotel Gracery" required>
+      <input class="form-input" name="name" value="${escapeHtml(item?.name || '')}" placeholder="e.g. Hotel Gracery" required>
     </div>
     <div class="form-group">
       <label class="form-label">${t('accom.address')}</label>
-      <input class="form-input" name="address" value="${item?.address || ''}" placeholder="Full address">
+      <input class="form-input" name="address" value="${escapeHtml(item?.address || '')}" placeholder="Full address">
     </div>
     ${coordsField(item?.lat, item?.lng)}
     <div class="form-row">
@@ -321,12 +321,12 @@ function travelFormHTML(item, today) {
   return `
     <div class="form-group">
       <label class="form-label">${t('book.airline')}</label>
-      <input class="form-input" name="airline" value="${item?.airline || ''}" placeholder="e.g. Korean Air">
+      <input class="form-input" name="airline" value="${escapeHtml(item?.airline || '')}" placeholder="e.g. Korean Air">
     </div>
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">${t('book.flight_no')}</label>
-        <input class="form-input" name="flightNo" value="${item?.flightNo || ''}" placeholder="e.g. KE 001">
+        <input class="form-input" name="flightNo" value="${escapeHtml(item?.flightNo || '')}" placeholder="e.g. KE 001">
       </div>
       <div class="form-group">
         <label class="form-label">${t('book.cabin_class')}</label>
@@ -339,7 +339,7 @@ function travelFormHTML(item, today) {
     </div>
     <div class="form-group">
       <label class="form-label">${t('book.from')} *</label>
-      <input class="form-input" name="departureAirport" value="${item?.departureAirport || ''}" placeholder="e.g. ICN — Seoul Incheon" required>
+      <input class="form-input" name="departureAirport" value="${escapeHtml(item?.departureAirport || '')}" placeholder="e.g. ICN — Seoul Incheon" required>
     </div>
     ${coordsField(item?.depLat, item?.depLng, 'depCoords')}
     <div class="form-row">
@@ -354,7 +354,7 @@ function travelFormHTML(item, today) {
     </div>
     <div class="form-group">
       <label class="form-label">${t('book.to')} *</label>
-      <input class="form-input" name="arrivalAirport" value="${item?.arrivalAirport || ''}" placeholder="e.g. JFK — New York JFK" required>
+      <input class="form-input" name="arrivalAirport" value="${escapeHtml(item?.arrivalAirport || '')}" placeholder="e.g. JFK — New York JFK" required>
     </div>
     ${coordsField(item?.arrLat, item?.arrLng, 'arrCoords')}
     <div class="form-row">
@@ -369,7 +369,7 @@ function travelFormHTML(item, today) {
     </div>
     <div class="form-group">
       <label class="form-label">${t('book.pnr')}</label>
-      <input class="form-input" name="pnr" value="${item?.pnr || ''}" placeholder="e.g. ABC123">
+      <input class="form-input" name="pnr" value="${escapeHtml(item?.pnr || '')}" placeholder="e.g. ABC123">
     </div>
     <div class="form-group">
       <label class="form-label">${t('book.headcount')}</label>
@@ -396,15 +396,15 @@ function rentFormHTML(item, today) {
   return `
     <div class="form-group">
       <label class="form-label">${t('book.company')}</label>
-      <input class="form-input" name="rentalCompany" value="${item?.rentalCompany || ''}" placeholder="e.g. Hertz">
+      <input class="form-input" name="rentalCompany" value="${escapeHtml(item?.rentalCompany || '')}" placeholder="e.g. Hertz">
     </div>
     <div class="form-group">
       <label class="form-label">${t('book.vehicle')}</label>
-      <input class="form-input" name="vehicleType" value="${item?.vehicleType || ''}" placeholder="e.g. Compact SUV">
+      <input class="form-input" name="vehicleType" value="${escapeHtml(item?.vehicleType || '')}" placeholder="e.g. Compact SUV">
     </div>
     <div class="form-group">
       <label class="form-label">${t('book.pickup_loc')} *</label>
-      <input class="form-input" name="pickupLocation" value="${item?.pickupLocation || ''}" placeholder="e.g. JFK Airport, Terminal 4" required>
+      <input class="form-input" name="pickupLocation" value="${escapeHtml(item?.pickupLocation || '')}" placeholder="e.g. JFK Airport, Terminal 4" required>
     </div>
     ${coordsField(item?.pickupLat, item?.pickupLng, 'pickupCoords')}
     <div class="form-row">
@@ -419,7 +419,7 @@ function rentFormHTML(item, today) {
     </div>
     <div class="form-group">
       <label class="form-label">${t('book.dropoff_loc')}</label>
-      <input class="form-input" name="dropoffLocation" value="${item?.dropoffLocation || ''}" placeholder="e.g. Same location">
+      <input class="form-input" name="dropoffLocation" value="${escapeHtml(item?.dropoffLocation || '')}" placeholder="e.g. Same location">
     </div>
     ${coordsField(item?.dropoffLat, item?.dropoffLng, 'dropoffCoords')}
     <div class="form-row">
@@ -434,7 +434,7 @@ function rentFormHTML(item, today) {
     </div>
     <div class="form-group">
       <label class="form-label">${t('book.booking_ref')}</label>
-      <input class="form-input" name="bookingRef" value="${item?.bookingRef || ''}" placeholder="e.g. HR-123456">
+      <input class="form-input" name="bookingRef" value="${escapeHtml(item?.bookingRef || '')}" placeholder="e.g. HR-123456">
     </div>
     <div class="form-row">
       <div class="form-group" style="flex:2">
@@ -466,7 +466,7 @@ function portCallsHTML() {
         <button type="button" class="link-item-del" onclick="window.__removePortCall(${i})">×</button>
       </div>
       <input class="form-input" style="margin-bottom:6px" placeholder="${getLang() === 'ko' ? '항구명 (예: Kusadasi, Turkiye)' : 'Port name (e.g. Kusadasi, Turkiye)'}"
-        value="${pc.port || ''}"
+        value="${escapeHtml(pc.port || '')}"
         oninput="window.__portCallUpdate(${i},'port',this.value)">
       <div class="form-row" style="margin-bottom:4px">
         <div class="form-group" style="flex:3">
@@ -486,7 +486,7 @@ function portCallsHTML() {
         </div>
       </div>
       <input class="form-input" style="font-size:0.78rem" placeholder="${getLang() === 'ko' ? '좌표 (선택) 예: 37.857, 27.258' : 'Coords (optional) e.g. 37.857, 27.258'}"
-        value="${coordsVal}"
+        value="${escapeHtml(coordsVal)}"
         oninput="window.__portCallUpdate(${i},'coords',this.value)">
     </div>`;
   }).join('');
@@ -499,21 +499,21 @@ function cruiseFormHTML(item, today) {
     <div class="form-row">
       <div class="form-group" style="flex:3">
         <label class="form-label">${t('book.ship')} *</label>
-        <input class="form-input" name="shipName" value="${item?.shipName || ''}" placeholder="e.g. MSC FANTASIA" required>
+        <input class="form-input" name="shipName" value="${escapeHtml(item?.shipName || '')}" placeholder="e.g. MSC FANTASIA" required>
       </div>
       <div class="form-group" style="flex:2">
         <label class="form-label">${t('book.cabin_no')}</label>
-        <input class="form-input" name="cabinNo" value="${item?.cabinNo || ''}" placeholder="e.g. 10020">
+        <input class="form-input" name="cabinNo" value="${escapeHtml(item?.cabinNo || '')}" placeholder="e.g. 10020">
       </div>
     </div>
     <div class="form-row">
       <div class="form-group" style="flex:2">
         <label class="form-label">${t('book.cruise_line')}</label>
-        <input class="form-input" name="cruiseLine" value="${item?.cruiseLine || ''}" placeholder="e.g. MSC Cruises">
+        <input class="form-input" name="cruiseLine" value="${escapeHtml(item?.cruiseLine || '')}" placeholder="e.g. MSC Cruises">
       </div>
       <div class="form-group" style="flex:3">
         <label class="form-label">${t('book.cabin_type')}</label>
-        <input class="form-input" name="cabinType" value="${item?.cabinType || ''}" placeholder="e.g. BL2 - Balcony Cabin">
+        <input class="form-input" name="cabinType" value="${escapeHtml(item?.cabinType || '')}" placeholder="e.g. BL2 - Balcony Cabin">
       </div>
     </div>
 
@@ -522,7 +522,7 @@ function cruiseFormHTML(item, today) {
     </div>
     <div class="form-group">
       <label class="form-label">${t('book.embark_port')} *</label>
-      <input class="form-input" name="embarkPort" value="${item?.embarkPort || ''}" placeholder="e.g. Piraeus, Greece" required>
+      <input class="form-input" name="embarkPort" value="${escapeHtml(item?.embarkPort || '')}" placeholder="e.g. Piraeus, Greece" required>
     </div>
     <div class="form-row">
       <div class="form-group">
@@ -548,7 +548,7 @@ function cruiseFormHTML(item, today) {
     </div>
     <div class="form-group">
       <label class="form-label">${t('book.disembark_port')} *</label>
-      <input class="form-input" name="disembarkPort" value="${item?.disembarkPort || ''}" placeholder="e.g. Piraeus, Greece" required>
+      <input class="form-input" name="disembarkPort" value="${escapeHtml(item?.disembarkPort || '')}" placeholder="e.g. Piraeus, Greece" required>
     </div>
     <div class="form-row">
       <div class="form-group">
@@ -563,7 +563,7 @@ function cruiseFormHTML(item, today) {
 
     <div class="form-group">
       <label class="form-label">${t('book.booking_ref')}</label>
-      <input class="form-input" name="bookingRef" value="${item?.bookingRef || ''}" placeholder="e.g. 72662893">
+      <input class="form-input" name="bookingRef" value="${escapeHtml(item?.bookingRef || '')}" placeholder="e.g. 72662893">
     </div>
     <div class="form-group">
       <label class="form-label">${t('book.headcount')}</label>
@@ -621,7 +621,7 @@ function openItemModal(item) {
         </div>
         <div class="form-group" id="book-name-group" style="${cat === 'accommodation' || cat === 'cruise' ? 'display:none' : ''}">
           <label class="form-label" id="book-name-label">${cat === 'travel' ? (getLang() === 'ko' ? '항공 이름' : 'Airline Name') : (getLang() === 'ko' ? '렌트 이름' : 'Rental Name')} <span class="text-muted" style="font-weight:400">${getLang() === 'ko' ? '(선택)' : '(optional)'}</span></label>
-          <input class="form-input" name="name" id="book-name-input" value="${item?.name || ''}" placeholder="${cat === 'travel' ? 'e.g. Outbound KE001' : 'e.g. Hertz Compact'}">
+          <input class="form-input" name="name" id="book-name-input" value="${escapeHtml(item?.name || '')}" placeholder="${cat === 'travel' ? 'e.g. Outbound KE001' : 'e.g. Hertz Compact'}">
         </div>
         <div id="book-cat-fields">${catFields}</div>
         <div class="form-group">
@@ -641,7 +641,7 @@ function openItemModal(item) {
         </div>
         <div class="form-group">
           <label class="form-label">${t('accom.notes')}</label>
-          <textarea class="form-textarea" name="notes" placeholder="Booking details, instructions…">${item?.notes || ''}</textarea>
+          <textarea class="form-textarea" name="notes" placeholder="Booking details, instructions…">${escapeHtml(item?.notes || '')}</textarea>
         </div>
       </form>`;
   }

@@ -1,4 +1,4 @@
-const VERSION = 'v63';
+const VERSION = 'v64';
 const APP_SHELL = 'app-shell-' + VERSION;
 const MAP_CACHE  = 'map-tiles-' + VERSION;
 const API_CACHE  = 'api-' + VERSION;
@@ -22,10 +22,14 @@ const PRECACHE = [
   '/js/pages/activities.js',
   '/js/pages/expenses.js',
   '/js/pages/archive.js',
+  '/js/pages/packing.js',
+  '/js/calculator.js',
   '/js/mileage.js',
   '/js/imgbb.js',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
+  '/icons/icon-maskable-192.png',
+  '/icons/icon-maskable-512.png',
 ];
 
 // ── Install: precache app shell ──────────────────────────────────

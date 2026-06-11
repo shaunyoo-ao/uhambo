@@ -4,7 +4,7 @@ import {
   upsertLinkedExpense, deleteLinkedExpense, upsertLinkedItinItem, deleteLinkedItinItems,
   getTrip,
 } from '../db.js';
-import { openModal, closeModal, showToast, showConfirm, setModalSaving } from '../app.js';
+import { openModal, closeModal, showToast, showConfirm, setModalSaving, escapeHtml } from '../app.js';
 import { formatConverted, getCurrency, CURRENCIES } from '../currency.js';
 import { openCalc } from '../calculator.js';
 import { geocodeCity } from '../weather.js';
@@ -134,12 +134,12 @@ async function renderItem(item) {
            ${isGuest ? 'style="opacity:0.5;pointer-events:none"' : `onclick="event.stopPropagation();window.__toggleAct('${item.id}', ${!item.completed})"`}></div>
       <div class="list-icon" style="background:var(--surface-2)">${CAT_ICONS[item.category] || '⚡'}</div>
       <div class="list-content" ${isGuest ? '' : `onclick="window.__editActItem('${item.id}')"`}>
-        <div class="list-title ${item.completed ? 'text-muted' : ''}" style="${item.completed ? 'text-decoration:line-through' : ''}">${item.name || '—'}</div>
+        <div class="list-title ${item.completed ? 'text-muted' : ''}" style="${item.completed ? 'text-decoration:line-through' : ''}">${escapeHtml(item.name) || '—'}</div>
         <div class="list-sub">
           ${item.time ? item.time + ' · ' : ''}
-          ${item.location ? '📍' + item.location : ''}
+          ${item.location ? '📍' + escapeHtml(item.location) : ''}
         </div>
-        ${item.notes ? `<div class="text-xs text-muted" style="margin-top:4px;white-space:pre-wrap">${item.notes}</div>` : ''}
+        ${item.notes ? `<div class="text-xs text-muted" style="margin-top:4px;white-space:pre-wrap">${escapeHtml(item.notes)}</div>` : ''}
       </div>
       <div class="list-meta" ${isGuest ? '' : `onclick="window.__editActItem('${item.id}')"`}>
         ${priceStr ? `<div class="mono text-sm text-accent">${priceStr}</div>` : ''}
@@ -153,7 +153,7 @@ async function renderItem(item) {
 function linkListHTML(links) {
   return (links || []).map((url, i) => `
     <div class="link-item">
-      <a href="${url}" target="_blank" rel="noopener">${url}</a>
+      <a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(url)}</a>
       <button type="button" class="link-item-del" onclick="window.__actRmLink(${i})">×</button>
     </div>`).join('');
 }
@@ -169,7 +169,7 @@ function openItemModal(item) {
       <form id="act-form">
         <div class="form-group">
           <label class="form-label">${t('act.name')} *</label>
-          <input class="form-input" name="name" value="${item?.name || ''}" placeholder="e.g. Teamlab Borderless" required>
+          <input class="form-input" name="name" value="${escapeHtml(item?.name || '')}" placeholder="e.g. Teamlab Borderless" required>
         </div>
         <div class="form-group">
           <label class="form-label">${t('act.category')}</label>
@@ -189,7 +189,7 @@ function openItemModal(item) {
         </div>
         <div class="form-group">
           <label class="form-label">${t('act.location')}</label>
-          <input class="form-input" name="location" value="${item?.location || ''}" placeholder="e.g. Odaiba, Tokyo">
+          <input class="form-input" name="location" value="${escapeHtml(item?.location || '')}" placeholder="e.g. Odaiba, Tokyo">
         </div>
         <div class="form-group" style="margin-top:-4px">
           <label class="form-label" style="font-size:0.7rem;color:var(--muted)">${t('book.coords')} <span style="font-weight:400">(${t('book.coords_hint')})</span></label>
@@ -231,7 +231,7 @@ function openItemModal(item) {
         </div>
         <div class="form-group">
           <label class="form-label">${t('act.notes')}</label>
-          <textarea class="form-textarea" name="notes" placeholder="Details, booking info…">${item?.notes || ''}</textarea>
+          <textarea class="form-textarea" name="notes" placeholder="Details, booking info…">${escapeHtml(item?.notes || '')}</textarea>
         </div>
       </form>`,
     footer: `

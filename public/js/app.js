@@ -4,7 +4,7 @@ import { setCurrency, getCurrency, CURRENCIES, getCountryCurrency } from './curr
 import { getTrips, createTrip, getTrip, updateTrip, deleteTrip, getGuestCode, setGuestCode, removeGuestCode, lookupGuestCode, getItinerary, getBookings, getActivities, getExpenses } from './db.js';
 import { resizeImageToBlob, uploadToImgBB } from './imgbb.js';
 
-const APP_VERSION = '1.2.63';
+const APP_VERSION = '1.2.64';
 
 // Populate login footer version from this single source of truth.
 // Runs as soon as this module loads (before login screen is shown).
@@ -15,6 +15,12 @@ document.addEventListener('DOMContentLoaded', () => {
 if (document.readyState !== 'loading') {
   const el = document.getElementById('login-version');
   if (el) el.textContent = APP_VERSION;
+}
+
+// Escape user-entered text before injecting into innerHTML templates.
+export function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 const COUNTRIES = ['Australia','Austria','Belgium','Brazil','Canada','China','Croatia','Czech Republic','Denmark','Egypt','Finland','France','Germany','Greece','Hong Kong','Hungary','Iceland','India','Indonesia','Ireland','Israel','Italy','Japan','Malaysia','Mexico','Morocco','Netherlands','New Zealand','Norway','Philippines','Poland','Portugal','Romania','Russia','Singapore','South Africa','South Korea','Spain','Sweden','Switzerland','Taiwan','Thailand','Turkey','United Arab Emirates','United Kingdom','United States','Vietnam'];
@@ -233,8 +239,8 @@ function openTripPicker() {
       <div class="trip-radio-item" onclick="window.__selectTrip('${trip.id}')">
         <div class="trip-radio-dot">${trip.id === currentTripId ? '●' : '○'}</div>
         <div style="flex:1;min-width:0">
-          <div class="font-medium">${trip.name}</div>
-          ${trip.destination ? `<div class="text-xs text-muted">📍 ${trip.destination}</div>` : ''}
+          <div class="font-medium">${escapeHtml(trip.name)}</div>
+          ${trip.destination ? `<div class="text-xs text-muted">📍 ${escapeHtml(trip.destination)}</div>` : ''}
         </div>
       </div>`).join(''),
     footer: `<button class="btn btn-ghost btn-full" onclick="window.__closeModal()">${t('common.cancel')}</button>`
@@ -817,11 +823,11 @@ window.__editCurrentTrip = async () => {
           <form id="edit-trip-form">
             <div class="form-group">
               <label class="form-label">${isKo ? '여행 이름' : 'Trip Name'}</label>
-              <input class="form-input" name="name" value="${trip.name || ''}" required>
+              <input class="form-input" name="name" value="${escapeHtml(trip.name || '')}" required>
             </div>
             <div class="form-group">
               <label class="form-label">${isKo ? '여행지' : 'Destination'}</label>
-              <input class="form-input" name="destination" value="${trip.destination || ''}" placeholder="e.g. Tokyo, Japan">
+              <input class="form-input" name="destination" value="${escapeHtml(trip.destination || '')}" placeholder="e.g. Tokyo, Japan">
             </div>
             <div class="form-row">
               <div class="form-group">
